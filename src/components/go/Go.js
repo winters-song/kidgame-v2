@@ -123,7 +123,7 @@ export class Go {
 
   // 该坐标是否有落子, col=x, row=y
   isEmpty (x, y) {
-    return this.board[y][x] == Color.EMPTY
+    return this.board[y][x] === Color.EMPTY
   }
 
   isBadMove (x, y) {
@@ -183,20 +183,20 @@ export class Go {
 
     // 没有上一步，不是打劫
     let lastMove = me.getLastMove()
-    if (undefined == lastMove) {
+    if (undefined === lastMove) {
       return true
     }
     // 获得上一次提子
     let lastCaptureVertex = null
     let lastCaptures
-    if(Color.BLACK == lastMove[2]) {
+    if(Color.BLACK === lastMove[2]) {
       lastCaptures = me.blackCaptures.get(me.history.length - 1)
     } else {
       lastCaptures = me.whiteCaptures.get(me.history.length - 1)
     }
 
     // 上一次无提子，或有多个提子，不算打劫
-    if(null == lastCaptures || lastCaptures.size != 1) {
+    if(null === lastCaptures || lastCaptures.size !== 1) {
       return true
     }
 
@@ -211,7 +211,7 @@ export class Go {
     })
 
     // 上一步被提掉子=本次落子，本次要吃掉的子=上一步落子
-    if(lastCaptureVertex == me.getVertex(move[0], move[1]) && eatVertex == me.getVertex(lastMove[0], lastMove[1])){
+    if(lastCaptureVertex === me.getVertex(move[0], move[1]) && eatVertex === me.getVertex(lastMove[0], lastMove[1])){
       return false
     }
     return true
@@ -221,7 +221,7 @@ export class Go {
   willSuicide (move) {
     let me = this
 
-    let strs = move[2] == Color.BLACK ? me.blackStrs : me.whiteStrs;
+    let strs = move[2] === Color.BLACK ? me.blackStrs : me.whiteStrs;
     let vertex = me.getVertex(move[0], move[1])
     // 该落子是否有气
     let hasLiberty = !!this.getLiberty(vertex).length;
@@ -247,11 +247,11 @@ export class Go {
     // 将被吃掉的多块棋
     let eatedStrs = new Set();
     // 当前落黑子，则遍历白棋各块棋， 反之亦然
-    let strs = move[2] == Color.BLACK ? me.whiteStrs : me.blackStrs;
+    let strs = move[2] === Color.BLACK ? me.whiteStrs : me.blackStrs;
     //搜索对方每条龙是否是最后1口气
     strs.forEach(function(str){
       // 最后1口气，且坐标位置与落子相同
-      if (str.liberty.size == 1 && str.liberty.has(me.getVertex(move[0], move[1]))) {
+      if (str.liberty.size === 1 && str.liberty.has(me.getVertex(move[0], move[1]))) {
         eatedStrs.add(str);
       }
     });
@@ -267,8 +267,8 @@ export class Go {
     let me = this;
     let vertex = me.getVertex(move[0], move[1])
     // eat
-    let myStr = move[2] == Color.BLACK ? me.blackStrs : me.whiteStrs;
-    let oppositeStr = move[2] == Color.BLACK ? me.whiteStrs	: me.blackStrs;
+    let myStr = move[2] === Color.BLACK ? me.blackStrs : me.whiteStrs;
+    let oppositeStr = move[2] === Color.BLACK ? me.whiteStrs	: me.blackStrs;
 
     //移除吃掉的子
     eating.forEach(function(o){
@@ -290,7 +290,7 @@ export class Go {
     });
     // 记录提子（方便恢复）
     if (eating.size) {
-      if (Color.BLACK == move[2]) {
+      if (Color.BLACK === move[2]) {
         me.blackCaptures.set(me.history.length, eating);
       } else {
         me.whiteCaptures.set(me.history.length, eating);
@@ -308,7 +308,7 @@ export class Go {
     myStr.forEach(function(str){
       // 我方气有该位置
       if (str.liberty.has(vertex)) {
-        if (null == firstStr) {
+        if (null === firstStr) {
           // 记录要合并主方
           firstStr = str;
         } else {
@@ -325,7 +325,7 @@ export class Go {
     }
 
     // 没有大龙相连，新建一块棋
-    if (null == firstStr) {
+    if (null === firstStr) {
       firstStr = new Str();
       firstStr.vertexes.add(vertex);
       myStr.add(firstStr);
@@ -382,7 +382,7 @@ export class Go {
         if(oldBoard[i][j] != me.board[i][j]) {
 
           //exclude current move
-          if(i == moveResult.move[1] && j == moveResult.move[0]){
+          if(i === moveResult.move[1] && j === moveResult.move[0]){
 
           }else{
             eated.add({
@@ -471,7 +471,7 @@ export class Go {
       let x2 = neighbors[i][0] + x
       let y2 = neighbors[i][1] + y
 
-      if(me.isOnBoard(x2, y2) && color == me.board[y2][x2]){
+      if(me.isOnBoard(x2, y2) && color === me.board[y2][x2]){
         arr.push(me.getVertex(x2, y2))
       }
     }
@@ -506,7 +506,7 @@ export class Go {
       let x = surround[i][0] + move[0]
       let y = surround[i][1] + move[1]
 
-      if(me.isOnBoard(x, y) && color == me.board[y][x]){
+      if(me.isOnBoard(x, y) && color === me.board[y][x]){
         arr.push(me.getVertex(x, y))
       }
     }
@@ -555,7 +555,7 @@ export class Go {
 
     history.forEach( move => {
       s += ";";
-      if (Color.BLACK == move[2]) {
+      if (Color.BLACK === move[2]) {
         s += "B";
       } else {
         s += "W";

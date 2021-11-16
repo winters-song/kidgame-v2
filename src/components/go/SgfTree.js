@@ -34,13 +34,13 @@ function SgfNode(){
 }
 
 SgfNode.prototype.isFirstNode = function(){
-	return null == this.parent;
+	return null === this.parent;
 }
 SgfNode.prototype.isLastNode = function() {
-	return null == this.children || 0 == this.children.length;
+	return null === this.children || 0 === this.children.length;
 }
 SgfNode.prototype.toSgf = function() {
-	if(null == this.properties || this.properties.length<=0) {
+	if(null === this.properties || this.properties.length<=0) {
 		return null;
 	}
 	var SgfTree = ";"
@@ -59,8 +59,8 @@ SgfNode.prototype.getProperty = function(name) {
 	if(!this.properties) return null;
 	var p = null;
 	for(var i =0 ;i < this.properties.length;i++) {
-		if(this.properties[i].name == name) {
-			if (null == p){
+		if(this.properties[i].name === name) {
+			if (null === p){
 				p = this.properties[i].values
 			}else {
 				p = p.concat(this.properties[i].values)
@@ -76,7 +76,7 @@ SgfNode.prototype.getChildNode = function(col,row){
 		return false
 	}
 	for(var i = 0 ; i < this.children.length;i++) {
-		if(this.children[i].col == col && this.children[i].row == row) {
+		if(this.children[i].col === col && this.children[i].row === row) {
 			return this.children[i];
 		}
 	}
@@ -84,7 +84,7 @@ SgfNode.prototype.getChildNode = function(col,row){
 }
 
 SgfNode.create = function(properties){
-	if(!properties || properties.length==0) {
+	if(!properties || properties.length===0) {
 		return null;
 	}
 
@@ -96,7 +96,7 @@ SgfNode.create = function(properties){
 	for(var i in properties){
 		name = properties[i].name.toUpperCase();
 
-		if(SgfProperty.B == name|| SgfProperty.W==name) {
+		if(SgfProperty.B === name|| SgfProperty.W===name) {
 			isMoveNode = true;
 			currentProperty = properties[i]
 			break;
@@ -105,7 +105,7 @@ SgfNode.create = function(properties){
 	
 	if(isMoveNode){
 		var v ;
-		if( !currentProperty.values  || currentProperty.values.length == 0){
+		if( !currentProperty.values  || currentProperty.values.length === 0){
 			v = Vertex.pass();
 		}else{
 			v = SgfTree.toVertex(currentProperty.values[0]);
@@ -169,7 +169,7 @@ SgfTree.prototype.hasChildNode = function(col,row,node){
 		return false
 	}
 	for(var i = 0 ; i < node.children.length;i++) {
-		if(node.children[i].col == col &&node.children[i].row == row) {
+		if(node.children[i].col === col &&node.children[i].row === row) {
 			return true;
 		}
 	}
@@ -184,11 +184,11 @@ SgfTree.prototype.forward = function(col,row){
 	if(this.current.isLastNode()) {
 		return null;
 	}
-	if('undefined' == typeof col || 'undefined' == typeof row) {
+	if('undefined' === typeof col || 'undefined' === typeof row) {
 		this.current = this.current.children[0]
 	}
 	for(var i = 0 ; i < this.current.children.length;i++) {
-		if(this.current.children[i].col == col &&this.current.children[i].row == row) {
+		if(this.current.children[i].col === col &&this.current.children[i].row === row) {
 			this.current = this.current.children[i]
 			break;
 		}
@@ -258,21 +258,21 @@ SgfTree.prototype.parse= function(sgf , s){
 		this.parseIndex++;
 		switch (s) {
 		case SgfStatus.begin:
-			if ('(' == c) {
+			if ('(' === c) {
 				s = SgfStatus.branchStart;
 			}
 			break;
 		case SgfStatus.branchStart:
-			if (';' == c) {
+			if (';' === c) {
 				s = SgfStatus.newProperty;
 			}
-			if (null != current) {
-				if (null == current.children) {
+			if (null !== current) {
+				if (null === current.children) {
 					current.children = [];
 				}
 				var r = this.parse(sgf, s);
 
-				if (r == null){
+				if (r === null){
 					break;
 				}
 				current.children.push(r);
@@ -280,32 +280,32 @@ SgfTree.prototype.parse= function(sgf , s){
 			}
 			break;
 		case SgfStatus.newProperty:
-			if (';' == c || '(' == c || ')' == c) {
+			if (';' === c || '(' === c || ')' === c) {
 				var ps = SgfTree.parseProperty(buffer.replace(/^\s+|\s+$/g, ''));
 				buffer = "";
 				next = SgfNode.create(ps);
-				if (null != next) {
-					if(null == root) {
+				if (null !== next) {
+					if(null === root) {
 						root = next;
 					}
-					if (null != current) {
+					if (null !== current) {
 						next.parent = current;
-						if (null == current.children) {
+						if (null === current.children) {
 							current.children = [];
 						}
 						current.children.push(next);
 					}
 					current = next;
 				}
-				if (';' == c) {
+				if (';' === c) {
 					s = SgfStatus.newProperty;
 					break;
 				}
-				if ('(' == c) {
+				if ('(' === c) {
 					s = SgfStatus.branchStart;
 					break;
 				}
-				if (')' == c) {
+				if (')' === c) {
 					return root;
 				}
 				break;
@@ -336,19 +336,19 @@ SgfTree.parseProperty = function(str) {
 	return result;
 }
 SgfTree.toInt = function(color) {
-	if("B" == color) {
+	if("B" === color) {
 		return SgfTree.COLOR_BLACK;
 	}
-	if("W" == color) {
+	if("W" === color) {
 		return SgfTree.COLOR_WHITE;
 	}
 	return SgfTree.COLOR_EMPTY;
 }
 SgfTree.fromInt = function(c) {
-	if(1 == c) {
+	if(1 === c) {
 		return "B";
 	}
-	if(2 == c) {
+	if(2 === c) {
 		return "W";
 	}
 }
@@ -359,7 +359,7 @@ SgfTree.addTrace = function(sgf ,trace) {
 	var step ;
 	for(var i = 0 ;i < trace.length;i++) {
 		step = trace[i].split(',');
-		if(step[2]*1!=SgfTree.COLOR_BLACK &&step[2]*1!=SgfTree.COLOR_WHITE){
+		if(step[2]*1!==SgfTree.COLOR_BLACK &&step[2]*1!==SgfTree.COLOR_WHITE){
 			continue;
 		}
 		traceSgf+= ';'+SgfTree.fromInt(step[2])+'['+SgfTree.toGnuCo(step[0],step[1])+']';
@@ -372,11 +372,11 @@ SgfTree.addTrace = function(sgf ,trace) {
  * @return
  */
 SgfTree.toVertex = function(strVertex) {
-	if(null == strVertex || strVertex.length ==0){
+	if(null === strVertex || strVertex.length ===0){
 		return Vertex.pass();
 	}
 	var str = strVertex.toLowerCase();
-	if(2 !=str.length) {
+	if(2 !== str.length) {
 		return null;
 	}
 	return new Vertex(str.charCodeAt(0)-'a'.charCodeAt(0), str.charCodeAt(1)-'a'.charCodeAt(0));
@@ -400,7 +400,7 @@ Vertex.pass = function() {
 	return new Vertex(-1,-1);
 }
 Vertex.prototype.equals = function(v){
-	return this.col ==v.col && this.row ==v.row;
+	return this.col === v.col && this.row === v.row;
 }
 // Vertex.prototype.hashCode = function(v){
 // 	return col+row*19;

@@ -1,19 +1,12 @@
-/**
- * 试卷用棋盘控制器
- */
-// define([
-// 	'jquery',
-// 	'underscore',
-// 	'js/common',
-// 	'js/libs/Go',
-// 	'js/libs/Goboard2d',
-// ], function ($, _, Common, Go, Goboard) {
-
 import Goboard from "./Goboard";
-import {Go} from "./Go";
+// import {Go} from "./Go";
+import Board from "../newGo/Board";
+
 import {SgfMoveNode, SgfNode, SgfTree} from "./SgfTree"
 import EventEmitter from "events";
 import Audio from  './Audio'
+
+const Go = Board
 
 export default class GoboardPlayer extends EventEmitter{
 
@@ -50,8 +43,8 @@ export default class GoboardPlayer extends EventEmitter{
 			map.set(item, require(`./assets/sound/${item}.mp3`))
 		})
 
-		Audio.init()
-		Audio.loadEffects(map)
+		// Audio.init()
+		// Audio.loadEffects(map)
 	}
 
 	// fullSgf: 带有答案的sgf, 用于正确裁剪棋盘（避免答案部分被裁剪掉）
@@ -179,6 +172,7 @@ export default class GoboardPlayer extends EventEmitter{
 		this.cb.clearBoard();
 
 		this.go = new Go(this.boardSize);
+		window.go = this.go
 	}
 
 	toStart () {
@@ -280,7 +274,7 @@ export default class GoboardPlayer extends EventEmitter{
 			});
 		}
 
-		if (this.cb.options.showOrder == 'last') {
+		if (this.cb.options.showOrder === 'last') {
 			this.cb.showLastOrder();
 		}
 
@@ -340,9 +334,11 @@ export default class GoboardPlayer extends EventEmitter{
 
 			if (!i.mark && !i.move) {
 				this.cb.addPiece(key, i.col, i.row, i.color, -1);
-				this.go.add(i.col, i.row, i.color);
+				// this.go.add(i.col, i.row, i.color);
+				this.go.add_stone(this.go.POS(i.row, i.col), i.color)
 			}
 		});
+		this.go.print_board()
 
 		//后渲染字母，保证不被棋子盖住
 		stones.forEach( i => {
@@ -417,6 +413,7 @@ export default class GoboardPlayer extends EventEmitter{
 						case "MA": // 叉子
 							this.addSpecialMarks(prop.values, "✕");
 							break;
+						default:
 					}
 
 				});
@@ -458,7 +455,7 @@ export default class GoboardPlayer extends EventEmitter{
 
 			json.mark = arr[1];
 
-			if (arr[1] == "~{!o~}") {
+			if (arr[1] === "~{!o~}") {
 				json.mark = "☆";
 			}
 			this.stones.push(json);

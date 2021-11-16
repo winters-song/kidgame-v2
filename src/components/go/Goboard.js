@@ -10,7 +10,7 @@ import board19Img from './assets/goboard-19.png'
 
 // 棋子绘制
 Raphael.fn.ball = function ({x, y, r, color, shadow, blackImg, whiteImg }) {
-	var img = color == 1 ? blackImg : whiteImg;
+	var img = color === 1 ? blackImg : whiteImg;
 
 	if(shadow){
 		return this.set(
@@ -27,9 +27,10 @@ const BoardEvents = [
 	{ key: 'mousedown', name: 'onMouseDown', handler: 'mouseDownHandler'},
 	{ key: 'mouseup', name: 'onMouseUp', handler: 'mouseUpHandler'},
 	{ key: 'mousemove', name: 'onMouseMove', handler: 'mouseMoveHandler'},
-	{ key: 'touchstart', name: 'onTouchStart', handler: 'touchStartHandler'},
-	{ key: 'touchend', name: 'onTouchEnd', handler: 'touchEndHandler'},
-	{ key: 'touchmove', name: 'onTouchMove', handler: 'touchMoveHandler'}]
+	// { key: 'touchstart', name: 'onTouchStart', handler: 'touchStartHandler'},
+	// { key: 'touchend', name: 'onTouchEnd', handler: 'touchEndHandler'},
+	// { key: 'touchmove', name: 'onTouchMove', handler: 'touchMoveHandler'}
+	]
 
 export default class Goboard {
 
@@ -240,14 +241,6 @@ export default class Goboard {
 		const dh = this.height * ratio;
 		this.paper.setViewBox(this.offsetX, this.offsetY, dw, dh);
 
-		// if(me.options.position == 'c'){
-		// 	var screen_width = me.$el.parent().width();
-		// 	// var screen_height = $(window).height();
-
-		// 	var offsetX = (screen_width - me.width) / 2;
-		// 	me.el.style.marginLeft =  offsetX
-		// }
-
 	}
 
 	initHelper () {
@@ -313,9 +306,9 @@ export default class Goboard {
 	initCoordinates () {
 
 		let alpha;
-		if(this.options.boardSize == 9){
+		if(this.options.boardSize === 9){
 			alpha = 'ABCDEFGHJ';
-		}else if(this.options.boardSize == 13){
+		}else if(this.options.boardSize === 13){
 			alpha = 'ABCDEFGHJKLMN';
 		}else{
 			alpha = 'ABCDEFGHJKLMNOPQRST';
@@ -337,9 +330,9 @@ export default class Goboard {
 		let text;
 		let offset;
 		let size = this.options.boardSize
-		if(size == 9){
+		if(size === 9){
 			offset = 35;
-		}else if (size == 13){
+		}else if (size === 13){
 			offset = 26;
 		}else{
 			offset = 17;
@@ -517,7 +510,7 @@ export default class Goboard {
 				this.intersects = true;
 			}
 
-			if(this.myTurn && "markDead" != this.boardStatus){
+			if(this.myTurn && "markDead" !== this.boardStatus){
 				dummy.show();
 			} else {
 				dummy.hide();
@@ -533,9 +526,9 @@ export default class Goboard {
 	shoot () {
 		const {col, row} = this.mouse_co;
 
-		if(this.clickStatus == 'marker'){
+		if(this.clickStatus === 'marker'){
 			this.onMarkCb.call(this, this.nextMarker, col, row);
-		}else if(this.clickStatus == 'vote'){
+		}else if(this.clickStatus === 'vote'){
 			this.onVoteCb.call(this, this.currentColor, col, row);
 		}else{
 			this.onPlayCb.call(this, this.currentColor, col, row);
@@ -717,7 +710,6 @@ export default class Goboard {
 	setReadonly (b){
 		this.options.readonly = b;
 
-		const func = b? 'removeEventListener' : 'addEventListener'
 		if(b){
 			this.dummy.hide();
 		}else{
@@ -739,48 +731,6 @@ export default class Goboard {
 	}
 
 
-	// setMarkDead (b){
-	// 	var me = this;
-
-	// 	if(!b){
-	// 		me.$el.off('mousemove.player').off('click.player');
-	// 		me.clearTerritoryMarkers();
-
-	// 		//@需要处理dummy棋子
-	// 	} else {
-
-	// 		if(!me.isMobile){
-	// 			me.$el.on('mousemove.player', function(e){
-
-	// 				var x = e.clientX;
-	// 				var y = e.clientY;
-
-	// 				var offset = me.$el.offset();
-	// 				x -= offset.left;
-	// 				y -= offset.top;
-	// 				x += $(window).scrollLeft();
-	// 				y += $(window).scrollTop();
-
-	// 				me.mouse.x = x;
-	// 				me.mouse.y = y;
-
-	// 				me.checkIntersection();
-
-	// 			});
-	// 		}
-	// 		me.$el.on( 'click.player', function() {
-
-	// 			me.checkIntersection();
-
-	// 			if(me.intersects){
-	// 				if("markDead" == me.boardStatus) {
-	// 					me.markDead();
-	// 				}
-	// 			}
-	// 		});
-	// 	}
-	// }
-
 	add (color, col, row, silent) {
 		var key = col + "," + row;
 
@@ -793,7 +743,7 @@ export default class Goboard {
 		if(this.pieces[key]) {
 			return false;
 		}
-		if(-1 != col && -1 != row) {
+		if(-1 !== col && -1 !== row) {
 
 			this.addPiece(key, col, row, color);
 
@@ -841,7 +791,7 @@ export default class Goboard {
 		stepText = this.paper.text(co[0], co[1], orderMain).attr({
 			'font-size': this.options.fontSize,
 			'font-family': this.options.fontFamily,
-			fill: color==1 ? '#fff' : '#000'
+			fill: color===1 ? '#fff' : '#000'
 		});
 		this.orders[key] = stepText;
 
@@ -850,7 +800,7 @@ export default class Goboard {
 			stepText.hide();
 		}
 		//显示最后一手，隐藏上一个手数
-		if(this.options.showOrder == 'last' && !this.branch){
+		if(this.options.showOrder === 'last' && !this.branch){
 			this.lastStepText && this.lastStepText.hide();
 			//上一步时，添加吃掉的子，这些子不展示手数
 			if(isRecover){
@@ -877,7 +827,7 @@ export default class Goboard {
 			stepText = this.paper.text(co[0], co[1], order).attr({
 				'font-size': this.options.fontSize,
 				'font-family': this.options.fontFamily,
-					fill: color==1 ? '#fff' : '#000'
+					fill: color===1 ? '#fff' : '#000'
 			});
 			this.branchOrders[key] = stepText;
 
@@ -914,7 +864,7 @@ export default class Goboard {
 		for(var i = this.trace.length-1;i>=0 ;i--){
 			// indexOf '15,1' -> '15,18','15,17'...
 			// indexOf '15,1,' -> '15,1,'
-			if(0 == this.trace[i].indexOf(col+','+row + ',')) {
+			if(0 === this.trace[i].indexOf(col+','+row + ',')) {
 				m = this.trace[i];
 				break;
 			}
@@ -953,7 +903,7 @@ export default class Goboard {
 			// console.log(this.options.showOrder)
 			if(this.options.showOrder || this.branch){
 				//黑-红，白-蓝
-				if(color == 1){
+				if(color === 1){
 					headColor = 'red'
 				}else{
 					headColor = 'blue'
@@ -1004,15 +954,15 @@ export default class Goboard {
 
 	// iqidao 1.0
 	loadFromGo (history , stones){
-		var h = [];
-		for(var i =0 ;i < history.length ;i++) {
+		let h = [];
+		for(let i =0 ;i < history.length ;i++) {
 			h.push(history[i].col+","+history[i].row+","+history[i].color+","+(history[i].isAdded?1:0));
 		}
-		var s = {};
-		var cols = stones.split(',');
-		for(var i = 0 ;i < cols.length;i++) {
-			for(var j=0 ;j<cols[i].length;j++){
-				if(0 == cols[i][j]*1) {
+		let s = {};
+		let cols = stones.split(',');
+		for(let i = 0 ;i < cols.length;i++) {
+			for(let j=0 ;j<cols[i].length;j++){
+				if(0 === cols[i][j]*1) {
 					continue;
 				}
 				s[i+","+j] = cols[i][j]*1;
@@ -1054,7 +1004,7 @@ export default class Goboard {
 
 		var lastMove = this.parsePlay(this.trace[last]);
 
-		if(lastMove.vertex == '-1,-1'){
+		if(lastMove.vertex === '-1,-1'){
 			if(last < 1){
 				return;
 			}
@@ -1131,7 +1081,7 @@ export default class Goboard {
 		for(var i = 0 ; i < this.trace.length; i++){
 			const goCo = this.trace[i].split(",");
 			//pass
-			if(-1 == goCo[0] || -1 == goCo[1]){
+			if(-1 === goCo[0] || -1 === goCo[1]){
 				continue;
 			}
 			var key = goCo[0]+","+goCo[1];
@@ -1242,10 +1192,6 @@ export default class Goboard {
 		}
 	}
 
-	computeCurrentColor (){
-		return this.trace.length % 2 == 0 ? 0 : 1;
-	}
-
 	drawPlaces (color, vertexes){
 		for(var i = 0 ;i<vertexes.length ;i++) {
 			var key = vertexes[i].Col + "," + vertexes[i].Row;
@@ -1258,9 +1204,9 @@ export default class Goboard {
 
 		let fill;
 
-		if(color == 1 ){
+		if(color === 1 ){
 			fill = 'black';
-		}else if(color == 2){
+		}else if(color === 2){
 			fill = 'white';
 		}else{
 			fill = 'red';
@@ -1297,8 +1243,6 @@ export default class Goboard {
 
 	drawMarker (mark, col, row){
 		var key = col + "," + row;
-
-		var color;
 
 		if( col > this.options.boardSize || row > this.options.boardSize){
 			return false;
