@@ -1,0 +1,46 @@
+@border-color: #6e3838;
+
+#page{
+  position: fixed;
+  top: 0;
+  left:0;
+  right: 0;
+  bottom: 0;
+  background: url(../assets/quiz-bg.png);
+  background-size: cover;
+}
+
+.puzzle-box{
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  right: 30px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: row;
+
+  .colomn{
+    flex: 1;
+  }
+
+  .flex{
+    display: flex;
+  }
+}
+
+.goboard {
+  position: relative;
+  float: right;
+
+  &:before{
+    position: absolute;
+    top: 2.4%;
+    bottom: 2.4%;
+    left: 2.4%;
+    right: 2.4%;
+    content:'';
+    background: @border-color;
+    border-radius: 5%;
+    box-shadow: 0 4px 20px fade(black, 40);
+  }
+}
