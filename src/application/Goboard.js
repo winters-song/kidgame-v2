@@ -1,7 +1,7 @@
 //题目详情（错题本） - 学生
 import React, {useRef, useEffect} from "react";
 
-import GoboardPlayer from '../components/go/Goboard-puzzle.sgf'
+import GoboardPlayer from '../components/go/Goboard.sgf'
 import {SgfTree} from "../components/go/SgfTree"
 
 import './index.less'
