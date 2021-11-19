@@ -79,16 +79,11 @@ export default class GoboardPlayer extends EventEmitter{
 		this.cb.setCurrentColor(this.whoFirst);
 		this.cb.whoFirst = this.whoFirst;
 		//设置go的先手
-		this.go.startColor = this.whoFirst;
+		// this.go.startColor = this.whoFirst;
 	}
 
 	initEvents () {
 		this.cb.onPlay((color, col, row) => {
-
-			//有锁时用户不能落子，用于交替落子应答
-			if (this.playerLock) {
-				return;
-			}
 
 			//有棋子的地方不能落子，否则步数出问题
 			if (!this.go.canPlay(col, row, color)) {
@@ -114,37 +109,27 @@ export default class GoboardPlayer extends EventEmitter{
 	}
 
 	move (node, silent) {
-		var eated = this.go.play(node.col, node.row, node.color);
+		const eated = this.go.play(node.col, node.row, node.color);
 
-		if (null !== eated) {
-			this.cb.clientColor = this.cb.oppositeColor(this.cb.clientColor);
-			this.cb.currentColor = this.cb.clientColor
-			//有silent时 不执行showHead
-			this.cb.add(node.color, node.col, node.row, silent);
+		this.go.print_board()
 
-			if (!silent) {
-				var rand = Math.round(1E4 * Math.random()) % 5;
-				Audio.play(`stone${rand + 1}`)
-			}
+		this.cb.clientColor = this.cb.oppositeColor(this.cb.clientColor);
+		this.cb.currentColor = this.cb.clientColor
+		//有silent时 不执行showHead
+		this.cb.add(node.color, node.col, node.row, silent);
 
-			if (eated.size) {
-				const capures = [];
-				eated.forEach(function (vertex) {
-					const arr = vertex.split(',');
-					const item = {
-						col: arr[0] * 1,
-						row: arr[1] * 1
-					};
-					capures.push(item);
-				});
+		if (!silent) {
+			var rand = Math.round(1E4 * Math.random()) % 5;
+			Audio.play(`stone${rand + 1}`)
+		}
 
-				this.cb.eat(capures);
+		if (eated && eated.length) {
+			this.cb.eat(eated);
 
-				if(eated.size<=2){
-					Audio.play('eat1')
-				}else{
-					Audio.play('eat2')
-				}
+			if(eated.length<=2){
+				Audio.play('eat1')
+			}else{
+				Audio.play('eat2')
 			}
 		}
 	}
@@ -334,8 +319,7 @@ export default class GoboardPlayer extends EventEmitter{
 
 			if (!i.mark && !i.move) {
 				this.cb.addPiece(key, i.col, i.row, i.color, -1);
-				// this.go.add(i.col, i.row, i.color);
-				this.go.add_stone(this.go.POS(i.row, i.col), i.color)
+				this.go.add(i.col, i.row, i.color);
 			}
 		});
 		this.go.print_board()

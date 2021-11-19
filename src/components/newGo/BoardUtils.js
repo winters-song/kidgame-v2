@@ -15,6 +15,11 @@ export class StringData {
   }
 };
 
+export class StringPosData {
+  constructor() {
+    this.list = []
+  }
+}
 
 export const Utils = {
   OTHER_COLOR (color) {
@@ -30,7 +35,7 @@ export const Utils = {
     return di * (this.MAX_BOARD + 1) + dj
   },
   I (pos) {
-    return pos / (this.MAX_BOARD + 1) - 1
+    return Math.floor(pos / (this.MAX_BOARD + 1)) - 1
   },
   J (pos) {
     return pos % (this.MAX_BOARD + 1) - 1
@@ -151,6 +156,11 @@ export const Utils = {
   /* These four macros have rather confusing names. It should be read as:
    * "(pos) is a neighbor of string (s) of (color) in any direction except
    * the specified one".
+   * pos落子后，周围有唯一相邻我方棋串，气合并时，pos南面的气是不是已经是棋串的气（该气的南or西or东是s棋串的棋子, 北面是刚落子不需要判断）
+   *
+   *  .*O
+   *  O.O
+   *  OOO
    */
   NON_SOUTH_NEIGHBOR_OF_STRING(pos, s, color) {
     return this.STRING_AT_VERTEX(this.SOUTH(pos), s, color)
@@ -186,14 +196,19 @@ export const Utils = {
 
   ADD_LIBERTY(s, pos) {
     if (this.string[s].liberties < this.MAX_LIBERTIES){
+      if(!this.string_libs[s]){
+        this.string_libs[s] = new StringPosData()
+      }
       this.string_libs[s].list[this.string[s].liberties] = pos;
       this.string[s].liberties++;
     }
   },
+
+  // 没有string_libs记录就创建新的，添加气并标记
   ADD_AND_MARK_LIBERTY(s, pos) {
     if (this.string[s].liberties < this.MAX_LIBERTIES) {
       if(!this.string_libs[s]){
-        this.string_libs[s] = { list : []}
+        this.string_libs[s] = new StringPosData()
       }
       this.string_libs[s].list[this.string[s].liberties] = pos;
     }
@@ -203,20 +218,20 @@ export const Utils = {
 
   ADD_NEIGHBOR(s, pos){
     if(!this.string_neighbors[s]){
-      this.string_neighbors[s] =  { list : []}
+      this.string_neighbors[s] = new StringPosData()
     }
     this.string_neighbors[s].list[this.string[s].neighbors++] = this.string_number[pos]
   },
 
   DO_ADD_STONE(pos, color) {
-    this.PUSH_VERTEX(this.board[pos]);
+    this.pushVertex(pos);
     this.board[pos] = color;
     this.hash.invert_stone(this.board_hash, pos, color);
   },
 
   DO_REMOVE_STONE(pos) {
-    this.PUSH_VERTEX(this.board[pos]);
-    this.invert_stone(this.board_hash, pos, this.board[pos]);
+    this.pushVertex(pos);
+    this.hash.invert_stone(this.board_hash, pos, this.board[pos]);
     this.board[pos] = colors.EMPTY;
   }
 

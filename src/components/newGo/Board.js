@@ -4,7 +4,8 @@ import {
   ko_rules
 } from './Constants'
 import Hash from './Hash'
-import {StringData, Utils} from './BoardUtils'
+import {StringData, StringPosData, Utils} from './BoardUtils'
+import {BoardInterface} from './BoardInterface'
 const boardParams = [
   'board_size',
   'board_ko_pos',
@@ -25,7 +26,7 @@ const directions = ['SOUTH', 'WEST', 'NORTH', 'EAST']
 class Board {
 
   constructor(boardSize) {
-    Object.assign(this, Utils)
+    Object.assign(this, Utils, BoardInterface)
 
     this.initConstants(boardSize)
     this.initParams()
@@ -322,6 +323,7 @@ class Board {
    * it yourself after all the moves have been played.
    */
   play_move_no_history( pos,  color, update_internals) {
+    let captured
     if (this.board_ko_pos !== NO_MOVE){
       this.hash.invert_ko(this.board_hash, this.board_ko_pos);
     }
@@ -331,12 +333,7 @@ class Board {
     if (pos !== PASS_MOVE) {
       // 断言： pos在棋盘上， pos是空
       /* Do play the move. */
-      // if (!this.is_suicide(pos, color)){
-        this.do_play_move(pos, color);
-      // } else {
-        console.log('自杀')
-        // this.do_commit_suicide(pos, color);
-      // }
+      captured = this.do_play_move(pos, color);
     }
 
     if (update_internals || this.next_string === this.MAX_STRINGS) {
@@ -346,6 +343,7 @@ class Board {
       this.change_stack = []
       this.vertex_stack = []
     }
+    return captured
   }
 
   /* Load the initial position and replay the first n moves. */
@@ -383,6 +381,7 @@ class Board {
     // pass或者pos位置是空
     // pos不是打劫禁入点
 
+    let captured
     //  color, pos, hash分别记录
     this.move_history_color[this.move_history_pointer] = color;
     this.move_history_pos[this.move_history_pointer] = pos;
@@ -391,8 +390,9 @@ class Board {
       this.hash.invert_ko(this.move_history_hash[this.move_history_pointer], this.board_ko_pos);
     }
     this.move_history_pointer++;
-    this.play_move_no_history(pos, color, 1);
+    captured = this.play_move_no_history(pos, color, 1);
     this.movenum++;
+    return captured
   }
 
   // 打印棋盘
@@ -429,15 +429,21 @@ class Board {
     /* Check for suicide. */
     // 南面有气 或 是敌方棋串且1气，是我方棋子且1气以上， 则不是自杀
     for(let i in directions){
-      const func = me[directions[i]]
+      const p = me[directions[i]](pos)
 
-      if (me.LIBERTY(func(pos))
-        || (me.ON_BOARD(func(pos)) && ((me.board[func(pos)] === color) ^ (me.LIBERTIES(func(pos)) === 1))))
+      if (me.LIBERTY(p) || (me.ON_BOARD(p) && ((me.board[p] === color) ^ (me.LIBERTIES(p) === 1))))
         return 0;
     }
     return 1;
   }
 
+  /*
+   * is_allowed_move(int pos, int color) determines whether a move is
+   * legal with respect to the suicide and ko rules in play.
+   *
+   * This function is only valid when stackp == 0 since there is no
+   * tracking of superko for trymoves.
+   */
   // 合法落子检查
   is_allowed_move(pos, color){
 
@@ -572,7 +578,7 @@ class Board {
     return size;
   }
 
-  // 建立棋串的气、相邻
+  // 建立棋串的气、撞气信息
   find_liberties_and_neighbors (s) {
     const other = this.OTHER_COLOR(this.string[s].color);
 
@@ -603,13 +609,427 @@ class Board {
     } while (!this.BACK_TO_FIRST_STONE(s, pos));
   }
 
+  /* Update the liberties of a string from scratch, first pushing the
+   * old information.
+   */
+  update_liberties(s) {
+    /* Push the old information. */
+    this.pushValue(this.string[s], 'liberties')
+    for (let k = 0; k < this.string[s].liberties && k < this.MAX_LIBERTIES; k++) {
+      this.pushValue(this.string_libs[s].list, k)
+    }
+    this.string[s].liberties = 0;
+
+    /* Clear the liberty mark. */
+    this.liberty_mark++;
+
+    /* Traverse the stones of the string, by following the cyclic chain. */
+    let pos = this.FIRST_STONE(s);
+    do {
+      /* Look in each direction for new liberties. Mark already visited
+       * liberties.
+       */
+      for(let i in directions){
+        const p = this[directions[i]](pos)
+        if(this.UNMARKED_LIBERTY(p)){
+          this.ADD_AND_MARK_LIBERTY(s, p);
+        }
+      }
+
+      pos = this.NEXT_STONE(pos);
+    } while (!this.BACK_TO_FIRST_STONE(s, pos));
+  }
+
+
+  /* Remove a string from the list of neighbors and push the changed
+   * information.
+   */
+  remove_neighbor(str_number, n) {
+    let s = this.string[str_number];
+    let sn = this.string_neighbors[str_number];
+    for (let k = 0; k < s.neighbors; k++){
+      if (sn.list[k] === n) {
+        /* We need to push the last entry too because it may become
+         * destroyed later.
+         */
+        this.pushValue(sn.list, s.neighbors - 1)
+        this.pushValue(sn.list, k)
+        this.pushValue(s, 'neighbors')
+        sn.list[k] = sn.list[s.neighbors - 1];
+        s.neighbors--;
+        break;
+      }
+    }
+  }
+
+
+  /* Remove one liberty from the list of liberties, pushing changed
+   * information. If the string had more liberties than the size of the
+   * list, rebuild the list from scratch.
+   */
+  remove_liberty(str_number, pos) {
+    let s = this.string[str_number];
+    let sl = this.string_libs[str_number];
+
+    if (s.liberties > this.MAX_LIBERTIES){
+      this.update_liberties(str_number);
+    } else {
+      for (let k = 0; k < s.liberties; k++) {
+        if (sl.list[k] === pos) {
+          /* We need to push the last entry too because it may become
+           * destroyed later.
+           */
+          this.pushValue(sl.list, s.liberties - 1)
+          this.pushValue(sl.list, k)
+          this.pushValue(sl, 'liberties')
+
+          sl.list[k] = sl.list[s.liberties - 1];
+          s.liberties--;
+          break;
+        }
+      }
+    }
+  }
+
+  /* Remove a string from the board, pushing necessary information to
+   * restore it. Return the number of removed stones.
+   */
+  // 两子以内，简单更新撞气信息；否则重新计算撞气信息
+  do_remove_string(s, captured) {
+    const size = this.string[s].size;
+
+    /* Traverse the stones of the string, by following the cyclic chain. */
+    let pos = this.FIRST_STONE(s);
+    do {
+      /* Push color, string number and cyclic chain pointers. */
+      this.pushValue(this.string_number, pos);
+      this.pushValue(this.next_stone, pos);
+      this.DO_REMOVE_STONE(pos);
+      captured.push(pos)
+      pos = this.NEXT_STONE(pos);
+    } while (!this.BACK_TO_FIRST_STONE(s, pos));
+
+    /* The neighboring strings have obtained some new liberties and lost
+     * a neighbor.  For speed reasons we handle two most common cases
+     * when string size is 1 or 2 stones here instead of calling
+     * update_liberties().
+     */
+    if (size === 1) {
+      for (let k = 0; k < this.string[s].neighbors; k++) {
+        const neighbor = this.string_neighbors[s].list[k];
+
+        this.remove_neighbor(neighbor, s);
+        this.pushValue(this.string[neighbor], 'liberties');
+
+        if (this.string[neighbor].liberties < this.MAX_LIBERTIES){
+          this.string_libs[neighbor].list[this.string[neighbor].liberties] = pos;
+        }
+        this.string[neighbor].liberties++;
+      }
+    } else if (size === 2) {
+      let other = this.OTHER_COLOR(this.string[s].color);
+      let pos2 = this.NEXT_STONE(pos);
+
+      for (let k = 0; k < this.string[s].neighbors; k++) {
+        const neighbor = this.string_neighbors[s].list[k];
+
+        this.remove_neighbor(neighbor, s);
+        this.pushValue(this.string[neighbor], 'liberties');
+
+        //相邻是撞气
+        if (this.NEIGHBOR_OF_STRING(pos, neighbor, other)) {
+          if (this.string[neighbor].liberties < this.MAX_LIBERTIES)
+            this.string_libs[neighbor].list[this.string[neighbor].liberties] = pos;
+          this.string[neighbor].liberties++;
+        }
+
+        if (this.NEIGHBOR_OF_STRING(pos2, neighbor, other)) {
+          if (this.string[neighbor].liberties < this.MAX_LIBERTIES)
+            this.string_libs[neighbor].list[this.string[neighbor].liberties] = pos2;
+          this.string[neighbor].liberties++;
+        }
+      }
+    }
+    else {
+      for (let k = 0; k < this.string[s].neighbors; k++) {
+        this.remove_neighbor(this.string_neighbors[s].list[k], s);
+        this.update_liberties(this.string_neighbors[s].list[k]);
+      }
+    }
+
+    /* Update the number of captured stones. These are assumed to
+     * already have been pushed.
+     */
+    if (this.string[s].color === colors.WHITE){
+      this.white_captured += size;
+    } else {
+      this.black_captured += size;
+    }
+
+    return size;
+  }
+
+  /* We have played an isolated new stone and need to create a new
+   * string for it.
+   */
+  create_new_string(pos) {
+    const color = this.board[pos];
+    const other = this.OTHER_COLOR(color);
+
+    /* Get the next free string number. */
+    this.pushValue(this, 'next_string');
+    let s = this.next_string++;
+    // 断言：s < MAX_STRINGS
+    this.string_number[pos] = s;
+    /* Set up a size one cycle for the string. */
+    this.next_stone[pos] = pos;
+
+    /* Set trivially known values and initialize the rest to zero. */
+    this.string[s] = new StringData({
+      size: 1,
+      color,
+      origin: pos,
+      mark: 0
+    })
+
+    /* Clear the string mark. */
+    this.string_mark++;
+
+    /* In each direction, look for a liberty or a nonmarked opponent
+     * neighbor. Mark visited neighbors. There is no need to mark the
+     * liberties since we can't find them twice. */
+
+    for(let i in directions){
+      const p = this[directions[i]](pos)
+      if(this.LIBERTY(p)){
+        this.ADD_LIBERTY(s, p);
+      }else if (this.UNMARKED_COLOR_STRING(p, other)){
+        const s2 = this.string_number[p];
+        /* Add the neighbor to our list. */
+        this.ADD_NEIGHBOR(s, p);
+        /* Add us to our neighbor's list. */
+        this.pushValue(this.string[s2], 'neighbors');
+        this.ADD_NEIGHBOR(s2, pos);
+        this.MARK_STRING(p);
+      }
+    }
+  }
+
+  /* We have played a stone with exactly one friendly neighbor. Add the
+   * new stone to that string.
+   */
+  // pos落子周边有唯一我方棋串
+  extend_neighbor_string(pos, s) {
+    let liberties_updated = 0;
+    const color = this.board[pos];
+    const other = this.OTHER_COLOR(color);
+
+    /* Link in the stone in the cyclic list. */
+    // 更新棋子循环列表
+    const pos2 = this.string[s].origin;
+    this.next_stone[pos] = this.next_stone[pos2];
+    this.pushValue(this.next_stone, pos2);
+    this.next_stone[pos2] = pos;
+
+    /* Do we need to update the origin? */
+    // 更新origin，保持pos为当前棋串棋子最小
+    if (pos < pos2) {
+      this.pushValue(this.string[s], 'origin');
+      this.string[s].origin = pos;
+    }
+
+    this.string_number[pos] = s;
+
+    /* The size of the string has increased by one. */
+    this.pushValue(this.string[s], 'size');
+    this.string[s].size++;
+
+    /* If s has too many liberties, we don't know where they all are and
+     * can't update the liberties with the algorithm we otherwise
+     * use. In that case we can only recompute the liberties from
+     * scratch.
+     */
+    if (this.string[s].liberties > this.MAX_LIBERTIES) {
+      this.update_liberties(s);
+      liberties_updated = 1;
+    } else {
+      /* The place of the new stone is no longer a liberty. */
+      this.remove_liberty(s, pos);
+    }
+
+    /* Mark old neighbors of the string. */
+    this.string_mark++;
+    for (let k = 0; k < this.string[s].neighbors; k++)
+      this.string[this.string_neighbors[s].list[k]].mark = this.string_mark;
+
+    /* Look at the neighbor locations of pos for new liberties and/or
+     * neighbor strings.
+     */
+
+    /* If we find a liberty, look two steps away to determine whether
+     * this already is a liberty of s.
+     */
+    for(let i in directions){
+      const p = this[directions[i]](pos)
+      const func = this[`NON_${directions[i]}_NEIGHBOR_OF_STRING`]
+      // pos南边是气， 合并棋串气<=8,
+      if (this.LIBERTY(p)) {
+        if (!liberties_updated && !func.call(this, p, s, color))  {
+          this.ADD_LIBERTY(s, p);
+        }
+      } else if (this.UNMARKED_COLOR_STRING(p, other)) {
+        // 我方、敌方棋串增加撞气
+        const s2 = this.string_number[p];
+        this.pushValue(this.string[s], 'neighbors');
+        this.ADD_NEIGHBOR(s, p);
+        this.pushValue(this.string[s2], 'neighbors');
+        this.ADD_NEIGHBOR(s2, pos);
+        this.MARK_STRING(p);
+      }
+    }
+  }
+
+
+
+  /* Incorporate the string at pos with the string s.
+   */
+  assimilate_string(s, pos) {
+    let last;
+    const s2 = this.string_number[pos];
+    this.string[s].size += this.string[s2].size;
+
+    /* Walk through the s2 stones and change string number. Also pick up
+     * the last stone in the cycle for later use.
+     */
+    pos = this.FIRST_STONE(s2);
+    do {
+      this.pushValue(this.string_number, pos);
+      this.string_number[pos] = s;
+      last = pos;
+      pos = this.NEXT_STONE(pos);
+    } while (!this.BACK_TO_FIRST_STONE(s2, pos));
+
+    /* Link the two cycles together. */
+    let pos2 = this.string[s].origin;
+    this.pushValue(this.next_stone, 'last');
+    this.pushValue(this.next_stone,'pos2');
+    this.next_stone[last] = this.next_stone[pos2];
+    this.next_stone[pos2] = this.string[s2].origin;
+
+    /* Do we need to update the origin? */
+    if (this.string[s2].origin < pos2){
+      this.string[s].origin = this.string[s2].origin;
+    }
+
+    /* Pick up the liberties of s2 that we don't already have.
+     * It is assumed that the liberties of s have been marked before
+     * this function is called.
+     */
+    if (this.string[s2].liberties <= this.MAX_LIBERTIES) {
+      for (let k = 0; k < this.string[s2].liberties; k++) {
+        pos2 = this.string_libs[s2].list[k];
+        if (this.UNMARKED_LIBERTY(pos2)) {
+          this.ADD_AND_MARK_LIBERTY(s, pos2);
+        }
+      }
+    } else {
+      /* If s2 had too many liberties the above strategy wouldn't be
+       * effective, since not all liberties are listed in
+       * libs[] the chain of stones for s2 is no
+       * longer available (it has already been merged with s) so we
+       * can't reconstruct the s2 liberties. Instead we capitulate and
+       * rebuild the list of liberties for s (including the neighbor
+       * strings assimilated so far) from scratch.
+       */
+      this.liberty_mark++;          /* Reset the mark. */
+      this.string[s].liberties = 0; /* To avoid pushing the current list. */
+      this.update_liberties(s);
+    }
+
+    /* Remove s2 as neighbor to the neighbors of s2 and instead add s if
+     * they don't already have added it. Also add the neighbors of s2 as
+     * neighbors of s, unless they already have been added. The already
+     * known neighbors of s are assumed to have been marked before this
+     * function is called.
+     */
+    for (let k = 0; k < this.string[s2].neighbors; k++) {
+      const t = this.string_neighbors[s2].list[k];
+      this.remove_neighbor(t, s2);
+      if (this.string[t].mark !== this.string_mark) {
+        this.pushValue(this.string[t], 'neighbors');
+        this.string_neighbors[t].list[this.string[t].neighbors++] = s;
+
+        if(!this.string_neighbors[s]){
+          this.string_neighbors[s] = new StringPosData()
+        }
+        this.string_neighbors[s].list[this.string[s].neighbors++] = t;
+        this.string[t].mark = this.string_mark;
+      }
+    }
+  }
+
+
+  /* Create a new string for the stone at pos and assimilate all
+   * friendly neighbor strings.
+   */
+  assimilate_neighbor_strings(pos) {
+    const color = this.board[pos];
+    const other = this.OTHER_COLOR(color);
+
+    /* Get the next free string number. */
+    this.pushValue(this, 'next_string');
+    let s = this.next_string++;
+    // PARANOID1(s < MAX_STRINGS, pos);
+    this.string_number[pos] = s;
+    /* Set up a size one cycle for the string. */
+    this.next_stone[pos] = pos;
+
+    /* Set trivially known values and initialize the rest to zero. */
+    this.string[s] = new StringData({
+      size: 1,
+      color,
+      origin: pos,
+      mark: 0
+    })
+
+    /* Clear the marks. */
+    this.liberty_mark++;
+    this.string_mark++;
+
+    /* Mark ourselves. */
+    this.string[s].mark = this.string_mark;
+
+    /* Look in each direction for
+     *
+     * 1. liberty: Add if not already visited.
+     * 2. opponent string: Add it among our neighbors and us among its
+     *    neighbors, unless already visited.
+     * 3. friendly string: Assimilate.
+     */
+    for(let i in directions) {
+      const p = this[directions[i]](pos)
+
+      if (this.UNMARKED_LIBERTY(p)) {
+        this.ADD_AND_MARK_LIBERTY(s, p);
+      } else if (this.UNMARKED_COLOR_STRING(p, other)) {
+        this.ADD_NEIGHBOR(s, p);
+        this.pushValue(this.string[this.string_number[p]], 'neighbors');
+        this.ADD_NEIGHBOR(this.string_number[p], pos);
+        this.MARK_STRING(p);
+      } else if (this.UNMARKED_COLOR_STRING(p, color)) {
+        this.assimilate_string(s, p);
+      }
+    }
+  }
+
+
   /* Play a move without legality checking. This is a low-level function,
- * it assumes that the move is not a suicide. Such cases must be handled
- * where the function is called.
- */
+  * it assumes that the move is not a suicide. Such cases must be handled
+  * where the function is called.
+  */
   do_play_move(pos, color) {
     const other = this.OTHER_COLOR(color);
-    let captured_stones = 0;
+    let captured_stones = [];
     let neighbor_allies = 0;
     let s = -1;
 
@@ -632,21 +1052,21 @@ class Board {
      */
 
     for(let i in directions){
-      const new_pos = this[directions[i]](pos)
+      const p = this[directions[i]](pos)
 
-      const judge1 = i === 0 ? this.board[new_pos] === color : this.UNMARKED_COLOR_STRING(new_pos, color)
-      const judge2 = i === 0 ? this.board[new_pos] === other : this.UNMARKED_COLOR_STRING(new_pos, other)
+      const judge1 = i === 0 ? this.board[p] === color : this.UNMARKED_COLOR_STRING(p, color)
+      const judge2 = i === 0 ? this.board[p] === other : this.UNMARKED_COLOR_STRING(p, other)
 
       if (judge1) {
         neighbor_allies++;
-        s = this.string_number[new_pos];
-        this.MARK_STRING(new_pos);
+        s = this.string_number[p];
+        this.MARK_STRING(p);
       } else if (judge2) {
-        if (this.LIBERTIES(new_pos) > 1) {
-          this.remove_liberty(this.string_number[new_pos], pos);
-          this.MARK_STRING(new_pos);
+        if (this.LIBERTIES(p) > 1) {
+          this.remove_liberty(this.string_number[p], pos);
+          this.MARK_STRING(p);
         } else{
-          captured_stones += this.do_remove_string(this.string_number[new_pos]);
+          this.do_remove_string(this.string_number[p], captured_stones);
         }
       }
     }
@@ -657,10 +1077,11 @@ class Board {
     } else if (neighbor_allies === 1) {
       // gg_assert(s >= 0);
       this.extend_neighbor_string(pos, s);
-      return; /* can't be a ko, we're done */
+      return captured_stones; /* can't be a ko, we're done */
     } else {
+      // 我方棋串合并
       this.assimilate_neighbor_strings(pos);
-      return; /* can't be a ko, we're done */
+      return captured_stones; /* can't be a ko, we're done */
     }
 
     /* Check whether this move was a ko capture and if so set
@@ -671,7 +1092,7 @@ class Board {
      */
     // 打劫： 1口气，1个子，吃了1个子， 记录 board_ko_pos
     s = this.string_number[pos];
-    if (this.string[s].liberties === 1 && this.string[s].size === 1 && captured_stones === 1) {
+    if (this.string[s].liberties === 1 && this.string[s].size === 1 && captured_stones.length === 1) {
       /* In case of a double ko: clear old ko position first. */
       if (this.board_ko_pos !== NO_MOVE){
         this.hash.invert_ko(this.board_hash, this.board_ko_pos)
@@ -679,10 +1100,9 @@ class Board {
       this.board_ko_pos = this.string_libs[s].list[0];
       this.hash.invert_ko(this.board_hash, this.board_ko_pos);
     }
+
+    return captured_stones
   }
-
-
-
 }
 
 
