@@ -7,9 +7,10 @@ import {SgfTree} from "../components/go/SgfTree"
 import './index.less'
 
 
-// const sgf = '(;CA[gb2312]AP[MultiGo:4.4.4]SZ[9];B[fe];W[ee];B[ef];W[ff])'
-// const sgf = '(;CA[gb2312]AB[fe][ef]AW[ee][ff]AP[MultiGo:4.4.4]SZ[9])'
-const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-16]AB[cc][dc][ec]AW[gc][ge])'
+// const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-16]AB[cc][dc][ec]AW[gc][ge])'
+// attack1
+const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-26]AB[dd][ed][de][df][ef][fd][ff]AW[ee][fe][gf][gg][gd][gc])';
+
 
 function Puzzle (props){
   const goboardRef = useRef()
@@ -26,7 +27,7 @@ function Puzzle (props){
     }
 
     player.init({sgfTree, whoFirst: whoPlay, boardSize});
-    player.toEnd()
+    // player.toEnd()
   }
 
   useEffect(() => {
@@ -34,6 +35,8 @@ function Puzzle (props){
       el: goboardRef.current,
     });
     changeData(player, sgf, 1)
+
+    player.genmove()
   }, [])
 
   return (

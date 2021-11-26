@@ -5,6 +5,7 @@ import Board from "../newGo/Board";
 import {SgfMoveNode, SgfNode, SgfTree} from "./SgfTree"
 import EventEmitter from "events";
 import Audio from  './Audio'
+import Genmove from "../newGo/Genmove";
 
 const Go = Board
 
@@ -452,6 +453,11 @@ export default class GoboardPlayer extends EventEmitter{
 			json.mark = type;
 			this.stones.push(json);
 		});
+	}
+
+	genmove() {
+		const generator = new Genmove(this.go)
+		generator.genmove(1)
 	}
 
 }

@@ -10,6 +10,17 @@ export const colors  = {
   NUM_KOMASTER_STATES: 7
 };
 
+export const codes = {
+  WIN : 5,
+  KO_A: 4,
+  GAIN: 3,
+  LOSS: 2,
+  KO_B: 1,
+  LOSE: 0,
+}
+
+
+
 export const PASS_MOVE = 0
 export const NO_MOVE = PASS_MOVE
 

@@ -37,13 +37,14 @@ class Board {
 
     // this.MIN_BOARD = 1
     this.MAX_BOARD = boardSize
+    this.MAXSTACK = this.MAX_BOARD * this.MAX_BOARD
     // this.MAX_HANDICAP = 9
     this.MAX_MOVE_HISTORY = 500
 
     this.DEFAULT_BOARD_SIZE = this.MAX_BOARD
 
     // n子棋串最多有2(n+1)口气，N^2棋盘上气的上限是 2/3 (N^2+1)
-    // this.MAXLIBS = 2*(this.MAX_BOARD * this.MAX_BOARD + 1)/3
+    this.MAXLIBS = 2*(this.MAX_BOARD * this.MAX_BOARD + 1)/3
     this.MAX_LIBERTIES = 8
     this.MAX_STRINGS = 4 * this.MAX_BOARD * this.MAX_BOARD / 5
     // this.MAXCHAIN = 160
@@ -81,6 +82,17 @@ class Board {
 
     this.position_number = 0
     this.stackp = 0
+
+    // trymove
+    this.stack = []
+    this.move_color = [];
+    this.board_hash_stack = []
+    this.trymove_counter = 0
+
+    //stones count
+    this.stone_count_for_position = -1;
+    this.white_stones = 0;
+    this.black_stones = 0;
 
     this.initData()
 
@@ -171,7 +183,7 @@ class Board {
     }
 
     this.hash.recalc(this.board_hash, this.board, this.board_ko_pos);
-    // new_position();
+    this.new_position();
 
   }
 
@@ -208,69 +220,84 @@ class Board {
   /*                      Temporary moves   (临时落子)                  */
   /* ================================================================ */
 
-  // trymove(pos, color, message, str) {
-  //   return do_trymove(pos, color, 0)
-  // }
+  trymove(pos, color, message, str) {
+    return this.do_trymove(pos, color, 0)
+  }
 
-  // tryko(pos, color, message) {
-  //   return do_trymove(pos, color, 1)
-  // }
+  tryko(pos, color, message) {
+    return this.do_trymove(pos, color, 1)
+  }
 
-  // do_trymove(pos, color, ignore_ko) {
-  //   if (pos !== PASS_MOVE) {
-  //     /* Update the reading tree shadow. */
-  //     // shadow[pos] = 1;
+  /* Really, really make a temporary move. It is assumed that all
+   * necessary checks have already been made and likewise that various
+   * administrative bookkeeping outside of the actual board logic has
+   * either been done or is not needed.
+   */
+  really_do_trymove(pos, color) {
+    this.change_stack.push(null)
+    this.vertex_stack.push(null)
+    this.pushValue(this, 'board_ko_pos');
 
-  //     /* 3. The location must be empty. */
-  //     if (board[pos] !== colors.EMPTY){
-  //       return 0;
-  //     }
+    this.board_hash_stack[this.stackp].hashval = this.board_hash.hashval
 
-  //     /* 4. The location must not be the ko point, unless ignore_ko === 1. */
-  //     if (!ignore_ko && pos === this.board_ko_pos) {
-  //       if (this.board[WEST(pos)] === OTHER_COLOR(color) || this.board[EAST(pos)] === OTHER_COLOR(color)) {
-  //         return 0;
-  //       }
-  //     }
+    if (this.board_ko_pos !== NO_MOVE){
+      this.hash.invert_ko(this.board_hash, this.board_ko_pos)
+    }
 
-  //     /* 5. Test for suicide. */
-  //     if (this.is_suicide(pos, color)){
-  //       return 0;
-  //     }
-  //   }
+    this.board_ko_pos = NO_MOVE;
+    this.stackp++;
+
+    if (pos !== PASS_MOVE) {
+      this.pushValue(this, 'black_captured');
+      this.pushValue(this, 'white_captured');
+      this.do_play_move(pos, color);
+    }
+  }
+
+  do_trymove(pos, color, ignore_ko) {
+    if (pos !== PASS_MOVE) {
+      /* Update the reading tree shadow. */
+      // shadow[pos] = 1;
+
+      /* 3. The location must be empty. */
+      if (this.board[pos] !== colors.EMPTY){
+        return 0;
+      }
+
+      /* 4. The location must not be the ko point, unless ignore_ko === 1. */
+      if (!ignore_ko && pos === this.board_ko_pos) {
+        if (this.board[this.WEST(pos)] === this.OTHER_COLOR(color)
+          || this.board[this.EAST(pos)] === this.OTHER_COLOR(color)) {
+          return 0;
+        }
+      }
+
+      /* 5. Test for suicide. */
+      if (this.is_suicide(pos, color)){
+        return 0;
+      }
+    }
 
     /* Check for stack overflow. */
-    // if (stackp >= MAXSTACK-2) {
-    //   fprintf(stderr,
-    //     "gnugo: Truncating search. This is beyond my reading ability!\n");
-    //   /* FIXME: Perhaps it's best to just assert here and be done with it? */
-    //   if (0) {
-    //     ASSERT1(0 && "trymove stack overflow", pos);
-    //   }
-    //   #if 0
-    //   if (verbose > 0) {
-    //     showboard(0);
-    //     dump_stack();
-    //   }
-    //   #endif
-    //   fflush(stderr);
-    //   return 0;
-    // }
+    if (this.stackp >= this.MAXSTACK - 2) {
+      console.error("gnugo: Truncating search. This is beyond my reading ability!");
+      return 0;
+    }
 
 
-  //   /* Only count trymove when we do create a new position. */
-  //   trymove_counter++;
+    /* Only count trymove when we do create a new position. */
+    this.trymove_counter++;
 
-  //   /* So far, so good. Now push the move on the move stack. These are
-  //    * needed for dump_stack().
-  //    */
-  //   stack[stackp] = pos;
-  //   move_color[stackp] = color;
+    /* So far, so good. Now push the move on the move stack. These are
+     * needed for dump_stack().
+     */
+    this.stack[this.stackp] = pos;
+    this.move_color[this.stackp] = color;
 
-  //   this.really_do_trymove(pos, color);
+    this.really_do_trymove(pos, color);
 
-  //   return 1;
-  // }
+    return 1;
+  }
 
   popgo() {
     this.undo_trymove();
@@ -279,8 +306,6 @@ class Board {
   undo_trymove() {
     this.popMove()
     this.popVertices()
-    // POP_VERTICES
-
 
     this.stackp--;
     this.board_hash.hashval = this.board_hash_stack[this.stackp].hashval
@@ -493,6 +518,173 @@ class Board {
     //   return 0;
 
     return 1;
+  }
+
+
+  countlib(str) {
+    // ASSERT1(IS_STONE(board[str]), str);
+    /* We already know the number of liberties. Just look it up. */
+    return this.string[this.string_number[str]].liberties;
+  }
+
+  findlib(str, maxlib, libs) {
+    /* We already have the list of liberties and only need to copy it to
+     * libs[].
+     *
+     * However, if the string has more than MAX_LIBERTIES liberties the
+     * list is truncated and if maxlib is also larger than MAX_LIBERTIES
+     * we have to traverse the stones in the string in order to find
+     * where the liberties are.
+     */
+    let s = this.string_number[str];
+    let liberties = this.string[s].liberties;
+
+    if (liberties <= this.MAX_LIBERTIES || maxlib <= this.MAX_LIBERTIES) {
+      /* The easy case, it suffices to copy liberty locations from the
+       * incrementally updated list.
+       */
+      for (let k = 0; k < maxlib && k < liberties; k++){
+        libs[k] = this.string_libs[s].list[k];
+      }
+    } else {
+      /* The harder case, where we have to traverse the stones in the
+       * string. We don't have to check explicitly if we are back to
+       * the start of the chain since we will run out of liberties
+       * before that happens.
+       */
+      this.liberty_mark++;
+      for (let k = 0, pos = this.FIRST_STONE(s); k < maxlib && k < liberties; pos = this.NEXT_STONE(pos)) {
+        for(let i in directions){
+          const p = this[directions[i]](pos)
+
+          if (this.UNMARKED_LIBERTY(p)) {
+            libs[k++] = p;
+            this.MARK_LIBERTY(p);
+            if (k >= maxlib){
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    return liberties;
+  }
+
+  countstones(str) {
+    // ASSERT_ON_BOARD1(str);
+    // ASSERT1(IS_STONE(board[str]), str);
+    return this.COUNTSTONES(str);
+  }
+
+  /* Find the stones of the string at str. str must not be
+   * empty. The locations of up to maxstones stones are written into
+   * stones[]. The full number of stones is returned.
+   */
+  findstones(str, maxstones, stones) {
+    // ASSERT_ON_BOARD1(str);
+    // ASSERT1(IS_STONE(board[str]), str);
+
+    const s = this.string_number[str];
+    const size = this.string[s].size;
+
+    /* Traverse the stones of the string, by following the cyclic chain. */
+    let pos = this.FIRST_STONE(s);
+    for (let k = 0; k < maxstones && k < size; k++) {
+      stones[k] = pos;
+      pos = this.NEXT_STONE(pos);
+    }
+
+    return size;
+  }
+
+  count_adjacent_stones(){}
+
+  chainlinks() {}
+
+  chainlinks2() {}
+
+  chainlinks3() {}
+
+  extended_chainlinks() {}
+
+  send_two_return_one() {}
+
+  find_origin(str) {
+    return this.string[this.string_number[str]].origin;
+  }
+
+  is_self_atari(pos, color) {}
+
+  liberty_of_string(pos, str) {
+    if (this.IS_STONE(this.board[pos])){
+      return 0;
+    }
+
+    return this.NEIGHBOR_OF_STRING(pos, this.string_number[str], this.board[str]);
+  }
+
+  second_order_liberty_of_string(pos, str) {
+    for (let k = 0; k < 4; k++){
+      if (this.board[pos + this.delta[k]] === colors.EMPTY
+       && this.NEIGHBOR_OF_STRING(pos + this.delta[k], this.string_number[str], this.board[str])){
+        return 1;
+      }
+    }
+    return 0;
+  }
+
+  neighbor_of_string(pos, str) {
+    const color = this.board[str];
+    return this.NEIGHBOR_OF_STRING(pos, this.string_number[str], color);
+  }
+
+  has_neighbor(pos, color) {
+    return (this.board[this.SOUTH(pos)] === color
+    || this.board[this.WEST(pos)] === color
+    || this.board[this.NORTH(pos)] === color
+    || this.board[this.EAST(pos)] === color);
+  }
+
+  same_string(str1, str2) {
+    return this.string_number[str1] === this.string_number[str2];
+  }
+
+  adjacent_strings() {}
+
+  is_ko() {}
+
+  is_ko_point() {}
+
+  is_superko_violation() {}
+
+  does_capture_something() {}
+
+  mark_string() {}
+
+  move_in_stack() {}
+
+  get_move_from_stack() {}
+
+  stones_on_board(color) {
+    // gg_assert(stackp == 0);
+
+    if (this.stone_count_for_position !== this.position_number) {
+      this.white_stones = 0;
+      this.black_stones = 0;
+      for (let pos = this.BOARDMIN; pos < this.BOARDMAX; pos++) {
+        if (this.board[pos] === colors.WHITE){
+          this.white_stones++;
+        }
+        else if (this.board[pos] === colors.BLACK){
+          this.black_stones++;
+        }
+      }
+
+      this.stone_count_for_position = this.position_number;
+    }
+
+    return ((color & colors.BLACK ? this.black_stones : 0) + (color & colors.WHITE ? this.white_stones : 0));
   }
 
 
