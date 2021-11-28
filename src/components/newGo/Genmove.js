@@ -7,6 +7,7 @@ import {Worm} from "./Worm";
 import {Unconditional} from "./Unconditional";
 import {Reading} from "./Reading";
 import {MoveList} from "./MoveList";
+import {Persistent} from "./Persistent";
 
 
 const EXAMINE_WORMS =               1
@@ -22,9 +23,11 @@ const EXAMINE_ALL =                 99
 export default class Genmove {
   constructor(board) {
     this.board = board
-    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList)
+    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent)
 
     this.initData()
+
+    this.persistent_cache_init()
   }
 
   initData() {

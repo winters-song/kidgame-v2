@@ -1,3 +1,6 @@
+import {
+ codes
+} from './Constants'
 
 /* Routine names used by persistent and non-persistent caching schemes. */
 export const routine_id ={
@@ -45,3 +48,5 @@ export const dragon_status  = {
 export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
+
+export const REVERSE_RESULT = function(result){ return codes.WIN - result}	
