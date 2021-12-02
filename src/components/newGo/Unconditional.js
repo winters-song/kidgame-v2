@@ -1,7 +1,6 @@
 import {
-  colors, NO_MOVE, PASS_MOVE
+  colors
 } from './Constants'
-import {dragon_status, MAX_CLOSE_WORMS} from "./Liberty";
 
 export const Unconditional = {
 

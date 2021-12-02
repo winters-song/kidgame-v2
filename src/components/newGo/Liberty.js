@@ -24,6 +24,7 @@ export const routine_id ={
   NUM_CACHE_ROUTINES : 17
 };
 
+export const ROUTINE_COSTS = [3, 3, 4, 0, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, -1]
 
 export const dragon_status  = {
   DEAD : 0,

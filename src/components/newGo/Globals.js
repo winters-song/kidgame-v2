@@ -114,31 +114,5 @@ export const Globals = {
   attack_dragon_weight  : 1.0,
   followup_weight       : 1.0,
 
-
   position_number: 0,
 }
-/* Used by reading. */
-// int depth;              /* deep reading cut off */
-// int backfill_depth;     /* deep reading cut off */
-// int backfill2_depth;    /* deep reading cut off */
-// int break_chain_depth;  /* deep reading cut off */
-// int superstring_depth;  /* deep reading cut off */
-// int fourlib_depth;      /* deep reading cut off */
-// int ko_depth;           /* deep reading cut off */
-// int branch_depth;       /* deep reading cut off */
-// int aa_depth;
-// int depth_offset;       /* keeps track of temporary depth changes */
-// int owl_distrust_depth;   /* below this owl trusts the optics code */
-// int owl_branch_depth;     /* below this owl tries only one variation */
-// int owl_reading_depth;    /* owl does not read below this depth */
-// int owl_node_limit;       /* maximum number of nodes considered */
-// int semeai_branch_depth;
-// int semeai_branch_depth2;
-// int semeai_node_limit;
-// int connect_depth;	/* Used by Tristan Cazenave's connection reader. */
-// int connect_depth2;     /* Used by alternater connection reader. */
-// int connection_node_limit;
-// int breakin_node_limit; /* Reading limits for break_in/block_off reading */
-// int breakin_depth;
-
-

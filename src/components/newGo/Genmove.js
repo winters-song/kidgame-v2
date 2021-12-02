@@ -1,5 +1,5 @@
 import {
-  colors, NO_MOVE, PASS_MOVE
+  DEFAULT_LEVEL, NO_MOVE, PASS_MOVE
 } from './Constants'
 import {Globals} from "./Globals";
 import {Utils} from "./Utils";
@@ -8,25 +8,27 @@ import {Unconditional} from "./Unconditional";
 import {Reading} from "./Reading";
 import {MoveList} from "./MoveList";
 import {Persistent} from "./Persistent";
+import {Cache} from "./Cache"
 
-
-const EXAMINE_WORMS =               1
-const EXAMINE_INITIAL_INFLUENCE =   2
-const EXAMINE_DRAGONS_WITHOUT_OWL = 3
-const EXAMINE_DRAGONS =             4
-const EXAMINE_OWL_REASONS =         5
-const EXAMINE_INITIAL_INFLUENCE2 =  6
-const FULL_EXAMINE_DRAGONS =        7
+// const EXAMINE_WORMS =               1
+// const EXAMINE_INITIAL_INFLUENCE =   2
+// const EXAMINE_DRAGONS_WITHOUT_OWL = 3
+// const EXAMINE_DRAGONS =             4
+// const EXAMINE_OWL_REASONS =         5
+// const EXAMINE_INITIAL_INFLUENCE2 =  6
+// const FULL_EXAMINE_DRAGONS =        7
 const EXAMINE_ALL =                 99
 
 
 export default class Genmove {
   constructor(board) {
     this.board = board
-    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent)
+    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache)
 
     this.initData()
 
+
+    this.reading_cache_init()
     this.persistent_cache_init()
   }
 
@@ -49,11 +51,13 @@ export default class Genmove {
     return x !== this.position_number
   }
 
-  reset_engine() {
-    // reuse_random_seed();
+  get_level(){
+    return DEFAULT_LEVEL
+  }
 
+  reset_engine() {
     /* Initialize things for hashing of positions. */
-    // reading_cache_clear();
+    this.reading_cache_clear();
 
     // hashdata_recalc(&board_hash, board, board_ko_pos);
 
@@ -69,7 +73,7 @@ export default class Genmove {
     // clear_break_in_list();
 
     /* Set up depth values (see comments there for details). */
-    // set_depth_values(get_level(), 0);
+    this.set_depth_values(this.get_level(), 0);
 
     /* Initialize arrays of moves which are meaningless due to
      * static analysis of unconditional status.
@@ -78,17 +82,10 @@ export default class Genmove {
   }
 
   examine_position(how_much, aftermath_play) {
-    let save_verbose = this.verbose;
+    // let save_verbose = this.verbose;
 
     // 清除缓存
     // purge_persistent_caches();
-
-    /* Don't print reading traces during make_worms and make_dragons unless
-     * the user really wants it (verbose == 3).
-     */
-    // if (verbose === 1 || verbose === 2){
-    //   --this.verbose;
-    // }
 
     if (this.needsUpdate(this.worms_examined)) {
       this.worms_examined = this.position_number
@@ -178,12 +175,12 @@ export default class Genmove {
  * overlooks them).
  */
   do_genmove(color, pure_threat_value, allowed_moves, value) {
-    let average_score, pessimistic_score, optimistic_score;
-    let save_verbose;
+    // let average_score, pessimistic_score, optimistic_score;
+    // let save_verbose;
     let save_depth;
     let move;
     let dummy_value;
-    let use_thrashing_dragon_heuristics = 0;
+    // let use_thrashing_dragon_heuristics = 0;
 
     if (!value){
       value = dummy_value;
@@ -205,7 +202,7 @@ export default class Genmove {
     /* Store the depth value so we can check that it hasn't changed when
      * we leave this function.
      */
-    // save_depth = depth;
+    // save_depth = this.depth;
 
     /* If in mirror mode, try to find a mirror move. */
     // if (play_mirror_go && (mirror_stones_limit < 0 || stones_on_board(WHITE | BLACK) <= mirror_stones_limit)

@@ -3,7 +3,7 @@ import {
   suicide_rules,
   ko_rules
 } from './Constants'
-import Hash from './Hash'
+import {Hash, HashData} from './Hash'
 import {StringData, StringPosData, Utils} from './BoardUtils'
 import {BoardInterface} from './BoardInterface'
 const boardParams = [
@@ -22,6 +22,25 @@ const boardParams = [
 
 // 方向（方法）遍历
 const directions = ['SOUTH', 'WEST', 'NORTH', 'EAST']
+
+class BoardCacheEntry {
+  constructor() {
+    this.threshold = 0
+    this.liberties = 0
+    this.position_hash = {
+      hashval: 0
+    }
+  }
+}
+
+const accuratelib_cache = []
+
+
+// struct board_cache_entry {
+//   int threshold;
+//   int liberties;
+//   Hash_data position_hash;
+// };
 
 class Board {
 
@@ -75,10 +94,12 @@ class Board {
     this.handicap = 0
     this.ko_rule = ko_rules.SIMPLE
     this.suicide_rule = suicide_rules.FORBIDDEN
-    // this.shadow = new Array(this.BOARDSIZE)
+    this.shadow = []
     this.board_hash = {}
     this.hash = new Hash(this.BOARDMIN, this.BOARDMAX)
     this.hash.init()
+
+    this.approxlib_cache = []
 
     this.position_number = 0
     this.stackp = 0
@@ -220,7 +241,7 @@ class Board {
   /*                      Temporary moves   (临时落子)                  */
   /* ================================================================ */
 
-  trymove(pos, color, message, str) {
+  trymove(pos, color, message) {
     return this.do_trymove(pos, color, 0)
   }
 
@@ -238,6 +259,9 @@ class Board {
     this.vertex_stack.push(null)
     this.pushValue(this, 'board_ko_pos');
 
+    if(!this.board_hash_stack[this.stackp]){
+      this.board_hash_stack[this.stackp] = {}
+    }
     this.board_hash_stack[this.stackp].hashval = this.board_hash.hashval
 
     if (this.board_ko_pos !== NO_MOVE){
@@ -364,7 +388,6 @@ class Board {
     if (update_internals || this.next_string === this.MAX_STRINGS) {
       this.new_position();
     } else{
-      // CLEAR_STACKS();
       this.change_stack = []
       this.vertex_stack = []
     }
@@ -520,38 +543,24 @@ class Board {
     return 1;
   }
 
-
+  // 获得棋串气数
   countlib(str) {
     // ASSERT1(IS_STONE(board[str]), str);
     /* We already know the number of liberties. Just look it up. */
     return this.string[this.string_number[str]].liberties;
   }
 
+  // 获得棋串气的列表，元素个数最大为maxlib
+  // maxlib< 缓存最大值时，从缓存读取； 否则遍历+标记获取
   findlib(str, maxlib, libs) {
-    /* We already have the list of liberties and only need to copy it to
-     * libs[].
-     *
-     * However, if the string has more than MAX_LIBERTIES liberties the
-     * list is truncated and if maxlib is also larger than MAX_LIBERTIES
-     * we have to traverse the stones in the string in order to find
-     * where the liberties are.
-     */
     let s = this.string_number[str];
     let liberties = this.string[s].liberties;
 
     if (liberties <= this.MAX_LIBERTIES || maxlib <= this.MAX_LIBERTIES) {
-      /* The easy case, it suffices to copy liberty locations from the
-       * incrementally updated list.
-       */
       for (let k = 0; k < maxlib && k < liberties; k++){
         libs[k] = this.string_libs[s].list[k];
       }
     } else {
-      /* The harder case, where we have to traverse the stones in the
-       * string. We don't have to check explicitly if we are back to
-       * the start of the chain since we will run out of liberties
-       * before that happens.
-       */
       this.liberty_mark++;
       for (let k = 0, pos = this.FIRST_STONE(s); k < maxlib && k < liberties; pos = this.NEXT_STONE(pos)) {
         for(let i in directions){
@@ -569,6 +578,581 @@ class Board {
     }
 
     return liberties;
+  }
+
+
+  /* Count the liberties a stone of the given color would get if played
+   * at (pos). The location (pos) must be empty.
+   *
+   * The intent of this function is to be as fast as possible, not
+   * necessarily complete. But if it returns a positive value (meaning
+   * it has succeeded), the value is guaranteed to be correct.
+   *
+   * Captures are ignored based on the ignore_capture flag.  The function
+   * fails if there are more than two neighbor strings of the same
+   * color.  In this case, the return value is -1.  Captures are handled
+   * in a very limited way, so if ignore_capture is 0, and a capture is
+   * required, it will often return -1.
+   *
+   * Note well, that it relies on incremental data.
+   */
+  fastlib(pos, color, ignore_captures) {
+    let ally1 = -1;
+    let ally2 = -1;
+    let fast_liberties = 0;
+
+    // ASSERT1(board[pos] == EMPTY, pos);
+    // ASSERT1(IS_STONE(color), pos);
+
+    /* Find neighboring strings of the same color. If there are more than two of
+     * them, we give up (it's too difficult to count their common liberties).
+     */
+    if (this.board[this.SOUTH(pos)] === color) {
+      ally1 = this.string_number[this.SOUTH(pos)];
+
+      if (this.board[this.WEST(pos)] === color && this.string_number[this.WEST(pos)] !== ally1) {
+        ally2 = this.string_number[this.WEST(pos)];
+
+        if (this.board[this.NORTH(pos)] === color
+          && this.string_number[this.NORTH(pos)] !== ally1
+          && this.string_number[this.NORTH(pos)] !== ally2){
+          return -1;
+        }
+      }
+      else if (this.board[this.NORTH(pos)] === color && this.string_number[this.NORTH(pos)] !== ally1){
+        ally2 = this.string_number[this.NORTH(pos)];
+      }
+
+      if (this.board[this.EAST(pos)] === color && this.string_number[this.EAST(pos)] !== ally1) {
+        if (ally2 < 0)
+          ally2 = this.string_number[this.EAST(pos)];
+        else if (this.string_number[this.EAST(pos)] !== ally2)
+          return -1;
+      }
+    }
+    else if (this.board[this.WEST(pos)] === color) {
+      ally1 = this.string_number[this.WEST(pos)];
+
+      if (this.board[this.NORTH(pos)] === color && this.string_number[this.NORTH(pos)] !== ally1) {
+        ally2 = this.string_number[this.NORTH(pos)];
+
+        if (this.board[this.EAST(pos)] === color
+          && this.string_number[this.EAST(pos)] !== ally1
+          && this.string_number[this.EAST(pos)] !== ally2)
+          return -1;
+      }
+      else if (this.board[this.EAST(pos)] === color
+        && this.string_number[this.EAST(pos)] !== ally1)
+        ally2 = this.string_number[this.EAST(pos)];
+    }
+    else if (this.board[this.NORTH(pos)] === color) {
+      ally1 = this.string_number[this.NORTH(pos)];
+
+      if (this.board[this.EAST(pos)] === color && this.string_number[this.EAST(pos)] !== ally1)
+        ally2 = this.string_number[this.EAST(pos)];
+    }
+    else if (this.board[this.EAST(pos)] === color)
+      ally1 = this.string_number[this.EAST(pos)];
+
+    /* If we are to ignore captures, the things are very easy. */
+    if (ignore_captures) {
+      if (ally1 < 0) {			/* No allies */
+        if (this.LIBERTY(this.SOUTH(pos)))
+          fast_liberties++;
+        if (this.LIBERTY(this.WEST(pos)))
+          fast_liberties++;
+        if (this.LIBERTY(this.NORTH(pos)))
+          fast_liberties++;
+        if (this.LIBERTY(this.EAST(pos)))
+          fast_liberties++;
+      }
+      else if (ally2 < 0) {		/* One ally */
+        if (this.LIBERTY(this.SOUTH(pos))
+          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally1, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.WEST(pos))
+          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally1, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.NORTH(pos))
+          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally1, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.EAST(pos))
+          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally1, color))
+          fast_liberties++;
+
+        fast_liberties += this.string[ally1].liberties - 1;
+      }
+      else {				/* Two allies */
+        if (this.LIBERTY(this.SOUTH(pos))
+          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally1, color)
+          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally2, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.WEST(pos))
+          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally1, color)
+          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally2, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.NORTH(pos))
+          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally1, color)
+          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally2, color))
+          fast_liberties++;
+        if (this.LIBERTY(this.EAST(pos))
+          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally1, color)
+          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally2, color))
+          fast_liberties++;
+
+        fast_liberties += this.string[ally1].liberties + this.string[ally2].liberties
+          - this.count_common_libs(this.string[ally1].origin, this.string[ally2].origin) - 1;
+      }
+    }
+    /* We are to take captures into account. This case is much more rare, so
+     * it is not optimized much.
+     */
+    else {
+      for (let k = 0; k < 4; k++) {
+        let neighbor = pos + this.delta[k];
+
+        if (this.LIBERTY(neighbor)
+          && (ally1 < 0 || !this.NEIGHBOR_OF_STRING(neighbor, ally1, color))
+          && (ally2 < 0 || !this.NEIGHBOR_OF_STRING(neighbor, ally2, color)))
+          fast_liberties++;
+        else if (this.board[neighbor] === this.OTHER_COLOR(color)	/* A capture */
+          && this.LIBERTIES(neighbor) === 1) {
+          const neighbor_size = this.COUNTSTONES(neighbor);
+
+          if (neighbor_size === 1 || (neighbor_size === 2 && ally1 < 0))
+            fast_liberties++;
+          else
+            return -1;
+        }
+      }
+
+      if (ally1 >= 0) {
+        fast_liberties += this.string[ally1].liberties - 1;
+        if (ally2 >= 0)
+          fast_liberties += this.string[ally2].liberties
+            - this.count_common_libs(this.string[ally1].origin, this.string[ally2].origin);
+      }
+    }
+
+    return fast_liberties;
+  }
+
+
+
+/* Find the liberties a stone of the given color would get if played
+ * at (pos), ignoring possible captures of opponent stones. (pos)
+ * must be empty. If libs != NULL, the locations of up to maxlib
+ * liberties are written into libs[]. The counting of liberties may
+ * or may not be halted when maxlib is reached. The number of liberties
+ * found is returned.
+ *
+ * If you want the number or the locations of all liberties, however
+ * many they are, you should pass MAXLIBS as the value for maxlib and
+ * allocate space for libs[] accordingly.
+ */
+
+  getApproxLib(pos, color){
+    const entry = {
+      threshold: 0,
+      liberties: 0,
+      position_hash: {
+        hashval: 0
+      }
+    }
+    if(this.approxlib_cache[pos]){
+      if(!this.approxlib_cache[pos][color]){
+        this.approxlib_cache[pos][color] = entry
+      }
+    }else{
+      this.approxlib_cache[pos] = {
+        [color]: entry
+      }
+    }
+    return this.approxlib_cache[pos][color]
+  }
+// 给定颜色在pos落子，获得气信息
+  approxlib(pos, color, maxlib, libs) {
+    let liberties;
+
+    let entry = this.getApproxLib(pos, color - 1)
+    // ASSERT1(board[pos] == EMPTY, pos);
+    // ASSERT1(IS_STONE(color), pos);
+
+    if (!libs) {
+      /* First see if this result is cached. */
+      if (this.hash.is_equal(this.board_hash, entry.position_hash) && maxlib <= entry.threshold) {
+        return entry.liberties;
+      }
+
+      liberties = this.fastlib(pos, color, 1);
+      if (liberties >= 0) {
+        /* Since fastlib() always returns precise result and doesn't take
+         * `maxlib' into account, we set threshold to MAXLIBS so that this
+         * result is used regardless of any `maxlib' passed.
+         */
+        entry.threshold = this.MAXLIBS;
+        entry.liberties = liberties;
+        entry.position_hash = this.board_hash;
+
+        return liberties;
+      }
+    }
+
+    /* We initialize the cache entry threshold to `maxlib'. If do_approxlib()
+     * or slow_approxlib() finds all the liberties (that is, they don't use
+     * `maxlib' value for an early return), they will set threshold to
+     * MAXLIBS themselves.
+     */
+    entry.threshold = maxlib;
+
+    if (maxlib <= this.MAX_LIBERTIES) {
+      liberties = this.do_approxlib(pos, color, maxlib, libs);
+    }else {
+      liberties = this.slow_approxlib(pos, color, maxlib, libs);
+    }
+    entry.liberties = liberties;
+    entry.position_hash = this.board_hash;
+
+    return liberties;
+  }
+
+  /* Does the real work of approxlib(). */
+  // 在pos位置落子后气数，上下左右四个方向有气加气，有我方棋串则累加气
+  do_approxlib(pos, color, maxlib, libs) {
+    let liberties = 0;
+
+    /* Look for empty neighbors and the liberties of the adjacent
+     * strings of the given color. The algorithm below won't work
+     * correctly if any of the adjacent strings have more than
+     * MAX_LIBERTIES liberties AND maxlib is larger than MAX_LIBERTIES.
+     * therefore approxlib() calls more robust slow_approxlib() if
+     * this might be the case.
+     */
+
+    /* Start by marking pos itself so it isn't counted among its own
+     * liberties.
+     */
+    this.liberty_mark++;
+    this.MARK_LIBERTY(pos);
+
+    for(let i in directions) {
+      const p = this[directions[i]](pos)
+
+      if (this.UNMARKED_LIBERTY(p)) {
+        if (libs !== null){
+          libs[liberties] = p;
+        }
+        liberties++;
+        /* Stop counting if we reach maxlib. */
+        if (liberties >= maxlib){
+          return liberties;
+        }
+        this.MARK_LIBERTY(p);
+      }else if (this.board[p] === color) {
+        let s = this.string_number[p];
+        for (let k = 0; k < this.string[s].liberties; k++) {
+          let lib = this.string_libs[s].list[k];
+          if (this.UNMARKED_LIBERTY(lib)) {
+            if (libs !== null){
+              libs[liberties] = lib;
+            }
+            liberties++;
+            if (liberties >= maxlib){
+              return liberties;
+            }
+            this.MARK_LIBERTY(lib);
+          }
+        }
+      }
+    }
+
+    /* If we reach here, then we have counted _all_ the liberties, so
+     * we set threshold to MAXLIBS (the result is the same regardless
+     * of `maxlib' value).
+     */
+    // if (!libs){
+    //   this.approxlib_cache[pos][color - 1].threshold = this.MAXLIBS;
+    // }
+    return liberties;
+  }
+
+  slow_approxlib() {}
+
+  /* Find the liberties a stone of the given color would get if played
+   * at (pos). This function takes into consideration all captures. Its
+   * return value is exact in that sense it counts all the liberties,
+   * unless (maxlib) allows it to stop earlier. (pos) must be empty. If
+   * libs != NULL, the locations of up to maxlib liberties are written
+   * into libs[]. The counting of liberties may or may not be halted
+   * when maxlib is reached. The number of found liberties is returned.
+   *
+   * This function guarantees that liberties which are not results of
+   * captures come first in libs[] array. To find whether all the
+   * liberties starting from a given one are results of captures, one
+   * may use  if (board[libs[k]] != EMPTY)  construction.
+   *
+   * If you want the number or the locations of all liberties, however
+   * many they are, you should pass MAXLIBS as the value for maxlib and
+   * allocate space for libs[] accordingly.
+   */
+  accuratelib(pos, color, maxlib, libs) {
+    let liberties;
+
+    if(!accuratelib_cache[pos]){
+      accuratelib_cache[pos] = []
+    }
+    if(!accuratelib_cache[pos][color - 1]){
+      accuratelib_cache[pos][color - 1] = new BoardCacheEntry()
+    }
+    let entry = accuratelib_cache[pos][color - 1];
+    // ASSERT1(board[pos] == EMPTY, pos);
+    // ASSERT1(IS_STONE(color), pos);
+
+    if (!libs) {
+      /* First see if this result is cached. */
+      if (HashData.is_equal(this.board_hash, entry.position_hash) && maxlib <= entry.threshold) {
+        return entry.liberties;
+      }
+
+      liberties = this.fastlib(pos, color, 0);
+      if (liberties >= 0) {
+        /* Since fastlib() always returns precise result and doesn't take
+         * `maxlib' into account, we set threshold to MAXLIBS so that this
+         * result is used regardless of any `maxlib' passed.
+         */
+        entry.threshold = this.MAXLIBS;
+        entry.liberties = liberties;
+        entry.position_hash[0] = this.board_hash[0];
+
+        return liberties;
+      }
+    }
+
+    liberties = this.do_accuratelib(pos, color, maxlib, libs);
+
+    /* If accuratelib() found less than `maxlib' liberties, then its
+     * result is certainly independent of `maxlib' and we set threshold
+     * to MAXLIBS.
+     */
+    entry.threshold = liberties < maxlib ? this.MAXLIBS : maxlib;
+    entry.liberties = liberties;
+    entry.position_hash[0] = this.board_hash[0];
+
+    return liberties;
+  }
+
+
+  /* Does the real work of accuratelib(). */
+  do_accuratelib(pos, color, maxlib, libs) {
+    let liberties = 0;
+    let captured = [];
+    let captures = 0;
+
+    this.string_mark++;
+    this.liberty_mark++;
+    this.MARK_LIBERTY(pos);
+
+    for (let k = 0; k < 4; k++) {
+      let pos2 = pos + this.delta[k];
+      if (this.UNMARKED_LIBERTY(pos2)) {
+        /* A trivial liberty */
+        if (libs)
+          libs[liberties] = pos2;
+        liberties++;
+        if (liberties >= maxlib)
+          return liberties;
+
+        this.MARK_LIBERTY(pos2);
+      }
+      else if (this.UNMARKED_COLOR_STRING(pos2, color)) {
+        /* An own neighbor string */
+        const s = this.string[this.string_number[pos2]];
+        const sl = this.string_libs[this.string_number[pos2]];
+
+        if (s.liberties <= this.MAX_LIBERTIES || maxlib <= this.MAX_LIBERTIES - 1) {
+          /* The easy case - we already have all (necessary) liberties of
+           * the string listed
+           */
+          for (let l = 0; l < s.liberties; l++) {
+            let lib = sl.list[l];
+            if (this.UNMARKED_LIBERTY(lib)) {
+              if (libs)
+                libs[liberties] = lib;
+              liberties++;
+              if (liberties >= maxlib)
+                return liberties;
+
+              this.MARK_LIBERTY(lib);
+            }
+          }
+        }
+        else {
+          /* The harder case - we need to find all the liberties of the
+           * string by traversing its stones. We stop as soon as we have
+           * traversed all the stones or have reached maxlib. Unfortunately,
+           * we cannot use the trick from findlib() since some of the
+           * liberties may already have been marked.
+           */
+          let stone = pos2;
+          do {
+            if (this.UNMARKED_LIBERTY(this.SOUTH(stone))) {
+              if (libs)
+                libs[liberties] = this.SOUTH(stone);
+              liberties++;
+              if (liberties >= maxlib)
+                return liberties;
+
+              this.MARK_LIBERTY(this.SOUTH(stone));
+            }
+
+            if (this.UNMARKED_LIBERTY(this.WEST(stone))) {
+              if (libs)
+                libs[liberties] = this.WEST(stone);
+              liberties++;
+              if (liberties >= maxlib)
+                return liberties;
+
+              this.MARK_LIBERTY(this.WEST(stone));
+            }
+
+            if (this.UNMARKED_LIBERTY(this.NORTH(stone))) {
+              if (libs)
+                libs[liberties] = this.NORTH(stone);
+              liberties++;
+              if (liberties >= maxlib)
+                return liberties;
+
+              this.MARK_LIBERTY(this.NORTH(stone));
+            }
+
+            if (this.UNMARKED_LIBERTY(this.EAST(stone))) {
+              if (libs)
+                libs[liberties] = this.EAST(stone);
+              liberties++;
+              if (liberties >= maxlib)
+                return liberties;
+
+              this.MARK_LIBERTY(this.EAST(stone));
+            }
+
+            stone = this.NEXT_STONE(stone);
+          } while (stone !== pos2);
+        }
+
+        this.MARK_STRING(pos2);
+      }
+      else if (this.board[pos2] === this.OTHER_COLOR(color)
+        && this.string[this.string_number[pos2]].liberties === 1) {
+        /* A capture. */
+        captured[captures++] = pos2;
+      }
+    }
+
+    /* Now we look at all the captures found in the previous step */
+    for (let k = 0; k < captures; k++) {
+      let lib = captured[k];
+
+      /* Add the stone adjacent to (pos) to the list of liberties if
+       * it is not also adjacent to an own marked string (otherwise,
+       * it will be added later).
+       */
+      if (!this.MARKED_COLOR_STRING(this.SOUTH(lib), color)
+        && !this.MARKED_COLOR_STRING(this.WEST(lib), color)
+        && !this.MARKED_COLOR_STRING(this.NORTH(lib), color)
+        && !this.MARKED_COLOR_STRING(this.EAST(lib), color)) {
+        if (libs)
+          libs[liberties] = lib;
+        liberties++;
+        if (liberties >= maxlib)
+          return liberties;
+      }
+
+      let l
+      /* Check if we already know of this capture. */
+      for (l = 0; l < k; l++)
+        if (this.string_number[captured[l]] === this.string_number[lib])
+          break;
+
+      if (l === k) {
+        /* Traverse all the stones of the capture and add to the list
+         * of liberties those, which are adjacent to at least one own
+         * marked string.
+         */
+        do {
+          if (this.MARKED_COLOR_STRING(this.SOUTH(lib), color)
+            || this.MARKED_COLOR_STRING(this.WEST(lib), color)
+            || this.MARKED_COLOR_STRING(this.NORTH(lib), color)
+            || this.MARKED_COLOR_STRING(this.EAST(lib), color)) {
+            if (libs)
+              libs[liberties] = lib;
+            liberties++;
+            if (liberties >= maxlib)
+              return liberties;
+          }
+
+          lib = this.NEXT_STONE(lib);
+        } while (lib !== captured[k]);
+      }
+    }
+
+    return liberties;
+  }
+
+
+  /* Find the number of common liberties of the two strings at str1 and str2.
+   */
+  count_common_libs(str1, str2) {
+    let libs1;
+    let all_libs1 = []
+    let commonlibs = 0
+
+    // ASSERT_ON_BOARD1(str1);
+    // ASSERT_ON_BOARD1(str2);
+    // ASSERT1(IS_STONE(board[str1]), str1);
+    // ASSERT1(IS_STONE(board[str2]), str2);
+
+    let n = this.string_number[str1];
+    let liberties1 = this.string[n].liberties;
+
+    if (liberties1 > this.string[this.string_number[str2]].liberties) {
+      n = this.string_number[str2];
+      liberties1 = this.string[n].liberties;
+      let tmp = str1;
+      str1 = str2;
+      str2 = tmp;
+    }
+
+    if (liberties1 <= this.MAX_LIBERTIES) {
+      /* Speed optimization: don't copy liberties with findlib */
+      libs1 = this.string_libs[n].list;
+      n = this.string_number[str2];
+      let liberties2 = this.string[n].liberties;
+
+      if (liberties2 <= this.MAX_LIBERTIES) {
+        /* Speed optimization: NEIGHBOR_OF_STRING is quite expensive */
+        this.liberty_mark++;
+
+        for (let k = 0; k < liberties1; k++)
+          this.MARK_LIBERTY(libs1[k]);
+
+        libs1 = this.string_libs[n].list;
+        for (let k = 0; k < liberties2; k++)
+          if (!this.UNMARKED_LIBERTY(libs1[k]))
+            commonlibs++;
+
+        return commonlibs;
+      }
+    }
+    else {
+      this.findlib(str1, this.MAXLIBS, all_libs1);
+      libs1 = all_libs1;
+    }
+
+    for (let k = 0; k < liberties1; k++)
+      if (this.NEIGHBOR_OF_STRING(libs1[k], this.string_number[str2], this.board[str2]))
+        commonlibs++;
+
+    return commonlibs;
   }
 
   countstones(str) {
@@ -598,11 +1182,63 @@ class Board {
     return size;
   }
 
-  count_adjacent_stones(){}
+  count_adjacent_stones(str1, str2, maxstones){
+    let count = 0;
 
-  chainlinks() {}
+    // ASSERT_ON_BOARD1(str1);
+    // ASSERT1(IS_STONE(board[str1]), str1);
+    // ASSERT_ON_BOARD1(str2);
+    // ASSERT1(IS_STONE(board[str2]), str2);
 
-  chainlinks2() {}
+    const s1 = this.string_number[str1];
+    const s2 = this.string_number[str2];
+    const size = this.string[s1].size;
+
+    /* Traverse the stones of the string, by following the cyclic chain. */
+    let pos = this.FIRST_STONE(s1);
+    for (let k = 0; k < size && count < maxstones; k++) {
+      if (this.NEIGHBOR_OF_STRING(pos, s2, this.board[str2]))
+        count++;
+      pos = this.NEXT_STONE(pos);
+    }
+
+    return count;
+  }
+
+  // 获取棋串相邻的棋串数量
+  chainlinks(str, adj) {
+    // ASSERT1(IS_STONE(board[str]), str);
+
+    /* We already have the list ready, just copy it and fill in the
+     * desired information.
+     */
+    const s = this.string[this.string_number[str]];
+    const sn = this.string_neighbors[this.string_number[str]];
+    for (let k = 0; k < s.neighbors; k++){
+      adj[k] = this.string[sn.list[k]].origin;
+    }
+
+    return s.neighbors;
+  }
+
+  // 获取棋串相邻的具有指定气数的棋串数量
+  chainlinks2(str, adj, lib) {
+    // ASSERT1(IS_STONE(board[str]), str);
+
+    /* We already have the list ready, just copy the strings with the
+     * right number of liberties.
+     */
+    let neighbors = 0;
+    const s = this.string[this.string_number[str]];
+    const sn = this.string_neighbors[this.string_number[str]];
+    for (let k = 0; k < s.neighbors; k++) {
+      let t = this.string[sn.list[k]];
+      if (t.liberties === lib){
+        adj[neighbors++] = t.origin;
+      }
+    }
+    return neighbors;
+  }
 
   chainlinks3() {}
 
@@ -614,7 +1250,68 @@ class Board {
     return this.string[this.string_number[str]].origin;
   }
 
-  is_self_atari(pos, color) {}
+  // 是否是自紧气到自杀
+  is_self_atari(pos, color) {
+    const other = this.OTHER_COLOR(color);
+    /* number of empty neighbors */
+    let trivial_liberties = 0;
+    /* number of captured opponent strings */
+    let captures = 0;
+    /* Whether there is a friendly neighbor with a spare liberty. If it
+     * has more than one spare liberty we immediately return 0.
+     */
+    let far_liberties = 0;
+
+    // ASSERT_ON_BOARD1(pos);
+    // ASSERT1(board[pos] == EMPTY, pos);
+    // ASSERT1(IS_STONE(color), pos);
+
+    /* 1. Try first to solve the problem without much work. */
+    this.string_mark++;
+
+
+    for(let i in directions) {
+      const p = this[directions[i]](pos)
+
+      if (this.LIBERTY(p)){
+        trivial_liberties++;
+      }
+      else if (this.board[p] === color) {
+        if (this.LIBERTIES(p) > 2){
+          // 气足够多
+          return 0;
+        }
+        if (this.LIBERTIES(p) === 2){
+          far_liberties++;
+        }
+      }
+      else if (this.board[p] === other && this.LIBERTIES(p) === 1 && this.UNMARKED_STRING(p)) {
+        captures++;
+        this.MARK_STRING(p);
+      }
+    }
+
+    /* Each captured string is guaranteed to produce at least one
+     * liberty. These are disjoint from both trivial liberties and far
+     * liberties. The two latter may however coincide.
+     */
+    if (trivial_liberties + captures >= 2){
+      return 0;
+    }
+
+    //
+    if (far_liberties > 0 && far_liberties + captures >= 2){
+      return 0;
+    }
+
+    if (captures === 0 && far_liberties + trivial_liberties <= 1){
+      return 1;
+    }
+
+    /* 2. It was not so easy.  We use accuratelib() in this case. */
+    return this.accuratelib(pos, color, 2, null) <= 1;
+  }
+
 
   liberty_of_string(pos, str) {
     if (this.IS_STONE(this.board[pos])){
@@ -701,6 +1398,7 @@ class Board {
  */
   new_position() {
     this.position_number++;
+    // next_string： 生成string的string_number自增序号
     this.next_string = 0;
     this.liberty_mark = 0;
     this.string_mark = 0;

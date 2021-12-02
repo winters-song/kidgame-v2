@@ -1,5 +1,5 @@
 import {
-  colors, NO_MOVE, PASS_MOVE
+  colors, NO_MOVE
 } from './Constants'
 import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS} from "./Liberty";
 
@@ -684,9 +684,9 @@ export const Worm = {
 
   find_worm_attacks_and_defenses() {
     const b = this.board
-    const libs = [];
+    // const libs = [];
     const attack_point = [] //pointer
-    const defense_point = [] //pointer
+    // const defense_point = [] //pointer
 
     /* 1. Start with finding attack points. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {

@@ -1,24 +1,24 @@
 import {
-  colors, NO_MOVE,
+  colors
 } from './Constants'
 
 const MAX_READING_CACHE_DEPTH = 5
 const MAX_READING_CACHE_SIZE = 100
 
 
-const MAX_OWL_CACHE_DEPTH = 0
-const MAX_OWL_CACHE_SIZE = 150
-
-const MAX_CONNECTION_CACHE_DEPTH = 5
-const MAX_CONNECTION_CACHE_SIZE = 100
-
-const MAX_BREAKIN_CACHE_DEPTH = 1
-const MAX_BREAKIN_CACHE_SIZE = 150
-
-const MAX_SEMEAI_CACHE_DEPTH = 0
-const MAX_SEMEAI_CACHE_SIZE = 150
-
-const MAX_CACHE_DEPTH = 	5
+// const MAX_OWL_CACHE_DEPTH = 0
+// const MAX_OWL_CACHE_SIZE = 150
+//
+// const MAX_CONNECTION_CACHE_DEPTH = 5
+// const MAX_CONNECTION_CACHE_SIZE = 100
+//
+// const MAX_BREAKIN_CACHE_DEPTH = 1
+// const MAX_BREAKIN_CACHE_SIZE = 150
+//
+// const MAX_SEMEAI_CACHE_DEPTH = 0
+// const MAX_SEMEAI_CACHE_SIZE = 150
+//
+// const MAX_CACHE_DEPTH = 	5
 
 
 class PersistentCacheEntry {

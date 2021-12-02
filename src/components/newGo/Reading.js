@@ -1,11 +1,21 @@
 import {
-  colors, codes, NO_MOVE, PASS_MOVE, 
+  codes, NO_MOVE,
 } from './Constants'
-import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, routine_id, REVERSE_RESULT} from "./Liberty";
+import {routine_id, REVERSE_RESULT} from "./Liberty";
 
 /* Statistics. */
-let reading_node_counter = 0
-let nodes_when_called = 0
+// let reading_node_counter = 0
+// let nodes_when_called = 0
+
+class ReadingMoves {
+  constructor(cfg) {
+    Object.assign(this, cfg)
+    this.pos = []
+    this.score = []
+    this.message = []
+  }
+};
+
 
 export const Reading = {
 
@@ -22,28 +32,37 @@ export const Reading = {
       // SGFTRACE(move_pos, WIN, trace_message);				
       return codes.WIN;							
     }									
-    else if (REVERSE_RESULT(code) > savecode) {				
-      savemove = move_pos;						
-      savecode = REVERSE_RESULT(code);					
+    else if (REVERSE_RESULT(code) > savecode[0]) {
+      // 得到结果比现在的好，则更新
+      savemove[0] = move_pos[0];
+      savecode[0] = REVERSE_RESULT(code);
     }		
   },
 
   CHECK_RESULT_UNREVERSED(savecode, savemove, code, move_pos,	move_ptr, trace_message) {
+    // 反转code
     return this.CHECK_RESULT(savecode, savemove, REVERSE_RESULT(code), move_pos, move_ptr, trace_message)
   },
 
 
   RETURN_RESULT(savecode, savemove, move_ptr, trace_message) {
-    if (savecode) {
+    // 非失败，且有move值，更新move
+    if (savecode[0]) {
       if (move_ptr) {
         move_ptr[0] = savemove[0] //保存结果
       }
     } else {
       // SGFTRACE(0, 0, NULL);
     }
-    return savecode;
+    return savecode[0];
   },
 
+  UPDATE_SAVED_KO_RESULT(savecode, save, code, move) {
+    if (code !== 0 && REVERSE_RESULT(code) > savecode[0]) {
+      save[0] = move[0];
+      savecode[0] = REVERSE_RESULT(code);
+    }
+  },
 
   /* attack(str, *move) determines if the string at (str) can be
    * captured, and if so, (*move) returns the attacking move, unless
@@ -64,16 +83,15 @@ export const Reading = {
     the_move[1] = 'attack'
     let liberties = b.countlib(str);
 
-    nodes_when_called = reading_node_counter;
+    // nodes_when_called = reading_node_counter;
     /* Don't even spend time looking in the cache if there are more than
      * enough liberties. We need this before the persistent cache lookup
      * to avoid results inconsistent with find_defense().
      */
     // 3口气以上忽略
-    if (liberties > 4)
-      // || (liberties === 4 && b.stackp > fourlib_depth)
-      // || (liberties === 3 && b.stackp > depth))
+    if (liberties > 4 || (liberties === 4 && b.stackp > this.fourlib_depth) || (liberties === 3 && b.stackp > this.depth)){
       return 0;
+    }
 
     // 搜索缓存
     // let origin = b.find_origin(str);
@@ -86,7 +104,7 @@ export const Reading = {
 
     // memset(shadow, 0, sizeof(shadow));
     result = this.do_attack(str, the_move);
-    let nodes = reading_node_counter - nodes_when_called;
+    // let nodes = reading_node_counter - nodes_when_called;
 
     // if (debug & DEBUG_READING_PERFORMANCE) {
     //   if (reading_node_counter - nodes_when_called
@@ -138,10 +156,8 @@ export const Reading = {
     str = b.find_origin(str);
     const liberties = b.countlib(str);
 
-    if (liberties > 4){
-      // || (liberties == 4 && b.stackp > fourlib_depth)
-      // || (liberties == 3 && b.stackp > depth)) {
       /* No need to cache the result in these cases. */
+    if (liberties > 4 || (liberties === 4 && b.stackp > this.fourlib_depth) || (liberties === 3 && b.stackp > this.depth)) {
       return 0;
     }
 
@@ -150,22 +166,24 @@ export const Reading = {
      * we only do this if the string has 4 liberties - otherwise the
      * situation changes too much from variation to variation.
      */
-    // if (liberties > 3 && move){
-    //   xpos = move;
-    // }
+    if (liberties > 3 && move){
+      xpos[0] = move[0];
+    }
 
     /* Note that if return value is 1 (too small depth), the move will
      * still be used for move ordering.
      */
-    // if (stackp <= depth
-    // && tt_get(&ttable, ATTACK, str, NO_MOVE, depth - stackp, NULL,
-    //   &retval, NULL, &xpos) == 2) {
-    //   TRACE_CACHED_RESULT(retval, xpos);
-    //   SGFTRACE(xpos, retval, "cached");
-    //   if (move)
-    //     *move = xpos;
-    //   return retval;
-    // }
+    let retval = []
+    if (b.stackp <= this.depth
+    && this.tt_get(this.ttable, routine_id.ATTACK, str, NO_MOVE, this.depth - b.stackp, null,
+      retval, null, xpos) === 2) {
+      // TRACE_CACHED_RESULT(retval, xpos);
+      // SGFTRACE(xpos, retval, "cached");
+      if (move){
+        move[0] = xpos[0];
+      }
+      return retval;
+    }
 
     /* Treat the attack differently depending on how many liberties the
        string at (str) has. */
@@ -189,39 +207,40 @@ export const Reading = {
     // ASSERT1(result >= 0 && result <= WIN, str);
 
     if (result) {
-      // READ_RETURN(ATTACK, str, depth - stackp, move, xpos, result);
-      if(result!==0 && move){
-        move[0] = xpos[0]
-      }
+      this.READ_RETURN(routine_id.ATTACK, str, this.depth - b.stackp, move, xpos, result);
       return result
     }
 
-    // READ_RETURN0(ATTACK, str, depth - stackp);
+    this.READ_RETURN0(routine_id.ATTACK, str, this.depth - b.stackp);
+    return 0
   },
 
   attack1(str, move) {
     const b = this.board
     const color = b.board[str];
     const other = b.OTHER_COLOR(color);
-    let savemove = 0;
-    let savecode = 0;
+    let savemove = [0];
+    let savecode = [0];
     let xpos = []
     let adjs = []
 
-    reading_node_counter++;
+    // reading_node_counter++;
 
     /* Pick up the position of the liberty. */
     b.findlib(str, 1, xpos);
 
+    // 棋串多于1子，打吃必定成功（考虑1子会有打劫情况）
     if (b.countstones(str) > 1) {
-      return this.RETURN_RESULT(codes.WIN, xpos, move, "last liberty");
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
     }
-
+    // 以下是color棋串1气且1子的情况
+    // 尝试提劫，成功
     if (b.trymove(xpos[0], other, "attack1-A", str)) {
       /* Is the attacker in atari? If not the attack was successful. */
+      // 提完多于1口气，不是打劫
       if (b.countlib(xpos[0]) > 1) {
         b.popgo();
-        return this.RETURN_RESULT(codes.WIN, xpos, move, "last liberty");
+        return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
       }
   
       /* If the attacking string is also a single stone, a possible
@@ -229,7 +248,7 @@ export const Reading = {
        * a ko threat first.
        */
       else if (b.countstones(xpos[0]) === 1) {
-        if (b.get_komaster() !== other) {
+        if (b.komaster !== other) {
           /* If the defender is allowed to take the ko the result is KO_A. */
           let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_A, xpos, move, "last liberty - ko");
           if(res === codes.WIN){
@@ -239,7 +258,7 @@ export const Reading = {
         else {
           /* But if the attacker is the attack was successful. */
           b.popgo();
-          return this.RETURN_RESULT(codes.WIN, xpos, move, "last liberty");
+          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
         }
       }
         
@@ -258,14 +277,14 @@ export const Reading = {
         else {
           b.popgo();
           b.popgo();
-          return this.RETURN_RESULT(codes.WIN, xpos, move, "last liberty");
+          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
         }
       }
       b.popgo();
     }
     else {
       /* Illegal ko capture. */
-      if (b.get_komaster() !== color) {
+      if (b.komaster !== color) {
         let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_B, xpos, move, "last liberty - ko");
         if(res === codes.WIN){
           return res
@@ -277,19 +296,22 @@ export const Reading = {
     * An example of back-capturing can be found in reading:234.
     * Backfilling is maybe only meaningful in positions involving ko.
     */
+    // 只适用于打劫
     const libs = []
     const liberties = b.approxlib(xpos[0], color, 6, libs);
-    let apos
+    let apos = []
     if (liberties <= 5){
 
       for (let k = 0; k < liberties; k++) {
         apos = libs[k];
-        if (!b.is_self_atari(apos, other) && b.trymove(apos, other, "attack1-C", str)) {
+        if (!b.is_self_atari(apos, other) && b.trymove(apos, other, "attack1-C")) {
+          // 防守时回填
           let dcode = this.do_find_defense(str, null);
           if (dcode !== codes.WIN && this.do_attack(str, null)) {
-            if (dcode == 0) {
+            // 防守失败
+            if (dcode === 0) {
               b.popgo();
-              return this.RETURN_RESULT(codes.WIN, apos, move, "backfilling");
+              return this.RETURN_RESULT([codes.WIN], apos, move, "backfilling");
             }
             this.UPDATE_SAVED_KO_RESULT(savecode, savemove, dcode, apos);
           }
@@ -298,14 +320,17 @@ export const Reading = {
       }
     }
 
+    // 相邻1口气的（敌方）棋串
     let adj = b.chainlinks2(str, adjs, 1);
     for (let r = 0; r < adj; r++) {
+      // 1口气正好是我们要提子位置
       if (b.liberty_of_string(xpos[0], adjs[r])) {
         let adjs2 = [];
         let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
+        // 相邻的相邻1口气（我方）棋串， 且不是要被提子的棋串
         for (let k = 0; k < adj2; k++) {
           let ko_move;
-          if (adjs2[k] == str){
+          if (adjs2[k] === str){
             continue;
           }
           b.findlib(adjs2[k], 1, apos);
@@ -322,7 +347,7 @@ export const Reading = {
             else {
               if (this.do_find_defense(str, null) !== codes.WIN && this.do_attack(str, null) !== 0) {
                 savemove = apos;
-                savecode = codes.KO_B;
+                savecode = [codes.KO_B];
               }
               b.popgo();
             }
@@ -331,12 +356,335 @@ export const Reading = {
       }
     }
     
-    if (savecode === 0) {
-      return this.RETURN_RESULT(0, 0, move, null);
+    if (savecode[0] === 0) {
+      return this.RETURN_RESULT([0], [0], move, null);
     }
     
     return this.RETURN_RESULT(savecode, savemove, move, "saved move");
 
-  }
+  },
 
+  /* ================================================================ */
+  /*                       Defensive functions                        */
+  /* ================================================================ */
+  /* Like find_defense, but takes the komaster argument. If the
+   * opponent is reading functions will not try
+   * to take ko.
+   */
+  do_find_defense(str, move) {
+    const b = this.board
+    const xpos = [NO_MOVE];
+    let dcode = 0;
+    let retval;
+
+    // SETUP_TRACE_INFO("find_defense", str);
+
+    /* We first check if the number of liberties is larger than four. In
+     * that case we don't cache the result and to avoid needlessly
+     * storing the position in the hash table, we must do this test
+     * before we look for cached results.
+     */
+    str = b.find_origin(str);
+    const liberties = b.countlib(str);
+
+    if (liberties > 4
+      || (liberties === 4 && b.stackp > this.fourlib_depth)
+      || (liberties === 3 && b.stackp > this.depth)) {
+      /* No need to cache the result in these cases. */
+      // SGFTRACE(0, WIN, "too many liberties or stackp > depth");
+      if (move){
+        move[0] = 0
+      }
+      return codes.WIN;
+    }
+
+    /* Set "killer move" up.  This move (if set) was successful in
+     * another variation, so it is reasonable to try it now.  However,
+     * we only do this if the string has at least 3 liberties -
+     * otherwise the situation changes too much from variation to
+     * variation.
+     */
+    if (liberties > 2 && move){
+      xpos[0] = move[0];
+    }
+
+    if (b.stackp <= this.depth
+      && this.tt_get(this.ttable, routine_id.FIND_DEFENSE, str, NO_MOVE, this.depth - b.stackp, null, retval, null, xpos) === 2) {
+      /* Note that if return value is 1 (too small depth), the move will
+       * still be used for move ordering.
+       */
+      // TRACE_CACHED_RESULT(retval, xpos);
+      // SGFTRACE(xpos, retval, "cached");
+      if (move){
+        move[0] = xpos[0];
+      }
+      return retval;
+    }
+
+    if (liberties === 1){
+      dcode = this.defend1(str, xpos);
+    }
+    // else if (liberties === 2){
+    //   dcode = this.defend2(str, xpos);
+    // }
+    // else if (liberties === 3){
+    //   dcode = this.defend3(str, xpos);
+    // }
+    // else if (liberties === 4){
+    //   dcode = this.defend4(str, xpos);
+    // }
+
+    if (dcode) {
+      this.READ_RETURN(routine_id.FIND_DEFENSE, str, this.depth - b.stackp, move, xpos, dcode);
+      return dcode
+    }
+
+    this.READ_RETURN0(routine_id.FIND_DEFENSE, str, this.depth - b.stackp);
+    return 0
+  },
+
+
+  /* Determine if a `move' by `color' allows under-the-stones tesuji
+   * a.k.a. "big snapback".  Here is an example:
+   *
+   *     |XXXX...
+   *     |XXOOXXX
+   *     |OOOXOOX
+   *     |..O*OOX
+   *     +-------
+   *
+   * Even though the move at '*' allows black to capture four white
+   * stones, white can later recapture black stones and create a second
+   * eye.  This is very similar to a snapback.
+   *
+   * This function returns true if a move creates a string of with two
+   * liberties, which can, however, be instantly recaptured by opponent.
+   * It is actually not required that the move captures something.  If
+   * the caller needs captures, it should check for them itself.
+   */
+  allows_under_the_stones_tesuji(move, color) {
+    const b = this.board
+    let result = 0;
+
+    if (b.accuratelib(move, color, 3, null) !== 2){
+      return 0;
+    }
+
+    if (b.trymove(move, color, "allows_under_the_stones_tesuji", NO_MOVE)) {
+      const libs =[];
+
+      b.findlib(move, 2, libs);
+      if ((!b.is_self_atari(libs[0], color)
+        && b.accuratelib(libs[1], b.OTHER_COLOR(color), 3, null) <= 2)
+        || (!b.is_self_atari(libs[1], color)
+          && b.accuratelib(libs[0], b.OTHER_COLOR(color), 3, null) <= 2)){
+        result = 1;
+      }
+
+      b.popgo();
+    }
+
+    return result;
+  },
+
+  /* Called by the defendN functions.  Don't think too much if there's
+   * an easy way to get enough liberties.
+   */
+  fast_defense(str, liberties, libs, move) {
+    const b = this.board
+    const color = b.board[str];
+    let goal_liberties = b.stackp < this.fourlib_depth ? 5 : 4;
+
+    /* We would like to initialize liberty_mark to -1, but some
+     * compilers warn, quite correctly, that -1 is not an unsigned
+     * number.
+     */
+    // static unsigned liberty_mark = ~0U;
+    // static unsigned lm[BOARDMAX];
+    let liberty_mark = -1
+    let lm = []
+    // ASSERT1(libs != NULL, str);
+    // ASSERT1(move != NULL, str);
+
+    for (let k = 0; k < liberties; k++) {
+      /* accuratelib() seems to be more efficient than fastlib() here,
+       * probably because it catches more cases.
+       */
+      if (b.accuratelib(libs[k], color, goal_liberties, null) >= goal_liberties) {
+        move[0] = libs[k];
+        return 1;
+      }
+    }
+
+    /* Check the cases where an opponent neighbor string is in
+     * atari.
+     */
+    let adjs = []
+    let adj = b.chainlinks2(str, adjs, 1);
+    for (let j = 0; j < adj; j++) {
+      const lib = [];
+      const missing = goal_liberties - liberties;
+      let total = 0;
+
+      b.findlib(adjs[j], 1, lib);
+      /* We aren't interested in ko (at this stage). And playing
+       * our own last liberty to capture is prone to snapbacks,
+       * so better let the 'normal' reading routines do the job.
+       */
+      if ((liberties === 1 && lib === libs[0] && b.countstones(adjs[j]) <= 2) || b.is_ko(lib, color, null)){
+        continue;
+      }
+
+      /* Would the capture already gain enough liberties ?
+       * No need to test the case if the move is one of our liberties,
+       * it has already been done in the first loop of this function.
+       */
+      const num_adjacent_stones = b.count_adjacent_stones(adjs[j], str, missing);
+      if (!b.liberty_of_string(lib[0], str) && num_adjacent_stones >= missing) {
+        move[0] = lib[0];
+        return 1;
+      }
+      // ASSERT1(num_adjacent_stones >= 1, str);
+
+      /* What is the total number of liberties of the friendly strings around
+       * the lunch?
+       */
+      if (++liberty_mark === 0) {
+        // memset(lm, 0, sizeof(lm));
+        liberty_mark++;
+      }
+      /* Loop over all neighbors of the lunch. */
+      let adjs2 = []
+      let adj2 = b.chainlinks(adjs[j], adjs2);
+      for (let k = 0; k < adj2; k++) {
+        /* Loop over all liberties of the neighbor. */
+        const alibs = []
+        const alib = b.findlib(adjs2[k], b.MAXLIBS, alibs);
+        for (let l = 0; l < alib; l++) {
+          if (lm[alibs[l]] !== liberty_mark) {
+            lm[alibs[l]] = liberty_mark;
+            total++;
+          }
+        }
+      }
+
+      /* The captured string is treated as common liberties, and
+       * some adjustements are made :
+       * - we're adding a stone for capturing the lunch (-1)
+       * - opponent might be able to remove a liberty (-1)
+       * - and possibly force us to connect (-1)
+       * - reduce us by one more liberty with a throw-in; this
+       *   is only possible if there is only one adjacent stone in the
+       *   lunch to the string (-1)
+       * Probably there are more damezumari-type cases, but as a heuristic,
+       * it seems good enough.
+       */
+      total += b.countstones(adjs[j]) - 2;
+      if (lm[lib] === liberty_mark)
+        total--;
+      if (num_adjacent_stones === 1)
+        total--;
+
+      if (total >= goal_liberties) {
+        /* One case when this code can give a false defense is an
+         * under-the-stones tesuji or "big snapback."  See reading:199
+         * for an example.  While this position is probably very rare,
+         * it is nice to make GNU Go understand "neat" tesujis.
+         */
+        if (liberties === 1 && lib === libs[0] && this.allows_under_the_stones_tesuji(lib, color)) {
+          /* This is a bad "fast defense". */
+          continue;
+        }
+
+        move[0] = lib;
+        return 1;
+      }
+    }
+
+    return 0;
+  },
+
+  /* If str points to a string with exactly one liberty, defend1
+   * determines whether it can be saved by extending or capturing
+   * a boundary chain having one liberty. The function returns WIN if the string
+   * can be saved, otherwise 0. It returns KO_A or KO_B if it can be saved,
+   * conditioned on ko. Returns KO_A if it can be saved provided (color) is
+   * willing to ignore any ko threat. Returns KO_B if it can be saved if (color)
+   * has a ko threat which must be answered.
+   *
+   * The pair defend1-attack2 call each other recursively to
+   * read situations such as ladders. They read all ladders to the end.
+   * If the reading ply (stackp) is deeper than the deep-reading cutoff
+   * parameter depth, whose default value DEPTH is defined in gnugo.h, then a
+   * string is assumed alive if it can get 3 liberties. When
+   * fourlib_depth < stackp < depth, a string is considered alive if it can get
+   * four liberties. When stackp < fourlib_depth, it is considered alive
+   * if it can get 5 liberties.
+   * */
+  defend1 (str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const xpos = [0];
+    let savemove = [0];
+    let savecode = [0];
+
+    // SETUP_TRACE_INFO("defend1", str);
+    // reading_node_counter++;
+
+    // ASSERT1(IS_STONE(board[str]), str);
+    // ASSERT1(countlib(str) == 1, str);
+
+    /* lib will be the liberty of the string. */
+    const lib = []
+    let liberties = b.findlib(str, 1, []);
+    // ASSERT1(liberties == 1, str);
+
+    if (this.fast_defense(str, liberties, lib, xpos)){
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "fast defense");
+    }
+
+    /* Collect moves to try in the first batch.
+     * 1. First order liberty.
+     * 2. Chain breaking moves.
+     * 3. Moves to set up a snapback.
+     */
+    const moves = new ReadingMoves({
+      num : 1,
+      num_tried : 0
+    })
+    moves.pos[0] = lib[0];
+    moves.score[0] = 0;
+    moves.message[0] = "liberty";
+
+    // this.break_chain_moves(str, moves);
+    // this.set_up_snapback_moves(str, lib, moves);
+
+    // this.order_moves(str, moves, color, read_function_name, move[0]);
+    // DEFEND_TRY_MOVES(0, null);
+
+    /* If the string is a single stone and a capture would give a ko,
+     * try to defend it with ko by backfilling.
+     *
+     * FIXME: What is an example of this? Is it correct that the
+     *           return value is WIN and not KO_A or KO_B?
+     */
+    if (b.stackp <= this.backfill_depth && b.countstones(str) === 1 && b.is_ko(lib, other, null)) {
+      let libs2 = [];
+      liberties = b.approxlib(lib, color, 6, libs2);
+      if (liberties <= 5) {
+        for (let k = 0; k < liberties; k++) {
+          let apos = libs2[k];
+          if ((liberties === 1 || !b.is_self_atari(apos, other))
+            && b.trymove(apos, color, "defend1-C", str)) {
+            let acode = this.do_attack(str, null);
+            b.popgo();
+            this.CHECK_RESULT(savecode, savemove, acode, apos, move, "backfilling");
+          }
+        }
+      }
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  }
 }

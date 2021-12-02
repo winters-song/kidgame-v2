@@ -1,4 +1,11 @@
 
+export const DEFAULT_LEVEL = 10
+/* Owl Node Limit */
+export const OWL_NODE_LIMIT = 1000
+/* Semeai Variations. 500 default */
+export const SEMEAI_NODE_LIMIT = 500
+
+
 export const colors  = {
   EMPTY : 0,
   BLACK: 1,

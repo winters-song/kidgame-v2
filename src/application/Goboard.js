@@ -9,8 +9,7 @@ import './index.less'
 
 // const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-16]AB[cc][dc][ec]AW[gc][ge])'
 // attack1
-const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-26]AB[dd][ed][de][df][ef][fd][ff]AW[ee][fe][gf][gg][gd][gc])';
-
+const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-01]AB[ed][de][fe]AW[ee][df][ff][eg];B[ef])'
 
 function Puzzle (props){
   const goboardRef = useRef()
@@ -27,7 +26,7 @@ function Puzzle (props){
     }
 
     player.init({sgfTree, whoFirst: whoPlay, boardSize});
-    // player.toEnd()
+    player.toEnd()
   }
 
   useEffect(() => {
