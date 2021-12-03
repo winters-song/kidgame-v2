@@ -1080,6 +1080,7 @@ class Board {
     let n = this.string_number[str1];
     let liberties1 = this.string[n].liberties;
 
+    // str1气数大于str2，互换取小值
     if (liberties1 > this.string[this.string_number[str2]].liberties) {
       n = this.string_number[str2];
       liberties1 = this.string[n].liberties;
