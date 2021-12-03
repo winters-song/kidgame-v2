@@ -33,14 +33,6 @@ class BoardCacheEntry {
   }
 }
 
-const accuratelib_cache = []
-
-
-// struct board_cache_entry {
-//   int threshold;
-//   int liberties;
-//   Hash_data position_hash;
-// };
 
 class Board {
 
@@ -100,6 +92,7 @@ class Board {
     this.hash.init()
 
     this.approxlib_cache = []
+    this.accuratelib_cache = []
 
     this.position_number = 0
     this.stackp = 0
@@ -607,99 +600,107 @@ class Board {
     /* Find neighboring strings of the same color. If there are more than two of
      * them, we give up (it's too difficult to count their common liberties).
      */
-    if (this.board[this.SOUTH(pos)] === color) {
-      ally1 = this.string_number[this.SOUTH(pos)];
+    const south = this.SOUTH(pos)
+    const west = this.WEST(pos)
+    const north = this.NORTH(pos)
+    const east = this.EAST(pos)
 
-      if (this.board[this.WEST(pos)] === color && this.string_number[this.WEST(pos)] !== ally1) {
-        ally2 = this.string_number[this.WEST(pos)];
+    if (this.board[south] === color) {
+      ally1 = this.string_number[south];
 
-        if (this.board[this.NORTH(pos)] === color
-          && this.string_number[this.NORTH(pos)] !== ally1
-          && this.string_number[this.NORTH(pos)] !== ally2){
+      // 南西不同
+      if (this.board[west] === color && this.string_number[west] !== ally1) {
+        ally2 = this.string_number[west];
+        // 南西北不同 - 有2个以上不同相邻棋串
+        if (this.board[north] === color && this.string_number[north] !== ally1 && this.string_number[north] !== ally2){
           return -1;
         }
       }
-      else if (this.board[this.NORTH(pos)] === color && this.string_number[this.NORTH(pos)] !== ally1){
-        ally2 = this.string_number[this.NORTH(pos)];
+      // 南北不同
+      else if (this.board[north] === color && this.string_number[north] !== ally1){
+        ally2 = this.string_number[north];
       }
 
-      if (this.board[this.EAST(pos)] === color && this.string_number[this.EAST(pos)] !== ally1) {
-        if (ally2 < 0)
-          ally2 = this.string_number[this.EAST(pos)];
-        else if (this.string_number[this.EAST(pos)] !== ally2)
+      // 东南不同
+      if (this.board[east] === color && this.string_number[east] !== ally1) {
+        // 没有西、北
+        if (ally2 < 0) {
+          ally2 = this.string_number[east];
+        }
+        else if (this.string_number[east] !== ally2){
           return -1;
+        }
       }
     }
-    else if (this.board[this.WEST(pos)] === color) {
-      ally1 = this.string_number[this.WEST(pos)];
+    else if (this.board[west] === color) {
+      ally1 = this.string_number[west];
 
-      if (this.board[this.NORTH(pos)] === color && this.string_number[this.NORTH(pos)] !== ally1) {
-        ally2 = this.string_number[this.NORTH(pos)];
+      if (this.board[north] === color && this.string_number[north] !== ally1) {
+        ally2 = this.string_number[north];
 
-        if (this.board[this.EAST(pos)] === color
-          && this.string_number[this.EAST(pos)] !== ally1
-          && this.string_number[this.EAST(pos)] !== ally2)
+        if (this.board[east] === color && this.string_number[east] !== ally1 && this.string_number[east] !== ally2){
           return -1;
+        }
       }
-      else if (this.board[this.EAST(pos)] === color
-        && this.string_number[this.EAST(pos)] !== ally1)
-        ally2 = this.string_number[this.EAST(pos)];
+      else if (this.board[east] === color && this.string_number[east] !== ally1){
+        ally2 = this.string_number[east];
+      }
     }
-    else if (this.board[this.NORTH(pos)] === color) {
-      ally1 = this.string_number[this.NORTH(pos)];
+    else if (this.board[north] === color) {
+      ally1 = this.string_number[north];
 
-      if (this.board[this.EAST(pos)] === color && this.string_number[this.EAST(pos)] !== ally1)
-        ally2 = this.string_number[this.EAST(pos)];
+      if (this.board[east] === color && this.string_number[east] !== ally1){
+        ally2 = this.string_number[east];
+      }
     }
-    else if (this.board[this.EAST(pos)] === color)
-      ally1 = this.string_number[this.EAST(pos)];
+    else if (this.board[east] === color){
+      ally1 = this.string_number[east];
+    }
 
     /* If we are to ignore captures, the things are very easy. */
     if (ignore_captures) {
       if (ally1 < 0) {			/* No allies */
-        if (this.LIBERTY(this.SOUTH(pos)))
+        if (this.LIBERTY(south))
           fast_liberties++;
-        if (this.LIBERTY(this.WEST(pos)))
+        if (this.LIBERTY(west))
           fast_liberties++;
-        if (this.LIBERTY(this.NORTH(pos)))
+        if (this.LIBERTY(north))
           fast_liberties++;
-        if (this.LIBERTY(this.EAST(pos)))
+        if (this.LIBERTY(east))
           fast_liberties++;
       }
       else if (ally2 < 0) {		/* One ally */
-        if (this.LIBERTY(this.SOUTH(pos))
-          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally1, color))
+        if (this.LIBERTY(south) && !this.NON_SOUTH_NEIGHBOR_OF_STRING(south, ally1, color))
           fast_liberties++;
-        if (this.LIBERTY(this.WEST(pos))
-          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally1, color))
+        if (this.LIBERTY(west) && !this.NON_WEST_NEIGHBOR_OF_STRING(west, ally1, color))
           fast_liberties++;
-        if (this.LIBERTY(this.NORTH(pos))
-          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally1, color))
+        if (this.LIBERTY(north) && !this.NON_NORTH_NEIGHBOR_OF_STRING(north, ally1, color))
           fast_liberties++;
-        if (this.LIBERTY(this.EAST(pos))
-          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally1, color))
+        if (this.LIBERTY(east) && !this.NON_EAST_NEIGHBOR_OF_STRING(east, ally1, color))
           fast_liberties++;
 
+        // 只有一个相邻我方棋串，气数减去当前落子位置的1口气
         fast_liberties += this.string[ally1].liberties - 1;
       }
       else {				/* Two allies */
-        if (this.LIBERTY(this.SOUTH(pos))
-          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally1, color)
-          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(this.SOUTH(pos), ally2, color))
+        if (this.LIBERTY(south)
+          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(south, ally1, color)
+          && !this.NON_SOUTH_NEIGHBOR_OF_STRING(south, ally2, color))
           fast_liberties++;
-        if (this.LIBERTY(this.WEST(pos))
-          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally1, color)
-          && !this.NON_WEST_NEIGHBOR_OF_STRING(this.WEST(pos), ally2, color))
+        if (this.LIBERTY(west)
+          && !this.NON_WEST_NEIGHBOR_OF_STRING(west, ally1, color)
+          && !this.NON_WEST_NEIGHBOR_OF_STRING(west, ally2, color))
           fast_liberties++;
-        if (this.LIBERTY(this.NORTH(pos))
-          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally1, color)
-          && !this.NON_NORTH_NEIGHBOR_OF_STRING(this.NORTH(pos), ally2, color))
+        if (this.LIBERTY(north)
+          && !this.NON_NORTH_NEIGHBOR_OF_STRING(north, ally1, color)
+          && !this.NON_NORTH_NEIGHBOR_OF_STRING(north, ally2, color))
           fast_liberties++;
-        if (this.LIBERTY(this.EAST(pos))
-          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally1, color)
-          && !this.NON_EAST_NEIGHBOR_OF_STRING(this.EAST(pos), ally2, color))
+        if (this.LIBERTY(east)
+          && !this.NON_EAST_NEIGHBOR_OF_STRING(east, ally1, color)
+          && !this.NON_EAST_NEIGHBOR_OF_STRING(east, ally2, color))
           fast_liberties++;
 
+        // 减去公气
         fast_liberties += this.string[ally1].liberties + this.string[ally2].liberties
           - this.count_common_libs(this.string[ally1].origin, this.string[ally2].origin) - 1;
       }
@@ -715,8 +716,8 @@ class Board {
           && (ally1 < 0 || !this.NEIGHBOR_OF_STRING(neighbor, ally1, color))
           && (ally2 < 0 || !this.NEIGHBOR_OF_STRING(neighbor, ally2, color)))
           fast_liberties++;
-        else if (this.board[neighbor] === this.OTHER_COLOR(color)	/* A capture */
-          && this.LIBERTIES(neighbor) === 1) {
+        /* A capture */
+        else if (this.board[neighbor] === this.OTHER_COLOR(color)	 && this.LIBERTIES(neighbor) === 1) {
           const neighbor_size = this.COUNTSTONES(neighbor);
 
           if (neighbor_size === 1 || (neighbor_size === 2 && ally1 < 0))
@@ -739,38 +740,28 @@ class Board {
 
 
 
-/* Find the liberties a stone of the given color would get if played
- * at (pos), ignoring possible captures of opponent stones. (pos)
- * must be empty. If libs != NULL, the locations of up to maxlib
- * liberties are written into libs[]. The counting of liberties may
- * or may not be halted when maxlib is reached. The number of liberties
- * found is returned.
- *
- * If you want the number or the locations of all liberties, however
- * many they are, you should pass MAXLIBS as the value for maxlib and
- * allocate space for libs[] accordingly.
- */
-
+  /* Find the liberties a stone of the given color would get if played
+   * at (pos), ignoring possible captures of opponent stones. (pos)
+   * must be empty. If libs != NULL, the locations of up to maxlib
+   * liberties are written into libs[]. The counting of liberties may
+   * or may not be halted when maxlib is reached. The number of liberties
+   * found is returned.
+   *
+   * If you want the number or the locations of all liberties, however
+   * many they are, you should pass MAXLIBS as the value for maxlib and
+   * allocate space for libs[] accordingly.
+   */
   getApproxLib(pos, color){
-    const entry = {
-      threshold: 0,
-      liberties: 0,
-      position_hash: {
-        hashval: 0
-      }
+    if(!this.approxlib_cache[pos]){
+      this.approxlib_cache[pos] = []
     }
-    if(this.approxlib_cache[pos]){
-      if(!this.approxlib_cache[pos][color]){
-        this.approxlib_cache[pos][color] = entry
-      }
-    }else{
-      this.approxlib_cache[pos] = {
-        [color]: entry
-      }
+    if(!this.approxlib_cache[pos][color]){
+      this.approxlib_cache[pos][color] = new BoardCacheEntry()
     }
     return this.approxlib_cache[pos][color]
   }
-// 给定颜色在pos落子，获得气信息
+
+  // 给定颜色在pos落子，获得气信息，不考虑提子
   approxlib(pos, color, maxlib, libs) {
     let liberties;
 
@@ -818,21 +809,12 @@ class Board {
 
   /* Does the real work of approxlib(). */
   // 在pos位置落子后气数，上下左右四个方向有气加气，有我方棋串则累加气
+  // maxlib > MAX_LIBERTIES时可能不准，需使用更健壮的slow_approxlib()
   do_approxlib(pos, color, maxlib, libs) {
     let liberties = 0;
 
-    /* Look for empty neighbors and the liberties of the adjacent
-     * strings of the given color. The algorithm below won't work
-     * correctly if any of the adjacent strings have more than
-     * MAX_LIBERTIES liberties AND maxlib is larger than MAX_LIBERTIES.
-     * therefore approxlib() calls more robust slow_approxlib() if
-     * this might be the case.
-     */
-
-    /* Start by marking pos itself so it isn't counted among its own
-     * liberties.
-     */
     this.liberty_mark++;
+    // pos位置假设落子，先做标记，后面遍历的时候不会算气
     this.MARK_LIBERTY(pos);
 
     for(let i in directions) {
@@ -866,17 +848,21 @@ class Board {
       }
     }
 
-    /* If we reach here, then we have counted _all_ the liberties, so
-     * we set threshold to MAXLIBS (the result is the same regardless
-     * of `maxlib' value).
-     */
-    // if (!libs){
-    //   this.approxlib_cache[pos][color - 1].threshold = this.MAXLIBS;
-    // }
     return liberties;
   }
 
   slow_approxlib() {}
+
+
+  getAccurateLib(pos, color){
+    if(!this.accuratelib_cache[pos]){
+      this.accuratelib_cache[pos] = []
+    }
+    if(!this.accuratelib_cache[pos][color]){
+      this.accuratelib_cache[pos][color] = new BoardCacheEntry()
+    }
+    return this.accuratelib_cache[pos][color]
+  }
 
   /* Find the liberties a stone of the given color would get if played
    * at (pos). This function takes into consideration all captures. Its
@@ -898,13 +884,7 @@ class Board {
   accuratelib(pos, color, maxlib, libs) {
     let liberties;
 
-    if(!accuratelib_cache[pos]){
-      accuratelib_cache[pos] = []
-    }
-    if(!accuratelib_cache[pos][color - 1]){
-      accuratelib_cache[pos][color - 1] = new BoardCacheEntry()
-    }
-    let entry = accuratelib_cache[pos][color - 1];
+    let entry = this.getAccurateLib(pos, color - 1 )
     // ASSERT1(board[pos] == EMPTY, pos);
     // ASSERT1(IS_STONE(color), pos);
 
@@ -954,13 +934,16 @@ class Board {
 
     for (let k = 0; k < 4; k++) {
       let pos2 = pos + this.delta[k];
+
       if (this.UNMARKED_LIBERTY(pos2)) {
         /* A trivial liberty */
-        if (libs)
+        if (libs){
           libs[liberties] = pos2;
+        }
         liberties++;
-        if (liberties >= maxlib)
+        if (liberties >= maxlib){
           return liberties;
+        }
 
         this.MARK_LIBERTY(pos2);
       }
@@ -976,12 +959,13 @@ class Board {
           for (let l = 0; l < s.liberties; l++) {
             let lib = sl.list[l];
             if (this.UNMARKED_LIBERTY(lib)) {
-              if (libs)
+              if (libs){
                 libs[liberties] = lib;
+              }
               liberties++;
-              if (liberties >= maxlib)
+              if (liberties >= maxlib){
                 return liberties;
-
+              }
               this.MARK_LIBERTY(lib);
             }
           }
@@ -995,54 +979,29 @@ class Board {
            */
           let stone = pos2;
           do {
-            if (this.UNMARKED_LIBERTY(this.SOUTH(stone))) {
-              if (libs)
-                libs[liberties] = this.SOUTH(stone);
-              liberties++;
-              if (liberties >= maxlib)
-                return liberties;
 
-              this.MARK_LIBERTY(this.SOUTH(stone));
-            }
+            for(let i in directions) {
+              const p = this[directions[i]](stone)
 
-            if (this.UNMARKED_LIBERTY(this.WEST(stone))) {
-              if (libs)
-                libs[liberties] = this.WEST(stone);
-              liberties++;
-              if (liberties >= maxlib)
-                return liberties;
-
-              this.MARK_LIBERTY(this.WEST(stone));
-            }
-
-            if (this.UNMARKED_LIBERTY(this.NORTH(stone))) {
-              if (libs)
-                libs[liberties] = this.NORTH(stone);
-              liberties++;
-              if (liberties >= maxlib)
-                return liberties;
-
-              this.MARK_LIBERTY(this.NORTH(stone));
-            }
-
-            if (this.UNMARKED_LIBERTY(this.EAST(stone))) {
-              if (libs)
-                libs[liberties] = this.EAST(stone);
-              liberties++;
-              if (liberties >= maxlib)
-                return liberties;
-
-              this.MARK_LIBERTY(this.EAST(stone));
+              if (this.UNMARKED_LIBERTY(p)) {
+                if (libs){
+                  libs[liberties] = p;
+                }
+                liberties++;
+                if (liberties >= maxlib){
+                  return liberties;
+                }
+                this.MARK_LIBERTY(p);
+              }
             }
 
             stone = this.NEXT_STONE(stone);
           } while (stone !== pos2);
         }
-
+        // 标记这个棋串已经遍历过了，防止棋串占据多个方向重复计算
         this.MARK_STRING(pos2);
       }
-      else if (this.board[pos2] === this.OTHER_COLOR(color)
-        && this.string[this.string_number[pos2]].liberties === 1) {
+      else if (this.board[pos2] === this.OTHER_COLOR(color) && this.string[this.string_number[pos2]].liberties === 1) {
         /* A capture. */
         captured[captures++] = pos2;
       }
@@ -1060,34 +1019,41 @@ class Board {
         && !this.MARKED_COLOR_STRING(this.WEST(lib), color)
         && !this.MARKED_COLOR_STRING(this.NORTH(lib), color)
         && !this.MARKED_COLOR_STRING(this.EAST(lib), color)) {
-        if (libs)
+        if (libs){
           libs[liberties] = lib;
+        }
         liberties++;
-        if (liberties >= maxlib)
+        if (liberties >= maxlib) {
           return liberties;
+        }
       }
 
       let l
       /* Check if we already know of this capture. */
-      for (l = 0; l < k; l++)
-        if (this.string_number[captured[l]] === this.string_number[lib])
+      for (l = 0; l < k; l++){
+        if (this.string_number[captured[l]] === this.string_number[lib]){
           break;
+        }
+      }
 
       if (l === k) {
         /* Traverse all the stones of the capture and add to the list
          * of liberties those, which are adjacent to at least one own
          * marked string.
          */
+        // 被提棋串与落子相邻棋串有若干撞气
         do {
           if (this.MARKED_COLOR_STRING(this.SOUTH(lib), color)
             || this.MARKED_COLOR_STRING(this.WEST(lib), color)
             || this.MARKED_COLOR_STRING(this.NORTH(lib), color)
             || this.MARKED_COLOR_STRING(this.EAST(lib), color)) {
-            if (libs)
+            if (libs){
               libs[liberties] = lib;
+            }
             liberties++;
-            if (liberties >= maxlib)
+            if (liberties >= maxlib){
               return liberties;
+            }
           }
 
           lib = this.NEXT_STONE(lib);
@@ -1268,7 +1234,6 @@ class Board {
 
     /* 1. Try first to solve the problem without much work. */
     this.string_mark++;
-
 
     for(let i in directions) {
       const p = this[directions[i]](pos)
