@@ -1,7 +1,8 @@
 import {
+  codes,
   colors, NO_MOVE
 } from './Constants'
-import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS} from "./Liberty";
+import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
 
 class WormData{
   constructor(cfg) {
@@ -686,7 +687,7 @@ export const Worm = {
     const b = this.board
     // const libs = [];
     const attack_point = [] //pointer
-    // const defense_point = [] //pointer
+    const defense_point = [] //pointer
 
     /* 1. Start with finding attack points. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
@@ -713,46 +714,46 @@ export const Worm = {
     // gg_assert(stackp == 0);
 
     /* 2. Use pattern matching to find a few more attacks. */
-    // this.find_attack_patterns();
+    this.find_attack_patterns();
     // gg_assert(stackp == 0);
 
     /* 3. Now find defense moves. */
-    // for (let str = BOARDMIN; str < BOARDMAX; str++) {
-    //   if (!IS_STONE(board[str]) || !is_worm_origin(str, str))
-    //     continue;
-    //
-    //   if (worm[str].attack_codes[0] != 0) {
-    //
-    //     TRACE("considering defense of %1m\n", str);
-    //     dcode = find_defense(str, &defense_point);
-    //     if (dcode != 0) {
-    //       TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
-    //       if (defense_point != NO_MOVE)
-    //         change_defense(str, defense_point, dcode);
-    //     }
-    //     else {
-    //       /* If the point of attack is not adjacent to the worm,
-    //        * it is possible that this is an overlooked point of
-    //        * defense, so we try and see if it defends.
-    //        */
-    //       attack_point = worm[str].attack_points[0];
-    //       if (!liberty_of_string(attack_point, str))
-    //         if (trymove(attack_point, worm[str].color, "make_worms", NO_MOVE)) {
-    //           int acode = attack(str, NULL);
-    //           if (acode != WIN) {
-    //             change_defense(str, attack_point, REVERSE_RESULT(acode));
-    //             TRACE("worm at %1m can be defended at %1m with code %d\n",
-    //               str, attack_point, REVERSE_RESULT(acode));
-    //           }
-    //           popgo();
-    //         }
-    //     }
-    //   }
-    // }
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
+        continue;
+
+      if (this.worm[str].attack_codes[0] !== 0) {
+
+        // TRACE("considering defense of %1m\n", str);
+        const dcode = this.find_defense(str, defense_point);
+        if (dcode !== 0) {
+          // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
+          if (defense_point !== NO_MOVE){
+            this.change_defense(str, defense_point[0], dcode);
+          }
+        }
+        else {
+          /* If the point of attack is not adjacent to the worm,
+           * it is possible that this is an overlooked point of
+           * defense, so we try and see if it defends.
+           */
+          attack_point[0] = this.worm[str].attack_points[0];
+          if (!b.liberty_of_string(attack_point[0], str))
+            if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
+              const acode = this.attack(str, null);
+              if (acode !== codes.WIN) {
+                this.change_defense(str, attack_point[0], REVERSE_RESULT(acode));
+                // TRACE("worm at %1m can be defended at %1m with code %d\n", str, attack_point, REVERSE_RESULT(acode));
+              }
+              b.popgo();
+            }
+        }
+      }
+    }
     // gg_assert(stackp == 0);
 
     /* 4. Use pattern matching to find a few more defense moves. */
-    // find_defense_patterns();
+    this.find_defense_patterns();
     // gg_assert(stackp == 0);
 
     /*
@@ -887,6 +888,25 @@ export const Worm = {
       }
     }
   },
+
+  worm_reasons() {},
+  ping_cave() {},
+  ping_recurse() {},
+  touching() {},
+  genus() {},
+  markcomponent() {},
+  examine_cavity() {},
+  cavity_recurse() {},
+  find_attack_patterns() {},
+  attack_callback() {},
+  find_defense_patterns() {},
+  defense_callback() {},
+  get_lively_stones() {},
+  compute_worm_influence() {},
+
+  ascii_report_worm() {},
+  report_worm() {},
+
 
   //temp 临时测试辐射过程
   test_print_worm(worm){

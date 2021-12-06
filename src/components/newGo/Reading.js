@@ -16,6 +16,31 @@ class ReadingMoves {
   }
 };
 
+const MAX_MOVES = 50
+
+
+
+/* Parameters used in the ordering of moves to try in the tactical
+ * reading.
+ */
+/*                                              0   1   2   3   4  >4  */
+const defend_lib_score              = [-5, -4,  0,  3,  5, 50];
+const defend_not_adjacent_lib_score = [ 0,  0,  2,  3,  5];
+const defend_capture_score          = [ 0,  6,  9, 13, 18, 24];
+const defend_atari_score            = [ 0,  2,  4,  6,  7, 8];
+const defend_save_score             = [ 0,  3,  6,  8, 10, 12];
+const defend_open_score             = [ 0,  1,  2,  3,  4];
+const attack_own_lib_score          = [10, -4,  2,  3,  4];
+const attack_string_lib_score       = [-5,  2,  3,  7, 10, 19];
+const attack_capture_score          = [-4,  4, 10, 15, 20, 25];
+const attack_save_score             = [ 0, 10, 13, 18, 21, 24];
+const attack_open_score             = [ 0,  0,  2,  4,  4];
+const defend_not_edge_score         = 5;
+const attack_not_edge_score         = 1;
+const attack_ko_score               = -15;
+const cannot_defend_penalty         = -20;
+const safe_atari_score              = 8;
+
 
 export const Reading = {
 
@@ -61,6 +86,27 @@ export const Reading = {
     if (code !== 0 && REVERSE_RESULT(code) > savecode[0]) {
       save[0] = move[0];
       savecode[0] = REVERSE_RESULT(code);
+    }
+  },
+
+
+  /* Please notice that message had better be a fixed string. Only the
+   * pointer to it is saved and there is no attempt to free up any
+   * storage.
+   */
+  ADD_CANDIDATE_MOVE(move, this_score, moves, this_message)	{
+    let u
+    for (u = 0; u < moves.num; u++){
+      if (moves.pos[u] === move) {
+        moves.score[u] += this_score;
+        break;
+      }
+    }
+    if (u === moves.num && moves.num < MAX_MOVES) {
+      moves.pos[moves.num] = move;
+      moves.score[moves.num] = this_score;
+      moves.message[moves.num] = this_message;
+      moves.num++;
     }
   },
 
@@ -129,240 +175,72 @@ export const Reading = {
   },
 
 
-
-  /* ================================================================ */
-  /*                       Attacking functions                        */
-  /* ================================================================ */
-  /* Like attack. If the opponent is komaster reading functions will not try
-   * to take ko.
+  /* find_defense(str, *move) attempts to find a move that will save
+   * the string at (str). It returns WIN if such a move is found, with
+   * (*move) the location of the saving move, unless (move) is a
+   * null pointer. It is not checked that tenuki defends, so this may
+   * give an erroneous answer if !attack(str).
+   *
+   * Returns KO_A or KO_B if the result depends on ko. Returns KO_A if the
+   * string can be defended provided the defender is willing to ignore
+   * any ko threat. Returns KO_B if the defender wins by having a ko threat
+   * which must be answered.
    */
-
-  do_attack(str, move){
+  find_defense(str, move) {
     const b = this.board
-    const color = b.board[str];
-    let xpos = [NO_MOVE];
-    xpos[1] = 'do_attack'
-
-    let result = 0;
-
-    // SETUP_TRACE_INFO("attack", str);
-
-    // ASSERT1(color != 0, str);
-    /* if assertions are turned off, silently fails */
-    if (color === 0){
-      return 0;
-    }
-
-    str = b.find_origin(str);
+    const the_move = [NO_MOVE];
     const liberties = b.countlib(str);
 
-      /* No need to cache the result in these cases. */
-    if (liberties > 4 || (liberties === 4 && b.stackp > this.fourlib_depth) || (liberties === 3 && b.stackp > this.depth)) {
-      return 0;
-    }
-
-    /* Set "killer move" up.  This move (if set) was successful in
-     * another variation, so it is reasonable to try it now.  However,
-     * we only do this if the string has 4 liberties - otherwise the
-     * situation changes too much from variation to variation.
+    // nodes_when_called = reading_node_counter;
+    /* Don't even spend time looking in the cache if there are more than
+     * enough liberties.
      */
-    if (liberties > 3 && move){
-      xpos[0] = move[0];
-    }
-
-    /* Note that if return value is 1 (too small depth), the move will
-     * still be used for move ordering.
-     */
-    let retval = []
-    if (b.stackp <= this.depth
-    && this.tt_get(this.ttable, routine_id.ATTACK, str, NO_MOVE, this.depth - b.stackp, null,
-      retval, null, xpos) === 2) {
-      // TRACE_CACHED_RESULT(retval, xpos);
-      // SGFTRACE(xpos, retval, "cached");
+    if (liberties > 4 || (liberties === 4 && b.stackp > this.fourlib_depth)) {
       if (move){
-        move[0] = xpos[0];
+        move[0] = NO_MOVE;
       }
-      return retval;
+      return codes.WIN;
     }
 
-    /* Treat the attack differently depending on how many liberties the
-       string at (str) has. */
-    if (liberties === 1) {
-      result = this.attack1(str, xpos);
-    }
-    // else if (liberties === 2) {
-    //   if (stackp > depth + 10) {
-    //     result = simple_ladder(str, xpos);
-    //   } else {
-    //     result = attack2(str, xpos);
+    // const origin = b.find_origin(str);
+    // if (search_persistent_reading_cache(FIND_DEFENSE, origin, &result, &the_move)) {
+    //   if (move)
+    //     *move = the_move;
+    //   return result;
+    // }
+
+    // memset(shadow, 0, sizeof(shadow));
+    let result = this.do_find_defense(str, the_move)
+    // nodes = reading_node_counter - nodes_when_called;
+
+    // if (debug & DEBUG_READING_PERFORMANCE) {
+    //   if (reading_node_counter - nodes_when_called
+    //     >= MIN_READING_NODES_TO_REPORT) {
+    //     if (result != 0)
+    //       gprintf("%odefend %1m(%1m) = %d %1M, %d nodes ", str, origin, result,
+    //         the_move, nodes);
+    //     else
+    //       gprintf("%odefend %1m(%1m) = %d, %d nodes ", str, origin, result,
+    //         nodes);
+    //     dump_stack();
     //   }
     // }
-    // else if (liberties === 3){
-    //   result = attack3(str, xpos);
-    // }
-    // else if (liberties === 4) {
-    //   result = attack4(str, xpos);
-    // }
+    // store_persistent_reading_cache(FIND_DEFENSE, origin, result, the_move, nodes);
 
-    // ASSERT1(result >= 0 && result <= WIN, str);
-
-    if (result) {
-      this.READ_RETURN(routine_id.ATTACK, str, this.depth - b.stackp, move, xpos, result);
-      return result
+    if (move){
+      move[0] = the_move[0];
     }
 
-    this.READ_RETURN0(routine_id.ATTACK, str, this.depth - b.stackp);
-    return 0
+    return result;
   },
 
-  attack1(str, move) {
-    const b = this.board
-    const color = b.board[str];
-    const other = b.OTHER_COLOR(color);
-    let savemove = [0];
-    let savecode = [0];
-    let xpos = []
-    let adjs = []
+  attack_and_defend() {},
+  attack_either() {},
+  defend_both() {},
 
-    // reading_node_counter++;
-
-    /* Pick up the position of the liberty. */
-    b.findlib(str, 1, xpos);
-
-    // 棋串多于1子，打吃必定成功（考虑1子会有打劫情况）
-    if (b.countstones(str) > 1) {
-      return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
-    }
-    // 以下是color棋串1气且1子的情况
-    // 尝试提劫，成功
-    if (b.trymove(xpos[0], other, "attack1-A", str)) {
-      /* Is the attacker in atari? If not the attack was successful. */
-      // 提完多于1口气，不是打劫
-      if (b.countlib(xpos[0]) > 1) {
-        b.popgo();
-        return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
-      }
-  
-      /* If the attacking string is also a single stone, a possible
-       * recapture would be a ko violation, so the defender has to make
-       * a ko threat first.
-       */
-      else if (b.countstones(xpos[0]) === 1) {
-        if (b.komaster !== other) {
-          /* If the defender is allowed to take the ko the result is KO_A. */
-          let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_A, xpos, move, "last liberty - ko");
-          if(res === codes.WIN){
-            return res
-          }
-        }
-        else {
-          /* But if the attacker is the attack was successful. */
-          b.popgo();
-          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
-        }
-      }
-        
-      /* Otherwise, do recapture. Notice that the liberty must be
-       * at (str) since we have already established that this string
-       * was a single stone.
-       */
-      else if (b.trymove(str, color, "attack1-B", str)) {
-        /* If this was a proper snapback, (str) will now have more
-         * than one liberty.
-         */
-        if (b.countlib(str) > 1) {
-          /* Proper snapback, attack fails. */
-          b.popgo();
-        }
-        else {
-          b.popgo();
-          b.popgo();
-          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
-        }
-      }
-      b.popgo();
-    }
-    else {
-      /* Illegal ko capture. */
-      if (b.komaster !== color) {
-        let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_B, xpos, move, "last liberty - ko");
-        if(res === codes.WIN){
-          return res
-        }
-      }
-    }
-
-    /* If not yet successful, try backfilling and back-capturing.
-    * An example of back-capturing can be found in reading:234.
-    * Backfilling is maybe only meaningful in positions involving ko.
-    */
-    // 只适用于打劫
-    const libs = []
-    const liberties = b.approxlib(xpos[0], color, 6, libs);
-    let apos = []
-    if (liberties <= 5){
-
-      for (let k = 0; k < liberties; k++) {
-        apos = libs[k];
-        if (!b.is_self_atari(apos, other) && b.trymove(apos, other, "attack1-C")) {
-          // 防守时回填
-          let dcode = this.do_find_defense(str, null);
-          if (dcode !== codes.WIN && this.do_attack(str, null)) {
-            // 防守失败
-            if (dcode === 0) {
-              b.popgo();
-              return this.RETURN_RESULT([codes.WIN], apos, move, "backfilling");
-            }
-            this.UPDATE_SAVED_KO_RESULT(savecode, savemove, dcode, apos);
-          }
-          b.popgo();
-        }
-      }
-    }
-
-    // 相邻1口气的（敌方）棋串
-    let adj = b.chainlinks2(str, adjs, 1);
-    for (let r = 0; r < adj; r++) {
-      // 1口气正好是我们要提子位置
-      if (b.liberty_of_string(xpos[0], adjs[r])) {
-        let adjs2 = [];
-        let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
-        // 相邻的相邻1口气（我方）棋串， 且不是要被提子的棋串
-        for (let k = 0; k < adj2; k++) {
-          let ko_move;
-          if (adjs2[k] === str){
-            continue;
-          }
-          b.findlib(adjs2[k], 1, apos);
-          if (b.komaster_trymove(apos, other, "attack1-D", str, ko_move, b.stackp <= this.ko_depth && savecode === 0)) {
-            if (!ko_move) {
-              let dcode = this.do_find_defense(str, null);
-              if (dcode !== codes.WIN && this.do_attack(str, null)) {
-                b.popgo();
-                this.CHECK_RESULT(savecode, savemove, dcode, apos, move, "attack effective");
-              } else {
-                b.popgo();
-              }
-            }
-            else {
-              if (this.do_find_defense(str, null) !== codes.WIN && this.do_attack(str, null) !== 0) {
-                savemove = apos;
-                savecode = [codes.KO_B];
-              }
-              b.popgo();
-            }
-          }
-        }
-      }
-    }
-    
-    if (savecode[0] === 0) {
-      return this.RETURN_RESULT([0], [0], move, null);
-    }
-    
-    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
-
-  },
+  break_through() {},
+  break_through_helper() {},
+  attack_threats() {},
 
   /* ================================================================ */
   /*                       Defensive functions                        */
@@ -510,6 +388,7 @@ export const Reading = {
       /* accuratelib() seems to be more efficient than fastlib() here,
        * probably because it catches more cases.
        */
+      // 防守后气数满足要求，防守成功
       if (b.accuratelib(libs[k], color, goal_liberties, null) >= goal_liberties) {
         move[0] = libs[k];
         return 1;
@@ -519,11 +398,14 @@ export const Reading = {
     /* Check the cases where an opponent neighbor string is in
      * atari.
      */
+    // 找到相邻对方能提掉棋串
     let adjs = []
     let adj = b.chainlinks2(str, adjs, 1);
+    const lib = [];
+    const missing = goal_liberties - liberties;
+
+    //遍历所有能提棋串
     for (let j = 0; j < adj; j++) {
-      const lib = [];
-      const missing = goal_liberties - liberties;
       let total = 0;
 
       b.findlib(adjs[j], 1, lib);
@@ -531,6 +413,7 @@ export const Reading = {
        * our own last liberty to capture is prone to snapbacks,
        * so better let the 'normal' reading routines do the job.
        */
+      // 忽略防守提子2子及以下、打劫
       if ((liberties === 1 && lib === libs[0] && b.countstones(adjs[j]) <= 2) || b.is_ko(lib, color, null)){
         continue;
       }
@@ -540,6 +423,7 @@ export const Reading = {
        * it has already been done in the first loop of this function.
        */
       const num_adjacent_stones = b.count_adjacent_stones(adjs[j], str, missing);
+      // 对方剩余的1口气不是当前防守棋串公气
       if (!b.liberty_of_string(lib[0], str) && num_adjacent_stones >= missing) {
         move[0] = lib[0];
         return 1;
@@ -550,7 +434,7 @@ export const Reading = {
        * the lunch?
        */
       if (++liberty_mark === 0) {
-        // memset(lm, 0, sizeof(lm));
+        lm = []
         liberty_mark++;
       }
       /* Loop over all neighbors of the lunch. */
@@ -604,6 +488,7 @@ export const Reading = {
     return 0;
   },
 
+
   /* If str points to a string with exactly one liberty, defend1
    * determines whether it can be saved by extending or capturing
    * a boundary chain having one liberty. The function returns WIN if the string
@@ -625,6 +510,7 @@ export const Reading = {
     const b = this.board
     const color = b.board[str];
     const other = b.OTHER_COLOR(color);
+    const lib = [];
     const xpos = [0];
     let savemove = [0];
     let savecode = [0];
@@ -636,8 +522,8 @@ export const Reading = {
     // ASSERT1(countlib(str) == 1, str);
 
     /* lib will be the liberty of the string. */
-    const lib = []
-    let liberties = b.findlib(str, 1, []);
+
+    let liberties = b.findlib(str, 1, lib);
     // ASSERT1(liberties == 1, str);
 
     if (this.fast_defense(str, liberties, lib, xpos)){
@@ -657,8 +543,8 @@ export const Reading = {
     moves.score[0] = 0;
     moves.message[0] = "liberty";
 
-    // this.break_chain_moves(str, moves);
-    // this.set_up_snapback_moves(str, lib, moves);
+    this.break_chain_moves(str, moves);
+    this.set_up_snapback_moves(str, lib, moves);
 
     // this.order_moves(str, moves, color, read_function_name, move[0]);
     // DEFEND_TRY_MOVES(0, null);
@@ -669,14 +555,14 @@ export const Reading = {
      * FIXME: What is an example of this? Is it correct that the
      *           return value is WIN and not KO_A or KO_B?
      */
+    const libs2 = [];
+    const apos = []
     if (b.stackp <= this.backfill_depth && b.countstones(str) === 1 && b.is_ko(lib, other, null)) {
-      let libs2 = [];
       liberties = b.approxlib(lib, color, 6, libs2);
       if (liberties <= 5) {
         for (let k = 0; k < liberties; k++) {
-          let apos = libs2[k];
-          if ((liberties === 1 || !b.is_self_atari(apos, other))
-            && b.trymove(apos, color, "defend1-C", str)) {
+          apos[0] = libs2[k];
+          if ((liberties === 1 || !b.is_self_atari(apos[0], other)) && b.trymove(apos[0], color, "defend1-C", str)) {
             let acode = this.do_attack(str, null);
             b.popgo();
             this.CHECK_RESULT(savecode, savemove, acode, apos, move, "backfilling");
@@ -686,5 +572,385 @@ export const Reading = {
     }
 
     return this.RETURN_RESULT(savecode, savemove, move, "saved move");
-  }
+  },
+
+  defend2() {},
+
+  defend3() {},
+
+  defend4() {},
+
+  special_rescue_moves() {},
+
+  bamboo_rescue_moves() {},
+
+  special_rescue2_moves() {},
+
+  special_rescue3_moves() {},
+
+  special_rescue4_moves() {},
+
+  hane_rescue_moves() {},
+
+  special_rescue5_moves() {},
+
+  special_rescue6_moves() {},
+
+  /*
+   * set_up_snapback_moves() is called with (str) a string having a
+   * single liberty at (lib).
+   *
+   * This adds moves which may defend a string in atari by capturing a
+   * neighbor in a snapback. One example is this position:
+   *
+   * OOOOO
+   * OXXXO
+   * OX.OX
+   * OXOXX
+   * OX*..
+   * -----
+   *
+   * This code also finds the move * to defend the lone O stone with ko
+   * in this position:
+   *
+   * |XXXXX
+   * |XOOOX
+   * |OX.OO
+   * |.*...
+   * +-----
+   *
+   */
+  set_up_snapback_moves (str, lib, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const libs2 = [];
+
+    // ASSERT1(countlib(str) == 1, str);
+
+    /* This can only work if our string is a single stone and the
+     * opponent is short of liberties.
+     */
+    if (b.stackp <= this.backfill_depth
+      && b.countstones(str) === 1
+      && b.approxlib(lib, other, 2, libs2) === 1
+      && (!b.is_self_atari(libs2[0], color) || b.is_ko(libs2[0], color, null))){
+
+      this.ADD_CANDIDATE_MOVE(libs2[0], 0, moves, "set_up_snapback");
+    }
+  },
+
+  superstring_moves() {},
+  squeeze_moves () {},
+  edge_clamp_moves () {},
+  propose_edge_moves() {},
+
+
+
+  /* ================================================================ */
+  /*                       Attacking functions                        */
+  /* ================================================================ */
+  /* Like attack. If the opponent is komaster reading functions will not try
+   * to take ko.
+   */
+
+  do_attack(str, move){
+    const b = this.board
+    const color = b.board[str];
+    let xpos = [NO_MOVE];
+    xpos[1] = 'do_attack'
+
+    let result = 0;
+
+    // SETUP_TRACE_INFO("attack", str);
+
+    // ASSERT1(color != 0, str);
+    /* if assertions are turned off, silently fails */
+    if (color === 0){
+      return 0;
+    }
+
+    str = b.find_origin(str);
+    const liberties = b.countlib(str);
+
+    /* No need to cache the result in these cases. */
+    if (liberties > 4 || (liberties === 4 && b.stackp > this.fourlib_depth) || (liberties === 3 && b.stackp > this.depth)) {
+      return 0;
+    }
+
+    /* Set "killer move" up.  This move (if set) was successful in
+     * another variation, so it is reasonable to try it now.  However,
+     * we only do this if the string has 4 liberties - otherwise the
+     * situation changes too much from variation to variation.
+     */
+    if (liberties > 3 && move){
+      xpos[0] = move[0];
+    }
+
+    /* Note that if return value is 1 (too small depth), the move will
+     * still be used for move ordering.
+     */
+    let retval = []
+    if (b.stackp <= this.depth
+      && this.tt_get(this.ttable, routine_id.ATTACK, str, NO_MOVE, this.depth - b.stackp, null,
+        retval, null, xpos) === 2) {
+      // TRACE_CACHED_RESULT(retval, xpos);
+      // SGFTRACE(xpos, retval, "cached");
+      if (move){
+        move[0] = xpos[0];
+      }
+      return retval;
+    }
+
+    /* Treat the attack differently depending on how many liberties the
+       string at (str) has. */
+    if (liberties === 1) {
+      result = this.attack1(str, xpos);
+    }
+    // else if (liberties === 2) {
+    //   if (stackp > depth + 10) {
+    //     result = simple_ladder(str, xpos);
+    //   } else {
+    //     result = attack2(str, xpos);
+    //   }
+    // }
+    // else if (liberties === 3){
+    //   result = attack3(str, xpos);
+    // }
+    // else if (liberties === 4) {
+    //   result = attack4(str, xpos);
+    // }
+
+    // ASSERT1(result >= 0 && result <= WIN, str);
+
+    if (result) {
+      this.READ_RETURN(routine_id.ATTACK, str, this.depth - b.stackp, move, xpos, result);
+      return result
+    }
+
+    this.READ_RETURN0(routine_id.ATTACK, str, this.depth - b.stackp);
+    return 0
+  },
+
+  attack1(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let savemove = [0];
+    let savecode = [0];
+    let xpos = []
+    let adjs = []
+
+    // reading_node_counter++;
+
+    /* Pick up the position of the liberty. */
+    b.findlib(str, 1, xpos);
+
+    // 棋串多于1子，打吃必定成功（考虑1子会有打劫情况）
+    if (b.countstones(str) > 1) {
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
+    }
+    // 以下是color棋串1气且1子的情况
+    // 尝试提劫，成功
+    if (b.trymove(xpos[0], other, "attack1-A", str)) {
+      /* Is the attacker in atari? If not the attack was successful. */
+      // 提完多于1口气，不是打劫
+      if (b.countlib(xpos[0]) > 1) {
+        b.popgo();
+        return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
+      }
+
+      /* If the attacking string is also a single stone, a possible
+       * recapture would be a ko violation, so the defender has to make
+       * a ko threat first.
+       */
+      else if (b.countstones(xpos[0]) === 1) {
+        if (b.komaster !== other) {
+          /* If the defender is allowed to take the ko the result is KO_A. */
+          let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_A, xpos, move, "last liberty - ko");
+          if(res === codes.WIN){
+            return res
+          }
+        }
+        else {
+          /* But if the attacker is the attack was successful. */
+          b.popgo();
+          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
+        }
+      }
+
+      /* Otherwise, do recapture. Notice that the liberty must be
+       * at (str) since we have already established that this string
+       * was a single stone.
+       */
+      else if (b.trymove(str, color, "attack1-B", str)) {
+        /* If this was a proper snapback, (str) will now have more
+         * than one liberty.
+         */
+        if (b.countlib(str) > 1) {
+          /* Proper snapback, attack fails. */
+          b.popgo();
+        }
+        else {
+          b.popgo();
+          b.popgo();
+          return this.RETURN_RESULT([codes.WIN], xpos, move, "last liberty");
+        }
+      }
+      b.popgo();
+    }
+    else {
+      /* Illegal ko capture. */
+      if (b.komaster !== color) {
+        let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_B, xpos, move, "last liberty - ko");
+        if(res === codes.WIN){
+          return res
+        }
+      }
+    }
+
+    /* If not yet successful, try backfilling and back-capturing.
+    * An example of back-capturing can be found in reading:234.
+    * Backfilling is maybe only meaningful in positions involving ko.
+    */
+    // 只适用于打劫
+    const libs = []
+    const apos = []
+    const liberties = b.approxlib(xpos[0], color, 6, libs);
+    if (liberties <= 5){
+
+      for (let k = 0; k < liberties; k++) {
+        apos[0] = libs[k];
+        if (!b.is_self_atari(apos[0], other) && b.trymove(apos[0], other, "attack1-C")) {
+          // 防守时回填
+          let dcode = this.do_find_defense(str, null);
+          if (dcode !== codes.WIN && this.do_attack(str, null)) {
+            // 防守失败
+            if (dcode === 0) {
+              b.popgo();
+              return this.RETURN_RESULT([codes.WIN], apos, move, "backfilling");
+            }
+            this.UPDATE_SAVED_KO_RESULT(savecode, savemove, dcode, apos);
+          }
+          b.popgo();
+        }
+      }
+    }
+
+    // 相邻1口气的（敌方）棋串
+    let adj = b.chainlinks2(str, adjs, 1);
+    for (let r = 0; r < adj; r++) {
+      // 1口气正好是我们要提子位置
+      if (b.liberty_of_string(xpos[0], adjs[r])) {
+        let adjs2 = [];
+        let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
+        // 相邻的相邻1口气（我方）棋串， 且不是要被提子的棋串
+        for (let k = 0; k < adj2; k++) {
+          let ko_move;
+          if (adjs2[k] === str){
+            continue;
+          }
+          b.findlib(adjs2[k], 1, apos);
+          if (b.komaster_trymove(apos, other, "attack1-D", str, ko_move, b.stackp <= this.ko_depth && savecode === 0)) {
+            if (!ko_move) {
+              let dcode = this.do_find_defense(str, null);
+              if (dcode !== codes.WIN && this.do_attack(str, null)) {
+                b.popgo();
+                this.CHECK_RESULT(savecode, savemove, dcode, apos, move, "attack effective");
+              } else {
+                b.popgo();
+              }
+            }
+            else {
+              if (this.do_find_defense(str, null) !== codes.WIN && this.do_attack(str, null) !== 0) {
+                savemove = apos;
+                savecode = [codes.KO_B];
+              }
+              b.popgo();
+            }
+          }
+        }
+      }
+    }
+
+    if (savecode[0] === 0) {
+      return this.RETURN_RESULT([0], [0], move, null);
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+
+  },
+
+  attack2() {},
+  attack3() {},
+  attack4() {},
+
+  find_cap_moves() {},
+  special_attack2_moves() {},
+  special_attack3_moves() {},
+  special_attack4_moves() {},
+  draw_back_moves() {},
+
+  edge_closing_backfill_moves() {},
+  edge_block_moves() {},
+
+
+  /* ================================================================ */
+  /*            Defending by attacking surrounding strings            */
+  /* ================================================================ */
+
+  /* Add the chainbreaking moves relative to the string (str) to the
+   * (moves) struct.
+   */
+  break_chain_moves(str, moves){
+    const b = this.board
+    const xpos = []
+    const adjs = []
+
+    /* Find links in atari. */
+    const adj = b.chainlinks2(str, adjs, 1);
+
+    for (let r = 0; r < adj; r++) {
+      b.findlib(adjs[r], 1, xpos);
+      this.ADD_CANDIDATE_MOVE(xpos[0], 1, moves, "break_chain");
+    }
+  },
+
+  defend_secondary_chain1_moves() {},
+  defend_secondary_chain2_moves() {},
+  break_chain2_efficient_moves() {},
+  do_find_break_chain2_efficient_moves() {},
+  break_chain2_moves() {},
+
+  break_chain2_defense_moves() {},
+  do_find_break_chain3_moves() {},
+  break_chain3_moves() {},
+  break_chain4_moves() {},
+
+  superstring_break_chain_moves() {},
+  double_atari_chain2_moves() {},
+
+
+  /* ================================================================ */
+  /*                Restricted Attack and Defense                     */
+  /* ================================================================ */
+
+  restricted_defend1() {},
+  restricted_attack2() {},
+  in_list() {},
+
+
+  order_moves() {},
+  tune_move_ordering() {},
+
+  clear_safe_move_cache() {},
+  safe_move() {},
+  does_secure() {},
+  reset_reading_node_counter() {},
+  get_reading_node_counter() {},
+  draw_reading_shadow() {},
+  simple_ladder() {},
+  simple_ladder_defend() {},
+
+
 }

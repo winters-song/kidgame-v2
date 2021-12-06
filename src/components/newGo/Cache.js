@@ -223,6 +223,7 @@ export const Cache = {
     let entry = table.entries[index];
     if(!entry){
       entry = new HashEntry()
+      table.entries[index] = entry
     }
     let deepest = entry.deepest;
     let newest  = entry.newest;

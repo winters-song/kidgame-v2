@@ -1149,6 +1149,7 @@ class Board {
     return size;
   }
 
+  // 获得两个棋串撞气数，不超过maxstones
   count_adjacent_stones(str1, str2, maxstones){
     let count = 0;
 
@@ -1315,7 +1316,51 @@ class Board {
 
   adjacent_strings() {}
 
-  is_ko() {}
+  /*
+   * Return true if the move (pos) by (color) is a ko capture
+   * (whether capture is legal on this move or not). If so,
+   * and if ko_pos is not a NULL pointer, then
+   * *ko_pos returns the location of the captured ko stone.
+   * If the move is not a ko capture, *ko_pos is set to 0.
+   *
+   * A move is a ko capture if and only if
+   *    1. All neighbors are opponent stones.
+   *    2. The number of captured stones is exactly one.
+   */
+  // 打劫判断： 周围都是对方棋子，提子数=1
+  is_ko(pos, color, ko_pos) {
+    const other = this.OTHER_COLOR(color);
+    let captures = 0;
+    let kpos = 0;
+
+    // ASSERT_ON_BOARD1(pos);
+    // ASSERT1(color == WHITE || color == BLACK, pos);
+
+    for(let i in directions) {
+      const p = this[directions[i]](pos)
+
+      if (this.ON_BOARD(p)) {
+        if (this.board[p] !== other){
+          return 0;
+        }
+        else if (this.LIBERTIES(p) === 1) {
+          kpos = p;
+          captures += this.string[this.string_number[p]].size;
+          if (captures > 1){
+            return 0;
+          }
+        }
+      }
+    }
+
+    if (captures === 1) {
+      if (ko_pos){
+        ko_pos[0] = kpos;
+      }
+      return 1;
+    }
+    return 0;
+  }
 
   is_ko_point() {}
 
@@ -1537,7 +1582,7 @@ class Board {
            */
           this.pushValue(sl.list, s.liberties - 1)
           this.pushValue(sl.list, k)
-          this.pushValue(sl, 'liberties')
+          this.pushValue(s, 'liberties')
 
           sl.list[k] = sl.list[s.liberties - 1];
           s.liberties--;
