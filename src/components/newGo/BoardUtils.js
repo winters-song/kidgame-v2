@@ -223,11 +223,7 @@ export const Utils = {
     this.string_neighbors[s].list[this.string[s].neighbors++] = this.string_number[pos]
   },
 
-  DO_ADD_STONE(pos, color) {
-    this.pushVertex(pos);
-    this.board[pos] = color;
-    this.hash.invert_stone(this.board_hash, pos, color);
-  },
+  // DO_ADD_STONE(pos, color) {},
 
   DO_REMOVE_STONE(pos) {
     this.pushVertex(pos);

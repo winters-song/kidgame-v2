@@ -42,6 +42,7 @@ export const MoveList = {
    * cases we can expect it to suffice with one turn through the outer
    * loop.
    */
+  // 按"成功->失败"排序
   movelist_sort_points(max_points, points, codes) {
     let start = 0;
     let end = max_points - 1;

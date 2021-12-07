@@ -82,6 +82,40 @@ export const Reading = {
     return savecode[0];
   },
 
+
+  /* Play a collected batch of moves and see if any of them works.  This
+   * is a defense version.
+   */
+  DEFEND_TRY_MOVES(no_deep_branching, attack_hint, str, move, color, moves, savecode, savemove )	{
+    const b = this.board
+    for (let k = moves.num_tried; k < moves.num; k++) {
+      let ko_move = [];
+      let dpos = moves.pos[k];
+
+      if (b.komaster_trymove(dpos, color, moves.message[k], str, ko_move, b.stackp <= this.ko_depth && savecode[0] === 0)) {
+        const acode = this.do_attack(str, attack_hint);
+        b.popgo();
+
+        if (!ko_move[0]) {
+          this.CHECK_RESULT(savecode, savemove, acode, dpos, move, "defense effective");
+        }
+        else {
+          if (acode !== codes.WIN) {
+            savemove[0] = dpos;
+            savecode[0] = codes.KO_B;
+          }
+        }
+      }
+
+      if (no_deep_branching && b.stackp >= this.branch_depth){
+        this.RETURN_RESULT(savecode, savemove, move, "branching limit");
+      }
+    }
+
+    moves.num_tried = moves.num;
+  },
+
+
   UPDATE_SAVED_KO_RESULT(savecode, save, code, move) {
     if (code !== 0 && REVERSE_RESULT(code) > savecode[0]) {
       save[0] = move[0];
@@ -414,7 +448,7 @@ export const Reading = {
        * so better let the 'normal' reading routines do the job.
        */
       // 忽略防守提子2子及以下、打劫
-      if ((liberties === 1 && lib === libs[0] && b.countstones(adjs[j]) <= 2) || b.is_ko(lib, color, null)){
+      if ((liberties === 1 && lib === libs[0] && b.countstones(adjs[j]) <= 2) || b.is_ko(lib[0], color, null)){
         continue;
       }
 
@@ -546,8 +580,8 @@ export const Reading = {
     this.break_chain_moves(str, moves);
     this.set_up_snapback_moves(str, lib, moves);
 
-    // this.order_moves(str, moves, color, read_function_name, move[0]);
-    // DEFEND_TRY_MOVES(0, null);
+    this.order_moves(str, moves, color, "read_function_name", move[0]);
+    this.DEFEND_TRY_MOVES(0, null, str, move, color, moves, savemove, savecode);
 
     /* If the string is a single stone and a capture would give a ko,
      * try to defend it with ko by backfilling.
@@ -557,7 +591,7 @@ export const Reading = {
      */
     const libs2 = [];
     const apos = []
-    if (b.stackp <= this.backfill_depth && b.countstones(str) === 1 && b.is_ko(lib, other, null)) {
+    if (b.stackp <= this.backfill_depth && b.countstones(str) === 1 && b.is_ko(lib[0], other, null)) {
       liberties = b.approxlib(lib, color, 6, libs2);
       if (liberties <= 5) {
         for (let k = 0; k < liberties; k++) {
@@ -813,7 +847,7 @@ export const Reading = {
     * An example of back-capturing can be found in reading:234.
     * Backfilling is maybe only meaningful in positions involving ko.
     */
-    // 只适用于打劫
+    // 只适用于打劫, 攻方先尝试在其他位置收气，守方回填，气数>5防守成功
     const libs = []
     const apos = []
     const liberties = b.approxlib(xpos[0], color, 6, libs);
@@ -822,6 +856,8 @@ export const Reading = {
       for (let k = 0; k < liberties; k++) {
         apos[0] = libs[k];
         if (!b.is_self_atari(apos[0], other) && b.trymove(apos[0], other, "attack1-C")) {
+          console.info("attack1-C")
+          b.print_board()
           // 防守时回填
           let dcode = this.do_find_defense(str, null);
           if (dcode !== codes.WIN && this.do_attack(str, null)) {
@@ -939,8 +975,226 @@ export const Reading = {
   restricted_attack2() {},
   in_list() {},
 
+  /* The string at (str) is under attack. The moves.num moves in
+   * (moves) for color have been deemed interesting in
+   * the attack or defense of the group. Most of these moves will be
+   * immediate liberties of the group.
+   *
+   * This function orders the moves in the order where the move most
+   * likely to succeed to attack or defend the string will be first and
+   * so on.
+   *
+   * Currently, this is defined as:
+   * 1) Moves which let the defending string get more liberties are more
+   *    interesting.
+   * 2) Moves adjacent to the most open liberties are more
+   *    interesting than those with fewer open liberties.
+   * 3) Moves on the edge are less interesting.
+   *
+   * Moves below first_move are ignored and assumed to be sorted already.
+   */
+  order_moves(str, moves, color, funcname, killer) {
+    const b = this.board
+    let string_color = b.board[str];
+    let string_libs = b.countlib(str);
 
-  order_moves() {},
+    /* Don't bother sorting if only one move, or none at all. */
+    if (moves.num - moves.num_tried < 2) {
+      /* But let's still have a single candidate in the sgf output */
+      // if (sgf_dumptree && moves.num > moves.num_tried)
+      //   sgf_dumpmoves(moves, funcname);
+      return;
+    }
+
+    /* Assign a score to each move. */
+    for (let r = moves.num_tried; r < moves.num; r++) {
+      const move = moves.pos[r];
+
+      /* Look at the neighbors of this move and count the things we
+       * find. Friendly and opponent stones are related to color, i.e.
+       * the player to move, not to the color of the string.
+       */
+      let number_edges       = [0]; /* outside board */
+      let number_same_string = [0]; /* the string being attacked */
+      let number_own         = [0]; /* friendly stone */
+      let number_opponent    = [0]; /* opponent stone */
+      let captured_stones    = [0]; /* number of stones captured by this move */
+      let threatened_stones  = [0]; /* number of stones threatened by this move */
+      let saved_stones       = [0]; /* number of stones in atari saved */
+      let number_open        = [0]; /* empty intersection */
+
+      /* We let the incremental_board code do the heavy work. */
+      b.incremental_order_moves(move, color, str,
+        number_edges, number_same_string, number_own,
+        number_opponent, captured_stones, threatened_stones,
+        saved_stones, number_open);
+
+      /* Different score strategies depending on whether the move is
+       * attacking or defending the string.
+       */
+      if (color === string_color) {
+        /* Defense move.
+         *
+         * 1) Add twice the number of liberties the group receives by
+         *    extending to the intersection of the move, if more than one.
+         *    Only applicable if the move is adjacent to the group.
+         */
+
+        let libs = b.approxlib(move, color, 10, null);
+        if (number_same_string > 0) {
+          if (libs > 5 || (libs === 4 && b.stackp > this.fourlib_depth))
+            moves.score[r] += defend_lib_score[5] + (libs - 4);
+          else
+            moves.score[r] += defend_lib_score[libs];
+        }
+        else {
+          /* Add points for the number of liberties the played stone
+                 * obtains when not adjacent to the attacked string.
+           */
+          if (libs > 4)
+            moves.score[r] += defend_not_adjacent_lib_score[4];
+          else
+            moves.score[r] += defend_not_adjacent_lib_score[libs];
+        }
+
+        /* 2) Add the number of open liberties near the move to its score. */
+        // gg_assert(number_open <= 4);
+        moves.score[r] += defend_open_score[number_open];
+
+        /* 3) Add a bonus if the move is not on the edge.
+         */
+        if (number_edges === 0 || captured_stones > 0)
+          moves.score[r] += defend_not_edge_score;
+
+        /* 4) Add thrice the number of captured stones. */
+        if (captured_stones <= 5)
+          moves.score[r] += defend_capture_score[captured_stones];
+        else
+          moves.score[r] += defend_capture_score[5] + captured_stones;
+
+        /* 5) Add points for stones put into atari, unless this is a
+         *    self atari.
+         */
+        if (libs + captured_stones > 1) {
+          if (threatened_stones <= 5)
+            moves.score[r] += defend_atari_score[threatened_stones];
+          else
+            moves.score[r] += defend_atari_score[5] + threatened_stones;
+        }
+
+        /* 6) Add a bonus for saved stones. */
+        if (saved_stones <= 5)
+          moves.score[r] += defend_save_score[saved_stones];
+        else
+          moves.score[r] += defend_save_score[5];
+      }
+      else {
+        /* Attack move.
+         *
+         * 1) Add the number of liberties the attacker gets when playing
+         *    there, but never more than four.
+         */
+        let libs = b.approxlib(move, color, 4, null);
+        if (libs > 4){
+          libs = 4;
+        }
+        moves.score[r] += attack_own_lib_score[libs];
+
+        if (libs === 0 && captured_stones === 1){
+          moves.score[r] += attack_ko_score;
+        }
+
+        /* 2) If the move is not a self atari and adjacent to the
+         *    string, add the number of liberties the opponent would
+         *    gain by playing there. If the string has two liberties,
+         *    self-ataris are also ok since they may be snapbacks, but
+         *    only if a single stone is sacrificed.
+         */
+        if ((libs + captured_stones > 1 || (string_libs <= 2 && number_own === 0))
+          && number_same_string > 0) {
+          let safe_atari;
+          let liberties = b.approxlib(move, string_color, 5, null);
+          if (liberties > 5 || (liberties === 4 && b.stackp > this.fourlib_depth)){
+            liberties = 5;
+          }
+          moves.score[r] += attack_string_lib_score[liberties];
+
+          safe_atari = (string_libs <= 2 && libs + captured_stones > 1);
+          /* The defender can't play here without getting into atari, so
+                 * we probably souldn't either.
+           */
+          if (liberties === 1 && saved_stones === 0 && !safe_atari){
+            moves.score[r] += cannot_defend_penalty;
+          }
+
+          /* Bonus if we put the attacked string into atari without
+                 * ourselves getting into atari.
+           */
+          if (safe_atari){
+            moves.score[r] += safe_atari_score;
+          }
+        }
+
+        /* 3) Add the number of open liberties near the move to its score. */
+        // gg_assert(number_open <= 4);
+        moves.score[r] += attack_open_score[number_open];
+
+        /* 4) Add a bonus if the move is not on the edge. */
+        if (number_edges === 0)
+          moves.score[r] += attack_not_edge_score;
+
+        /* 5) Add twice the number of captured stones. */
+        if (captured_stones <= 5)
+          moves.score[r] += attack_capture_score[captured_stones];
+        else
+          moves.score[r] += attack_capture_score[5];
+
+        /* 6) Add a bonus for saved stones. */
+        if (saved_stones <= 5)
+          moves.score[r] += attack_save_score[saved_stones];
+        else
+          moves.score[r] += attack_save_score[5];
+      }
+      if (moves.pos[r] === killer)
+        moves.score[r] += 50;
+    }
+
+    /* Now sort the moves.  We use selection sort since this array will
+     * probably never be more than 10 moves long.  In this case, the
+     * overhead imposed by quicksort will probably overshadow the gains
+     * given by the O(n*log(n)) behaviour over the O(n^2) behaviour of
+     * selection sort.
+     */
+    for (let i = moves.num_tried; i < moves.num-1; i++) {
+      let maxscore = moves.score[i];
+      let max_at = 0; /* This is slightly faster than max_at = i. */
+
+      /* Find the move with the biggest score. */
+      for (let j = i + 1; j < moves.num; j++) {
+        if (moves.score[j] > maxscore) {
+          maxscore = moves.score[j];
+          max_at = j;
+        }
+      }
+
+      /* Now exchange the move at i with the move at max_at.
+       * Don't forget to exchange the scores as well.
+       */
+      if (max_at !== 0) {
+        let temp = moves.pos[max_at];
+        const temp_message = moves.message[max_at];
+
+        moves.pos[max_at] = moves.pos[i];
+        moves.score[max_at] = moves.score[i];
+        moves.message[max_at] = moves.message[i];
+
+        moves.pos[i] = temp;
+        moves.score[i] = maxscore;
+        moves.message[i] = temp_message;
+      }
+    }
+  },
+
   tune_move_ordering() {},
 
   clear_safe_move_cache() {},

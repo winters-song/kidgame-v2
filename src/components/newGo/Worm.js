@@ -714,46 +714,46 @@ export const Worm = {
     // gg_assert(stackp == 0);
 
     /* 2. Use pattern matching to find a few more attacks. */
-    this.find_attack_patterns();
+    // this.find_attack_patterns();
     // gg_assert(stackp == 0);
 
     /* 3. Now find defense moves. */
-    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
-      if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
-        continue;
-
-      if (this.worm[str].attack_codes[0] !== 0) {
-
-        // TRACE("considering defense of %1m\n", str);
-        const dcode = this.find_defense(str, defense_point);
-        if (dcode !== 0) {
-          // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
-          if (defense_point !== NO_MOVE){
-            this.change_defense(str, defense_point[0], dcode);
-          }
-        }
-        else {
-          /* If the point of attack is not adjacent to the worm,
-           * it is possible that this is an overlooked point of
-           * defense, so we try and see if it defends.
-           */
-          attack_point[0] = this.worm[str].attack_points[0];
-          if (!b.liberty_of_string(attack_point[0], str))
-            if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
-              const acode = this.attack(str, null);
-              if (acode !== codes.WIN) {
-                this.change_defense(str, attack_point[0], REVERSE_RESULT(acode));
-                // TRACE("worm at %1m can be defended at %1m with code %d\n", str, attack_point, REVERSE_RESULT(acode));
-              }
-              b.popgo();
-            }
-        }
-      }
-    }
-    // gg_assert(stackp == 0);
-
-    /* 4. Use pattern matching to find a few more defense moves. */
-    this.find_defense_patterns();
+    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+    //   if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
+    //     continue;
+    //
+    //   if (this.worm[str].attack_codes[0] !== 0) {
+    //
+    //     // TRACE("considering defense of %1m\n", str);
+    //     const dcode = this.find_defense(str, defense_point);
+    //     if (dcode !== 0) {
+    //       // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
+    //       if (defense_point !== NO_MOVE){
+    //         this.change_defense(str, defense_point[0], dcode);
+    //       }
+    //     }
+    //     else {
+    //       /* If the point of attack is not adjacent to the worm,
+    //        * it is possible that this is an overlooked point of
+    //        * defense, so we try and see if it defends.
+    //        */
+    //       attack_point[0] = this.worm[str].attack_points[0];
+    //       if (!b.liberty_of_string(attack_point[0], str))
+    //         if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
+    //           const acode = this.attack(str, null);
+    //           if (acode !== codes.WIN) {
+    //             this.change_defense(str, attack_point[0], REVERSE_RESULT(acode));
+    //             // TRACE("worm at %1m can be defended at %1m with code %d\n", str, attack_point, REVERSE_RESULT(acode));
+    //           }
+    //           b.popgo();
+    //         }
+    //     }
+    //   }
+    // }
+    // // gg_assert(stackp == 0);
+    //
+    // /* 4. Use pattern matching to find a few more defense moves. */
+    // this.find_defense_patterns();
     // gg_assert(stackp == 0);
 
     /*

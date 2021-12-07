@@ -8,10 +8,10 @@ import './index.less'
 
 
 // attack1
-// const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-01]AB[ed][de][fe]AW[ee][df][ff][eg];B[ef])'
+const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-07]AB[dh][ci]AW[eh][fi][di];B[ei])'
 
 // set_up_snapback_moves
-const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-06]AB[bi][bh][bg][bf][be][ce][de][ee][fe][ff][eg][dh]AW[cf][cg][ch][ci][df][ef][fg][fh][eh])'
+// const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-06]AB[bi][bh][bg][bf][be][ce][de][ee][fe][ff][eg][dh]AW[cf][cg][ch][ci][df][ef][fg][fh][eh])'
 
 function Puzzle (props){
   const goboardRef = useRef()
@@ -35,9 +35,10 @@ function Puzzle (props){
     const player = new GoboardPlayer({
       el: goboardRef.current,
     });
-    changeData(player, sgf, 1)
 
-    player.genmove()
+    changeData(player, sgf, 1)
+    window.player = player
+    // player.genmove()
   }, [])
 
   return (

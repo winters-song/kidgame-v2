@@ -536,6 +536,180 @@ class Board {
     return 1;
   }
 
+
+  set_new_komaster(new_komaster) {
+    this.pushValue(this, 'komaster')
+    this.hash.invert_komaster(this.board_hash, this.komaster)
+    this.komaster = new_komaster;
+    this.hash.invert_komaster(this.board_hash, this.komaster)
+  }
+
+  set_new_kom_pos(new_kom_pos) {
+    this.pushValue(this, 'kom_pos')
+    this.hash.invert_kom_pos(this.board_hash, this.kom_pos)
+    this.kom_pos = new_kom_pos;
+    this.hash.invert_kom_pos(this.board_hash, this.kom_pos)
+  }
+
+
+  /* Variation of trymove()/tryko() where ko captures (both conditional
+   * and unconditional) must follow a komaster scheme.
+   *
+   * Historical note: Up to GNU Go 3.4 five different komaster schemes
+   * were implemented and could easily be switched between. In GNU Go
+   * 3.5.1 four of them were removed to simplify the code and because it
+   * no longer seemed interesting to be able to switch. The remaining
+   * komaster scheme was previously known as komaster scheme 5 (or V).
+   *
+   * FIXME: This function could be optimized by integrating the
+   * trymove()/tryko() code.
+   */
+
+  /* V. Complex scheme, O to move.
+   *
+   * 1. Komaster is EMPTY.
+   * 1a) Unconditional ko capture is allowed.
+   *       Komaster remains EMPTY if previous move was not a ko capture.
+   *       Komaster is set to WEAK_KO if previous move was a ko capture
+   *       and kom_pos is set to the old value of board_ko_pos.
+   * 1b) Conditional ko capture is allowed. Komaster is set to O and
+   *     kom_pos to the location of the ko, where a stone was
+   *     just removed.
+   *
+   * 2. Komaster is O:
+   * 2a) Only nested ko captures are allowed. Kom_pos is moved to the
+   *     new removed stone.
+   * 2b) If komaster fills the ko at kom_pos then komaster reverts to
+   *     EMPTY.
+   *
+   * 3. Komaster is X:
+   *    Play at kom_pos is not allowed. Any other ko capture
+   *    is allowed. If O takes another ko, komaster becomes GRAY_X.
+   *
+   * 4. Komaster is GRAY_O or GRAY_X:
+   *    Ko captures are not allowed. If the ko at kom_pos is
+   *    filled then the komaster reverts to EMPTY.
+   *
+   * 5. Komaster is WEAK_KO:
+   * 5a) After a non-ko move komaster reverts to EMPTY.
+   * 5b) Unconditional ko capture is only allowed if it is nested ko capture.
+   *     Komaster is changed to WEAK_X and kom_pos to the old value of
+   *     board_ko_pos.
+   * 5c) Conditional ko capture is allowed according to the rules of 1b.
+   */
+  // 更新 is_conditional_ko字段
+  komaster_trymove(pos, color, message, str, is_conditional_ko, consider_conditional_ko) {
+    const other = this.OTHER_COLOR(color);
+    let ko_move;
+    let kpos = [];
+    let previous_board_ko_pos = this.board_ko_pos
+
+    is_conditional_ko[0] = 0;
+    ko_move = this.is_ko(pos, color, kpos)
+
+    if (ko_move) {
+      /* If opponent is komaster we may not capture his ko. */
+      if (this.komaster === other && pos === this.kom_pos){
+        return 0;
+      }
+
+      /* If komaster is gray we may not capture ko at all. */
+      if (this.komaster === colors.GRAY_WHITE || this.komaster === colors.GRAY_BLACK){
+        return 0;
+      }
+
+      /* If we are komaster, we may only do nested captures. */
+      if (this.komaster === color && !this.DIAGONAL_NEIGHBORS(kpos, this.kom_pos)){
+        return 0;
+      }
+
+      /* If komaster is WEAK_KO, we may only do nested ko capture or
+       * conditional ko capture.
+       */
+      if (this.komaster === colors.WEAK_KO) {
+        if (pos !== this.board_ko_pos && !this.DIAGONAL_NEIGHBORS(kpos, this.kom_pos)){
+          return 0;
+        }
+      }
+    }
+
+    if (!this.trymove(pos, color, message, str)) {
+      if (!consider_conditional_ko){
+        return 0;
+      }
+
+      if (!this.tryko(pos, color, message)){
+        return 0; /* Suicide. */
+      }
+
+      is_conditional_ko[0] = 1;
+
+      /* Conditional ko capture, set komaster parameters. */
+      if (this.komaster === colors.EMPTY || this.komaster === colors.WEAK_KO) {
+        this.set_new_komaster(color);
+        this.set_new_kom_pos(kpos);
+        return 1;
+      }
+    }
+
+    if (!ko_move) {
+      /* If we are komaster, check whether the ko was resolved by the
+       * current move. If that is the case, revert komaster to EMPTY.
+       *
+       * The ko has been resolved in favor of the komaster if it has
+       * been filled, or if it is no longer a ko and an opponent move
+       * there is suicide.
+       */
+      if (((this.komaster === color
+        || (this.komaster === colors.GRAY_WHITE && color === colors.WHITE)
+        || (this.komaster === colors.GRAY_BLACK && color === colors.BLACK))
+        && (this.IS_STONE(this.board[this.kom_pos])
+          || (!this.is_ko(this.kom_pos, other, null)
+            && this.is_suicide(this.kom_pos, other))))) {
+        this.set_new_komaster(colors.EMPTY);
+        this.set_new_kom_pos(NO_MOVE);
+      }
+
+      if (this.komaster === colors.WEAK_KO) {
+        this.set_new_komaster(colors.EMPTY);
+        this.set_new_kom_pos(NO_MOVE);
+      }
+
+      return 1;
+    }
+
+    if (this.komaster === other) {
+      if (color === colors.WHITE)
+        this.set_new_komaster(colors.GRAY_BLACK);
+      else
+        this.set_new_komaster(colors.GRAY_WHITE);
+    }
+    else if (this.komaster === color) {
+      /* This is where we update kom_pos after a nested capture. */
+      this.set_new_kom_pos(kpos);
+    }
+    else {
+      /* We can reach here when komaster is EMPTY or WEAK_KO. If previous
+       * move was also a ko capture, we now set komaster to WEAK_KO.
+       */
+      if (previous_board_ko_pos !== NO_MOVE) {
+        this.set_new_komaster(colors.WEAK_KO);
+        this.set_new_kom_pos(previous_board_ko_pos);
+      }
+    }
+
+    return 1;
+  }
+
+  // get_komaster() {}
+  // get_kom_pos() {}
+
+  is_edge_vertex() {}
+  edge_distance() {}
+  is_corner_vertex() {}
+  rotate1() {}
+  are_neighbors() {}
+
   // 获得棋串气数
   countlib(str) {
     // ASSERT1(IS_STONE(board[str]), str);
@@ -771,7 +945,7 @@ class Board {
 
     if (!libs) {
       /* First see if this result is cached. */
-      if (this.hash.is_equal(this.board_hash, entry.position_hash) && maxlib <= entry.threshold) {
+      if (HashData.is_equal(this.board_hash, entry.position_hash) && maxlib <= entry.threshold) {
         return entry.liberties;
       }
 
@@ -1328,6 +1502,7 @@ class Board {
    *    2. The number of captured stones is exactly one.
    */
   // 打劫判断： 周围都是对方棋子，提子数=1
+  // int, int, int
   is_ko(pos, color, ko_pos) {
     const other = this.OTHER_COLOR(color);
     let captures = 0;
@@ -1794,6 +1969,7 @@ class Board {
 
   /* Incorporate the string at pos with the string s.
    */
+  // pos棋串合并到s上
   assimilate_string(s, pos) {
     let last;
     const s2 = this.string_number[pos];
@@ -1812,8 +1988,8 @@ class Board {
 
     /* Link the two cycles together. */
     let pos2 = this.string[s].origin;
-    this.pushValue(this.next_stone, 'last');
-    this.pushValue(this.next_stone,'pos2');
+    this.pushValue(this.next_stone, last);
+    this.pushValue(this.next_stone,pos2);
     this.next_stone[last] = this.next_stone[pos2];
     this.next_stone[pos2] = this.string[s2].origin;
 
@@ -2004,6 +2180,59 @@ class Board {
 
     return captured_stones
   }
+
+
+
+  /* Help collect the data needed by order_moves() in reading.c.
+   * It's the caller's responsibility to initialize the result parameters.
+   */
+  incremental_order_moves(move, color, str,
+    number_edges, number_same_string,number_own, number_opponent,
+    captured_stones, threatened_stones, saved_stones, number_open) {
+
+    this.string_mark++;
+
+    for(let i in directions) {
+      const p = this[directions[i]](move)
+
+      if (!this.ON_BOARD(p)){
+        number_edges[0]++;
+      }
+      else if (this.board[p] === colors.EMPTY){
+        number_open[0]++;
+      }
+      else {
+        const s = this.string_number[p];
+        if (this.string_number[str] === s){
+          number_same_string[0]++;
+        }
+        if (this.board[p] === color) {
+          number_own[0]++;
+          if (this.string[s].liberties === 1){
+            saved_stones[0] += this.string[s].size;
+          }
+        }
+        else {
+          number_opponent[0]++;
+          if (this.string[s].liberties === 1) {
+            captured_stones[0] += this.string[s].size;
+            for (let r = 0; r < this.string[s].neighbors; r++) {
+              let t = this.string[this.string_neighbors[s].list[r]];
+              if (t.liberties === 1){
+                saved_stones[0] += t.size;
+              }
+            }
+          }
+          else if (this.string[s].liberties === 2 && this.UNMARKED_STRING(p)) {
+            threatened_stones[0] += this.string[s].size;
+            this.MARK_STRING(p);
+          }
+        }
+      }
+    }
+
+  }
+
 }
 
 
