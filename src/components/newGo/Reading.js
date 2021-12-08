@@ -128,6 +128,7 @@ export const Reading = {
    * pointer to it is saved and there is no attempt to free up any
    * storage.
    */
+  //int move
   ADD_CANDIDATE_MOVE(move, this_score, moves, this_message)	{
     let u
     for (u = 0; u < moves.num; u++){
@@ -919,7 +920,95 @@ export const Reading = {
 
   attack2() {},
   attack3() {},
-  attack4() {},
+
+  /* attack4 tries to capture a string with 4 liberties. */
+  attack4(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const libs = [];
+    const adjs = [];
+    const savemove = [0];
+    const savecode = [0];
+    let suggest_move = NO_MOVE;
+
+    const moves = new ReadingMoves({
+      num : 0,
+      num_tried : 0
+    })
+
+    // SETUP_TRACE_INFO("attack4", str);
+
+    // ASSERT1(IS_STONE(board[str]), str);
+    // reading_node_counter++;
+
+    if (b.stackp > this.depth) {
+      // SGFTRACE(0, 0, "stackp > depth");
+      return 0;
+    }
+
+    for (let pass = 0; pass < 2; pass++) {
+
+      switch (pass) {
+        case 0:
+          let adj = b.chainlinks2(str, adjs, 1);
+          for (let r = 0; r < adj; r++) {
+            const hpos = [];
+            this.break_chain_moves(adjs[r], moves);
+
+            b.findlib(adjs[r], 1, hpos);
+            this.ADD_CANDIDATE_MOVE(hpos[0], 0, moves, "save_boundary");
+          }
+
+          /* Defend against double atari in the surrounding chain early. */
+          this.double_atari_chain2_moves(str, moves, b.stackp <= this.superstring_depth);
+
+          /* Give a score bonus to the chain preserving moves. */
+          for (let k = 0; k < moves.num; k++)
+            moves.score[k] += 5;
+
+          /* Get the four liberties of (str). */
+          let liberties = b.findlib(str, 4, libs);
+          // ASSERT1(liberties == 4, str);
+
+          for (let k = 0; k < 4; k++) {
+            let apos = libs[k];
+            /* We only want to consider the move at (apos) if:
+                   * stackp <= backfill_depth
+                   * -or-  stackp <= depth and it is an isolated stone
+                   * -or-  it is not in immediate atari
+                   */
+            if (b.stackp <= this.backfill_depth
+              || (b.stackp <= this.depth
+                && !b.has_neighbor(apos, other))
+              || !b.is_self_atari(apos, other))
+              this.ADD_CANDIDATE_MOVE(apos, 0, moves, "liberty");
+
+            this.edge_closing_backfill_moves(str, apos, moves);
+
+            /* Look for edge blocking moves. */
+            this.edge_block_moves(str, apos, moves);
+          }
+
+          /* Pick up some edge moves. */
+          this.propose_edge_moves(str, libs, liberties, moves, other);
+          break;
+
+        case 1:
+          if (b.stackp <= this.backfill_depth)
+            this.find_cap_moves(str, moves);
+          break;
+
+        default:
+          // abort();
+      }
+
+      this.order_moves(str, moves, other, 'read_function_name', move);
+      this.ATTACK_TRY_MOVES(1, suggest_move);
+    } /* for (pass = ... */
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  },
 
   find_cap_moves() {},
   special_attack2_moves() {},

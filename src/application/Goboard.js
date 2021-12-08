@@ -8,7 +8,8 @@ import './index.less'
 
 
 // attack1
-const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-07]AB[dh][ci]AW[eh][fi][di];B[ei])'
+const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-11-29]AB[ed][de][fe]AW[ee][df][eg][ff])'
+// const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-07]AB[dh][ci]AW[eh][fi][di];B[ei])'
 
 // set_up_snapback_moves
 // const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-06]AB[bi][bh][bg][bf][be][ce][de][ee][fe][ff][eg][dh]AW[cf][cg][ch][ci][df][ef][fg][fh][eh])'

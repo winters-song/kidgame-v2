@@ -60,7 +60,7 @@ const DEFAULT_NUMBER_OF_CACHE_ENTRIES = 350000
 const hn_get_value1 = hn=>           (hn >> 23) & 0x0f
 const hn_get_value2 = hn=>           (hn >> 19) & 0x0f
 const hn_get_move = hn=>             (hn >>  9) & 0x3ff
-const hn_get_cost = hn=>             (hn >>  5) & 0x0f
+// const hn_get_cost = hn=>             (hn >>  5) & 0x0f
 const hn_get_remaining_depth = hn=>  (hn >>  0) & 0x1f
 const hn_get_total_cost = hn=>       (hn >>  0) & 0x1ff
 

@@ -177,7 +177,7 @@ export default class Genmove {
   do_genmove(color, pure_threat_value, allowed_moves, value) {
     // let average_score, pessimistic_score, optimistic_score;
     // let save_verbose;
-    let save_depth;
+    // let save_depth;
     let move;
     let dummy_value;
     // let use_thrashing_dragon_heuristics = 0;

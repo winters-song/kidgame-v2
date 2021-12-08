@@ -1,6 +1,7 @@
 import {colors} from "./Constants";
 
-
+/* Incremental string data. */
+// string_data
 export class StringData {
   constructor(cfg) {
     this.color = null
@@ -15,6 +16,7 @@ export class StringData {
   }
 };
 
+// string_liberties_data + string_neighbors_data
 export class StringPosData {
   constructor() {
     this.list = []
@@ -97,9 +99,14 @@ export const Utils = {
   ON_BOARD1 (pos) {
     return pos < this.BOARDSIZE && this.board[pos] !== colors.GRAY
   },
+
   // 用于遍历数组中，无需判断index边界
   ON_BOARD (pos) {
     return this.board[pos] !== colors.GRAY
+  },
+
+  ASSERT_ON_BOARD1(pos) {
+    this.ASSERT1(this.ON_BOARD1(pos), pos)
   },
 
   FIRST_STONE (s){
@@ -226,9 +233,14 @@ export const Utils = {
   // DO_ADD_STONE(pos, color) {},
 
   DO_REMOVE_STONE(pos) {
-    this.pushVertex(pos);
+    this.PUSH_VERTEX(pos);
     this.hash.invert_stone(this.board_hash, pos, this.board[pos]);
     this.board[pos] = colors.EMPTY;
-  }
+  },
 
+  ASSERT1(x, pos){
+    if(!x) {
+      console.error(pos)
+    }
+  }
 }

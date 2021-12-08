@@ -6,6 +6,7 @@ import {
 import {Hash, HashData} from './Hash'
 import {StringData, StringPosData, Utils} from './BoardUtils'
 import {BoardInterface} from './BoardInterface'
+
 const boardParams = [
   'board_size',
   'board_ko_pos',
@@ -44,6 +45,59 @@ class Board {
     this.clear_board()
   }
 
+  CLEAR_STACKS() {
+    this.change_stack = []
+    this.vertex_stack = []
+  }
+
+  BEGIN_CHANGE_RECORD() {
+    this.change_stack.push(null)
+    this.vertex_stack.push(null)
+  }
+
+  // 值存储，入栈
+  PUSH_VALUE(ref, name){
+    this.change_stack.push({
+      ref,
+      name,
+      value: ref[name]
+    })
+  }
+
+  // 棋盘坐标值存储，入栈
+  PUSH_VERTEX(pos){
+    this.vertex_stack.push({
+      pos,
+      value: this.board[pos]
+    })
+  }
+
+  POP_MOVE() {
+    const cs = this.change_stack
+    // POP_MOVE
+    while(cs.length && cs[cs.length - 1]){
+      const stack = cs.pop()
+      stack.ref[stack.name] = stack.value
+    }
+
+    if(cs.length && cs[cs.length - 1] === null){
+      cs.pop()
+    }
+  }
+
+  POP_VERTICES() {
+    const vs = this.vertex_stack
+
+    while(vs.length && vs[vs.length - 1]){
+      const stack = vs.pop()
+      this.board[stack.pos] = stack.value
+    }
+    if(vs.length && vs[vs.length - 1] === null){
+      vs.pop()
+    }
+  }
+
+
   initConstants(boardSize) {
 
     // this.MIN_BOARD = 1
@@ -73,6 +127,7 @@ class Board {
   }
 
   initParams() {
+
     this.board_size = this.DEFAULT_BOARD_SIZE
     this.board = new Array(this.BOARDSIZE)
     this.initial_board = new Array(this.BOARDSIZE)
@@ -116,13 +171,12 @@ class Board {
   /*                      static data structures                      */
   /* ================================================================ */
   initData() {
+    //棋串信息
     this.string = {}
     this.string_libs = {}
     this.string_neighbors = {}
 
-    /* Stacks and stack pointers. */
-    this.change_stack = []
-    this.vertex_stack = []
+    this.CLEAR_STACKS()
 
     // 棋串字典 ：BOARDMAX, 位置pos映射棋串index
     this.string_number = {}
@@ -130,46 +184,8 @@ class Board {
     this.next_stone = {}
   }
 
-  pushValue(ref, name){
-    this.change_stack.push({
-      ref,
-      name,
-      value: ref[name]
-    })
-  }
 
-  pushVertex(pos){
-    this.vertex_stack.push({
-      pos,
-      value: this.board[pos]
-    })
-  }
-
-  popMove() {
-    const cs = this.change_stack
-    // POP_MOVE
-    while(cs.length && cs[cs.length - 1]){
-      const stack = cs.pop()
-      stack.ref[stack.name] = stack.value
-    }
-
-    if(cs.length && cs[cs.length - 1] === null){
-      cs.pop()
-    }
-  }
-
-  popVertices() {
-    const vs = this.vertex_stack
-
-    while(vs.length && vs[vs.length - 1]){
-      const stack = vs.pop()
-      this.board[stack.pos] = stack.value
-    }
-    if(vs.length && vs[vs.length - 1] === null){
-      vs.pop()
-    }
-  }
-
+  // 当前board信息存入 state
   store_board(state) {
 
     boardParams.forEach(item => state[item] = this[item])
@@ -184,6 +200,7 @@ class Board {
     }
   }
 
+  // 从state读取board信息
   restore_board(state){
     boardParams.forEach(item => this[item] = state[item])
 
@@ -230,6 +247,8 @@ class Board {
     this.new_position();
   }
 
+  // test_gray_border() {}
+
   /* ================================================================ */
   /*                      Temporary moves   (临时落子)                  */
   /* ================================================================ */
@@ -242,20 +261,15 @@ class Board {
     return this.do_trymove(pos, color, 1)
   }
 
-  /* Really, really make a temporary move. It is assumed that all
-   * necessary checks have already been made and likewise that various
-   * administrative bookkeeping outside of the actual board logic has
-   * either been done or is not needed.
-   */
+  // stack压栈，存储hash
   really_do_trymove(pos, color) {
-    this.change_stack.push(null)
-    this.vertex_stack.push(null)
-    this.pushValue(this, 'board_ko_pos');
+    this.BEGIN_CHANGE_RECORD()
+    this.PUSH_VALUE(this, 'board_ko_pos');
 
-    if(!this.board_hash_stack[this.stackp]){
-      this.board_hash_stack[this.stackp] = {}
+    //  memcpy(&board_hash_stack[stackp], &board_hash, sizeof(board_hash));
+    this.board_hash_stack[this.stackp] = {
+      hashval : this.board_hash.hashval
     }
-    this.board_hash_stack[this.stackp].hashval = this.board_hash.hashval
 
     if (this.board_ko_pos !== NO_MOVE){
       this.hash.invert_ko(this.board_hash, this.board_ko_pos)
@@ -265,16 +279,20 @@ class Board {
     this.stackp++;
 
     if (pos !== PASS_MOVE) {
-      this.pushValue(this, 'black_captured');
-      this.pushValue(this, 'white_captured');
+      this.PUSH_VALUE(this, 'black_captured');
+      this.PUSH_VALUE(this, 'white_captured');
       this.do_play_move(pos, color);
     }
   }
 
+  // Do the main work of trymove() and tryko()
+  // ignore_ko: 是否允许打劫非法提子
   do_trymove(pos, color, ignore_ko) {
     if (pos !== PASS_MOVE) {
-      /* Update the reading tree shadow. */
-      // shadow[pos] = 1;
+      /* 2. Unless pass, the move must be inside the board. */
+      this.ASSERT_ON_BOARD1(pos);
+
+      this.shadow[pos] = 1;
 
       /* 3. The location must be empty. */
       if (this.board[pos] !== colors.EMPTY){
@@ -283,8 +301,8 @@ class Board {
 
       /* 4. The location must not be the ko point, unless ignore_ko === 1. */
       if (!ignore_ko && pos === this.board_ko_pos) {
-        if (this.board[this.WEST(pos)] === this.OTHER_COLOR(color)
-          || this.board[this.EAST(pos)] === this.OTHER_COLOR(color)) {
+        let other = this.OTHER_COLOR(color)
+        if (this.board[this.WEST(pos)] === other || this.board[this.EAST(pos)] === other) {
           return 0;
         }
       }
@@ -300,7 +318,6 @@ class Board {
       console.error("gnugo: Truncating search. This is beyond my reading ability!");
       return 0;
     }
-
 
     /* Only count trymove when we do create a new position. */
     this.trymove_counter++;
@@ -321,14 +338,15 @@ class Board {
   }
 
   undo_trymove() {
-    this.popMove()
-    this.popVertices()
+    this.POP_MOVE()
+    this.POP_VERTICES()
 
     this.stackp--;
     this.board_hash.hashval = this.board_hash_stack[this.stackp].hashval
   }
 
-
+  // dump_stack() {}
+  // do_dump_stack() {}
   /* ================================================================ */
   /*                     Permanent moves （持久化落子）                  */
   /* ================================================================ */
@@ -343,6 +361,10 @@ class Board {
 
   // 默认放置棋子
   add_stone(pos, color) {
+    this.ASSERT1(this.stackp === 0, pos);
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
+
     this.board[pos] = color;
     this.hash.invert_stone(this.board_hash, pos, color);
     this.reset_move_history();
@@ -350,7 +372,10 @@ class Board {
   }
 
   remove_stone(pos) {
-    // 断言： stackp = 0， pos在棋盘内，pos上有棋子
+    this.ASSERT1(this.stackp === 0, pos);
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(this.IS_STONE(this.board[pos]), pos);
+
     this.hash.invert_stone(this.board_hash, pos, this.board[pos]);
     this.board[pos] = colors.EMPTY;
     this.reset_move_history();
@@ -364,7 +389,8 @@ class Board {
    * row to avoid overhead caused by new_position(). Don't forget to call
    * it yourself after all the moves have been played.
    */
-  play_move_no_history( pos,  color, update_internals) {
+  // 修改：为棋盘UI返回提子数组
+  play_move_no_history( pos, color, update_internals) {
     let captured
     if (this.board_ko_pos !== NO_MOVE){
       this.hash.invert_ko(this.board_hash, this.board_ko_pos);
@@ -373,22 +399,25 @@ class Board {
 
     /* If the move is a pass, we can skip some steps. */
     if (pos !== PASS_MOVE) {
-      // 断言： pos在棋盘上， pos是空
+      this.ASSERT_ON_BOARD1(pos);
+      this.ASSERT1(this.board[pos] == colors.EMPTY, pos);
       /* Do play the move. */
+      // 不允许自杀
       captured = this.do_play_move(pos, color);
     }
 
     if (update_internals || this.next_string === this.MAX_STRINGS) {
       this.new_position();
     } else{
-      this.change_stack = []
-      this.vertex_stack = []
+      this.CLEAR_STACKS()
     }
     return captured
   }
 
   /* Load the initial position and replay the first n moves. */
   replay_move_history(n) {
+    this.board = this.initial_board.slice()
+
     this.board_ko_pos = this.initial_board_ko_pos;
     this.white_captured = this.initial_white_captured;
     this.black_captured = this.initial_black_captured;
@@ -416,11 +445,15 @@ class Board {
    * possible to unplay at a later time.
    */
   play_move(pos,  color) {
-    // 断言： 栈为空 stackp === 0
-    // color是黑棋、白棋
-    // pos为pass或者棋盘范围内
-    // pass或者pos位置是空
-    // pos不是打劫禁入点
+    this.ASSERT1(this.stackp === 0, pos);
+    // 黑棋、白棋落子
+    this.ASSERT1(color == colors.WHITE || color === colors.BLACK, pos);
+    // 落子位置为pass或者棋盘范围内
+    this.ASSERT1(pos === PASS_MOVE || this.ON_BOARD1(pos), pos);
+    //  pass或者当前位置没有棋子
+    this.ASSERT1(pos === PASS_MOVE || this.board[pos] === colors.EMPTY, pos);
+    // 不是禁入点
+    this.ASSERT1(this.komaster === colors.EMPTY && this.kom_pos === NO_MOVE, pos);
 
     let captured
     //  color, pos, hash分别记录
@@ -435,6 +468,18 @@ class Board {
     this.movenum++;
     return captured
   }
+
+  // undo_move() {}
+
+  // get_last_opponent_move() {}
+
+  // get_last_move() {}
+
+  // get_last_player() {}
+
+  // is_pass() {}
+
+  is_legal() {}
 
   // 打印棋盘
   print_board(){
@@ -465,18 +510,20 @@ class Board {
 
    */
   is_suicide(pos, color) {
-    // 已知前提： pos在棋盘上，&& pos为空
-    const me = this
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
     /* Check for suicide. */
-    // 南面有气 或 是敌方棋串且1气，是我方棋子且1气以上， 则不是自杀
+    // 南面有气 或 是敌方棋串且1气，是我方棋子且1气以上，则不是自杀
     for(let i in directions){
-      const p = me[directions[i]](pos)
+      const p = this[directions[i]](pos)
 
-      if (me.LIBERTY(p) || (me.ON_BOARD(p) && ((me.board[p] === color) ^ (me.LIBERTIES(p) === 1))))
+      if (this.LIBERTY(p) || (this.ON_BOARD(p) && ((this.board[p] === color) ^ (this.LIBERTIES(p) === 1))))
         return 0;
     }
     return 1;
   }
+
+  // is_illegal_ko_capture() {}
 
   /*
    * is_allowed_move(int pos, int color) determines whether a move is
@@ -493,8 +540,7 @@ class Board {
       return 1;
 
     /* 2. The move must be inside the board. */
-    if(!this.ON_BOARD1(pos))
-      return 0
+    this.ASSERT_ON_BOARD1(pos)
 
     /* 3. The location must be empty. */
     if (this.board[pos] !== colors.EMPTY)
@@ -509,9 +555,9 @@ class Board {
      *    could be tested with has_neighbor() but here a faster test
      *    suffices.
      */
+    const other = this.OTHER_COLOR(color)
     if (this.ko_rule !== colors.NONE && pos === this.board_ko_pos &&
-      (this.board[this.WEST(pos)] === this.OTHER_COLOR(color)
-        || this.board[this.EAST(pos)] === this.OTHER_COLOR(color)))
+      (this.board[this.WEST(pos)] === other || this.board[this.EAST(pos)] === other))
       return 0;
 
     /* 5. Check for suicide. Suicide rule options:
@@ -519,10 +565,12 @@ class Board {
      *    ALLOWED     - Suicide of more than one stone allowed.
      *    ALL_ALLOWED - All suicides allowed.
      */
-    if (this.is_suicide(pos, color))
+    if (this.is_suicide(pos, color)) {
       if (this.suicide_rule === suicide_rules.FORBIDDEN
-        || (this.suicide_rule === suicide_rules.ALLOWED && !this.has_neighbor(pos, color)))
+        || (this.suicide_rule === suicide_rules.ALLOWED && !this.has_neighbor(pos, color))){
         return 0;
+      }
+    }
 
     /* 6. Check for whole board repetitions. The superko options are
      *    SIMPLE, NONE - No superko restrictions.
@@ -538,14 +586,14 @@ class Board {
 
 
   set_new_komaster(new_komaster) {
-    this.pushValue(this, 'komaster')
+    this.PUSH_VALUE(this, 'komaster')
     this.hash.invert_komaster(this.board_hash, this.komaster)
     this.komaster = new_komaster;
     this.hash.invert_komaster(this.board_hash, this.komaster)
   }
 
   set_new_kom_pos(new_kom_pos) {
-    this.pushValue(this, 'kom_pos')
+    this.PUSH_VALUE(this, 'kom_pos')
     this.hash.invert_kom_pos(this.board_hash, this.kom_pos)
     this.kom_pos = new_kom_pos;
     this.hash.invert_kom_pos(this.board_hash, this.kom_pos)
@@ -704,15 +752,36 @@ class Board {
   // get_komaster() {}
   // get_kom_pos() {}
 
-  is_edge_vertex() {}
-  edge_distance() {}
-  is_corner_vertex() {}
+  is_edge_vertex(pos) {
+    this.ASSERT_ON_BOARD1(pos);
+    if (!this.ON_BOARD(this.SW(pos)) || !this.ON_BOARD(this.NE(pos))){
+      return 1;
+    }
+
+    return 0;
+  }
+
+  edge_distance(pos) {
+    const i = this.I(pos);
+    const j = this.J(pos);
+    this.ASSERT_ON_BOARD1(pos);
+    return Math.min(Math.min(i, this.board_size-1 - i), Math.min(j, this.board_size-1 - j));
+  }
+  is_corner_vertex(pos) {
+    this.ASSERT_ON_BOARD1(pos);
+    if ((!this.ON_BOARD(this.WEST(pos)) || !this.ON_BOARD(this.EAST(pos)))
+      && (!this.ON_BOARD(this.SOUTH(pos)) || !this.ON_BOARD(this.NORTH(pos)))){
+      return 1;
+    }
+
+    return 0;
+  }
   rotate1() {}
-  are_neighbors() {}
+  // are_neighbors() {}
 
   // 获得棋串气数
   countlib(str) {
-    // ASSERT1(IS_STONE(board[str]), str);
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
     /* We already know the number of liberties. Just look it up. */
     return this.string[this.string_number[str]].liberties;
   }
@@ -720,6 +789,9 @@ class Board {
   // 获得棋串气的列表，元素个数最大为maxlib
   // maxlib< 缓存最大值时，从缓存读取； 否则遍历+标记获取
   findlib(str, maxlib, libs) {
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+    this.ASSERT1(libs !== null, str);
+
     let s = this.string_number[str];
     let liberties = this.string[s].liberties;
 
@@ -768,8 +840,8 @@ class Board {
     let ally2 = -1;
     let fast_liberties = 0;
 
-    // ASSERT1(board[pos] == EMPTY, pos);
-    // ASSERT1(IS_STONE(color), pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
+    this.ASSERT1(this.IS_STONE(color), pos);
 
     /* Find neighboring strings of the same color. If there are more than two of
      * them, we give up (it's too difficult to count their common liberties).
@@ -940,8 +1012,8 @@ class Board {
     let liberties;
 
     let entry = this.getApproxLib(pos, color - 1)
-    // ASSERT1(board[pos] == EMPTY, pos);
-    // ASSERT1(IS_STONE(color), pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
+    this.ASSERT1(this.IS_STONE(color), pos);
 
     if (!libs) {
       /* First see if this result is cached. */
@@ -1025,8 +1097,53 @@ class Board {
     return liberties;
   }
 
-  slow_approxlib() {}
+  slow_approxlib(pos, color, maxlib, libs) {
+    let liberties = 0;
 
+    this.liberty_mark++;
+    this.MARK_LIBERTY(pos);
+    this.string_mark++;
+
+    for (let k = 0; k < 4; k++) {
+      let d = delta[k];
+      if (this.UNMARKED_LIBERTY(pos + d)) {
+        if (libs){
+          libs[liberties] = pos + d;
+        }
+        liberties++;
+        if (liberties === maxlib){
+          return liberties;
+        }
+        this.MARK_LIBERTY(pos + d);
+      }
+      else if (this.board[pos + d] === color && this.UNMARKED_STRING(pos + d)) {
+        let s = this.string_number[pos + d];
+        let pos2 = this.FIRST_STONE(s);
+        do {
+          for (let l = 0; l < 4; l++) {
+            let d2 = delta[l];
+            if (this.UNMARKED_LIBERTY(pos2 + d2)) {
+              if (libs){
+                libs[liberties] = pos2 + d2;
+              }
+              liberties++;
+              if (liberties === maxlib){
+                return liberties;
+              }
+              this.MARK_LIBERTY(pos2 + d2);
+            }
+          }
+
+          pos2 = this.NEXT_STONE(pos2);
+        } while (!this.BACK_TO_FIRST_STONE(s, pos2));
+        this.MARK_STRING(pos + d);
+      }
+    }
+
+    return liberties;
+  }
+
+  // clear_accuratelib_cache() {}
 
   getAccurateLib(pos, color){
     if(!this.accuratelib_cache[pos]){
@@ -1059,8 +1176,8 @@ class Board {
     let liberties;
 
     let entry = this.getAccurateLib(pos, color - 1 )
-    // ASSERT1(board[pos] == EMPTY, pos);
-    // ASSERT1(IS_STONE(color), pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
+    this.ASSERT1(this.IS_STONE(color), pos);
 
     if (!libs) {
       /* First see if this result is cached. */
@@ -1246,10 +1363,10 @@ class Board {
     let all_libs1 = []
     let commonlibs = 0
 
-    // ASSERT_ON_BOARD1(str1);
-    // ASSERT_ON_BOARD1(str2);
-    // ASSERT1(IS_STONE(board[str1]), str1);
-    // ASSERT1(IS_STONE(board[str2]), str2);
+    this.ASSERT_ON_BOARD1(str1);
+    this.ASSERT_ON_BOARD1(str2);
+    this.ASSERT1(this.IS_STONE(this.board[str1]), str1);
+    this.ASSERT1(this.IS_STONE(this.board[str2]), str2);
 
     let n = this.string_number[str1];
     let liberties1 = this.string[n].liberties;
@@ -1296,9 +1413,13 @@ class Board {
     return commonlibs;
   }
 
+  // find_common_libs(){}
+  // have_common_lib() {}
+
   countstones(str) {
-    // ASSERT_ON_BOARD1(str);
-    // ASSERT1(IS_STONE(board[str]), str);
+    this.ASSERT_ON_BOARD1(str);
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+
     return this.COUNTSTONES(str);
   }
 
@@ -1307,8 +1428,8 @@ class Board {
    * stones[]. The full number of stones is returned.
    */
   findstones(str, maxstones, stones) {
-    // ASSERT_ON_BOARD1(str);
-    // ASSERT1(IS_STONE(board[str]), str);
+    this.ASSERT_ON_BOARD1(str);
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
 
     const s = this.string_number[str];
     const size = this.string[s].size;
@@ -1327,10 +1448,10 @@ class Board {
   count_adjacent_stones(str1, str2, maxstones){
     let count = 0;
 
-    // ASSERT_ON_BOARD1(str1);
-    // ASSERT1(IS_STONE(board[str1]), str1);
-    // ASSERT_ON_BOARD1(str2);
-    // ASSERT1(IS_STONE(board[str2]), str2);
+    this.ASSERT_ON_BOARD1(str1);
+    this.ASSERT1(this.IS_STONE(this.board[str1]), str1);
+    this.ASSERT_ON_BOARD1(str2);
+    this.ASSERT1(this.IS_STONE(this.board[str2]), str2);
 
     const s1 = this.string_number[str1];
     const s2 = this.string_number[str2];
@@ -1349,7 +1470,7 @@ class Board {
 
   // 获取棋串相邻的棋串数量
   chainlinks(str, adj) {
-    // ASSERT1(IS_STONE(board[str]), str);
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
 
     /* We already have the list ready, just copy it and fill in the
      * desired information.
@@ -1365,7 +1486,7 @@ class Board {
 
   // 获取棋串相邻的具有指定气数的棋串数量
   chainlinks2(str, adj, lib) {
-    // ASSERT1(IS_STONE(board[str]), str);
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
 
     /* We already have the list ready, just copy the strings with the
      * right number of liberties.
@@ -1382,13 +1503,85 @@ class Board {
     return neighbors;
   }
 
-  chainlinks3() {}
+  /* chainlinks3 returns (in adj array) those chains surrounding
+   * the string at str, which have less or equal lib liberties.
+   * The number of such chains is returned.
+   */
+  chainlinks3(str, adj, lib) {
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+
+    let neighbors = 0;
+    const s = this.string[this.string_number[str]];
+    const sn = this.string_neighbors[this.string_number[str]];
+    for (let k = 0; k < s.neighbors; k++) {
+      let t = this.string[sn.list[k]];
+      if (t.liberties <= lib){
+        adj[neighbors++] = t.origin;
+      }
+    }
+    return neighbors;
+  }
 
   extended_chainlinks() {}
 
-  send_two_return_one() {}
+  /* Returns true if a move by (color) fits a shape like:
+   *
+   *  -----
+   *  O.O*X        (O=color)
+   *  OOXXX
+   *
+   * More specifically the move should have the following properties:
+   * - The move is a self-atari
+   * - The move forms a string of exactly two stones
+   * - When the opponent captures, the capturing stone becomes a single
+   *   stone in atari
+   * - When capturing back the original position is repeated
+   */
+  send_two_return_one(move, color) {
+    const other = this.OTHER_COLOR(color);
+    let lib = NO_MOVE;
+    let friendly_neighbor = NO_MOVE;
+
+    this.ASSERT1(this.board[move] === colors.EMPTY, move);
+
+    for (let k = 0; k < 4; k++) {
+      let pos = move + delta[k];
+      if (this.board[pos] === colors.EMPTY)
+        return 0;
+      if (this.board[pos] === color) {
+        if (friendly_neighbor !== NO_MOVE){
+          return 0;
+        }
+        friendly_neighbor = pos;
+        let s = this.string_number[pos];
+        if (this.string[s].size !== 1 || this.string[s].liberties !== 2){
+          return 0;
+        }
+        lib = this.string_libs[s].list[0] + this.string_libs[s].list[1] - move;
+      }
+      else if (this.board[pos] === other && this.string[this.string_number[pos]].liberties === 1){
+        return 0;
+      }
+    }
+
+    if (friendly_neighbor === NO_MOVE){
+      return 0;
+    }
+
+    for (let k = 0; k < 4; k++) {
+      let pos = lib + delta[k];
+      if (this.board[pos] === colors.EMPTY || this.board[pos] === other)
+        return 0;
+      if (this.board[pos] === color && this.string[this.string_number[pos]].liberties < 2)
+        return 0;
+    }
+
+    return 1;
+  }
 
   find_origin(str) {
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+
     return this.string[this.string_number[str]].origin;
   }
 
@@ -1404,9 +1597,9 @@ class Board {
      */
     let far_liberties = 0;
 
-    // ASSERT_ON_BOARD1(pos);
-    // ASSERT1(board[pos] == EMPTY, pos);
-    // ASSERT1(IS_STONE(color), pos);
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
+    this.ASSERT1(this.IS_STONE(color), pos);
 
     /* 1. Try first to solve the problem without much work. */
     this.string_mark++;
@@ -1455,6 +1648,9 @@ class Board {
 
 
   liberty_of_string(pos, str) {
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT_ON_BOARD1(str);
+
     if (this.IS_STONE(this.board[pos])){
       return 0;
     }
@@ -1463,6 +1659,9 @@ class Board {
   }
 
   second_order_liberty_of_string(pos, str) {
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT_ON_BOARD1(str);
+
     for (let k = 0; k < 4; k++){
       if (this.board[pos + this.delta[k]] === colors.EMPTY
        && this.NEIGHBOR_OF_STRING(pos + this.delta[k], this.string_number[str], this.board[str])){
@@ -1474,10 +1673,16 @@ class Board {
 
   neighbor_of_string(pos, str) {
     const color = this.board[str];
+    this.ASSERT1(this.IS_STONE(color), str);
+    this.ASSERT_ON_BOARD1(pos);
+
     return this.NEIGHBOR_OF_STRING(pos, this.string_number[str], color);
   }
 
   has_neighbor(pos, color) {
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(this.IS_STONE(color), pos);
+
     return (this.board[this.SOUTH(pos)] === color
     || this.board[this.WEST(pos)] === color
     || this.board[this.NORTH(pos)] === color
@@ -1485,10 +1690,29 @@ class Board {
   }
 
   same_string(str1, str2) {
+    this.ASSERT_ON_BOARD1(str1);
+    this.ASSERT_ON_BOARD1(str2);
+    this.ASSERT1(this.IS_STONE(this.board[str1]), str1);
+    this.ASSERT1(this.IS_STONE(this.board[str2]), str2);
+
     return this.string_number[str1] === this.string_number[str2];
   }
 
-  adjacent_strings() {}
+  adjacent_strings(str1, str2) {
+    this.ASSERT_ON_BOARD1(str1);
+    this.ASSERT_ON_BOARD1(str2);
+    this.ASSERT1(this.IS_STONE(board[str1]), str1);
+    this.ASSERT1(this.IS_STONE(board[str2]), str2);
+
+    const s1 = this.string_number[str1];
+    const s2 = this.string_number[str2];
+
+    for (let k = 0; k < string[s1].neighbors; k++)
+      if (this.string_neighbors[s1].list[k] === s2)
+        return 1;
+
+    return 0;
+  }
 
   /*
    * Return true if the move (pos) by (color) is a ko capture
@@ -1508,8 +1732,8 @@ class Board {
     let captures = 0;
     let kpos = 0;
 
-    // ASSERT_ON_BOARD1(pos);
-    // ASSERT1(color == WHITE || color == BLACK, pos);
+    this.ASSERT_ON_BOARD1(pos);
+    this.ASSERT1(color === colors.WHITE || color === colors.BLACK, pos);
 
     for(let i in directions) {
       const p = this[directions[i]](pos)
@@ -1537,17 +1761,67 @@ class Board {
     return 0;
   }
 
-  is_ko_point() {}
+  /* Return true if pos is either a stone, which if captured would give
+   * ko, or if pos is an empty intersection adjacent to a ko stone.
+   */
+  is_ko_point(pos) {
+    this.ASSERT_ON_BOARD1(pos);
+
+    if (this.board[pos] === colors.EMPTY) {
+      let color;
+      if (this.ON_BOARD(this.SOUTH(pos)))
+        color = this.board[this.SOUTH(pos)];
+      else
+        color = this.board[this.NORTH(pos)];
+      if (this.IS_STONE(color) && this.is_ko(pos, this.OTHER_COLOR(color), null))
+        return 1;
+    }
+    else {
+      const s = this.string[this.string_number[pos]];
+      const sl = this.string_libs[this.string_number[pos]];
+      if (s.liberties == 1 && s.size == 1 && this.is_ko(sl.list[0], this.OTHER_COLOR(s.color), null))
+        return 1;
+    }
+
+    return 0;
+  }
 
   is_superko_violation() {}
 
-  does_capture_something() {}
+  does_capture_something(pos, color) {
+    const other = this.OTHER_COLOR(color);
 
-  mark_string() {}
+    this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
 
-  move_in_stack() {}
+    for(let i in directions) {
+      const p = this[directions[i]](pos)
 
-  get_move_from_stack() {}
+      if (this.board[p] === other && this.LIBERTIES(p) === 1){
+        return 1;
+      }
+    }
+
+    return 0;
+  }
+
+  /* For each stone in the string at pos, set mx to value mark. */
+  mark_string(str, mx, mark) {
+    let pos = str;
+
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+
+    do {
+      mx[pos] = mark;
+      pos = this.NEXT_STONE(pos);
+    } while (pos !== str);
+  }
+
+  // move_in_stack() {}
+
+  get_move_from_stack(k, move, color) {
+    move[0] = this.stack[k];
+    color[0] = this.move_color[k];
+  }
 
   stones_on_board(color) {
     // gg_assert(stackp == 0);
@@ -1572,25 +1846,23 @@ class Board {
 
 
   /* This function should be called if the board is modified by other
- * means than do_play_move() or undo_trymove().
- *
- * We have reached a new position. Increase the position counter and
- * re-initialize the incremental strings.
- *
- * Set up incremental board structures and populate them with the
- * strings available in the position given by board[]. Clear the stacks
- * and start the mark numbers from zero. All undo information is lost
- * by calling this function.
- */
+   * means than do_play_move() or undo_trymove().
+   *
+   * We have reached a new position. Increase the position counter and
+   * re-initialize the incremental strings.
+   *
+   * Set up incremental board structures and populate them with the
+   * strings available in the position given by board[]. Clear the stacks
+   * and start the mark numbers from zero. All undo information is lost
+   * by calling this function.
+   */
   new_position() {
     this.position_number++;
     // next_string： 生成string的string_number自增序号
     this.next_string = 0;
     this.liberty_mark = 0;
     this.string_mark = 0;
-    // CLEAR_STACKS();
-    this.change_stack = []
-    this.vertex_stack = []
+    this.CLEAR_STACKS();
 
     this.string = {}
     this.string_libs = {}
@@ -1690,9 +1962,9 @@ class Board {
    */
   update_liberties(s) {
     /* Push the old information. */
-    this.pushValue(this.string[s], 'liberties')
+    this.PUSH_VALUE(this.string[s], 'liberties')
     for (let k = 0; k < this.string[s].liberties && k < this.MAX_LIBERTIES; k++) {
-      this.pushValue(this.string_libs[s].list, k)
+      this.PUSH_VALUE(this.string_libs[s].list, k)
     }
     this.string[s].liberties = 0;
 
@@ -1728,9 +2000,9 @@ class Board {
         /* We need to push the last entry too because it may become
          * destroyed later.
          */
-        this.pushValue(sn.list, s.neighbors - 1)
-        this.pushValue(sn.list, k)
-        this.pushValue(s, 'neighbors')
+        this.PUSH_VALUE(sn.list, s.neighbors - 1)
+        this.PUSH_VALUE(sn.list, k)
+        this.PUSH_VALUE(s, 'neighbors')
         sn.list[k] = sn.list[s.neighbors - 1];
         s.neighbors--;
         break;
@@ -1755,9 +2027,9 @@ class Board {
           /* We need to push the last entry too because it may become
            * destroyed later.
            */
-          this.pushValue(sl.list, s.liberties - 1)
-          this.pushValue(sl.list, k)
-          this.pushValue(s, 'liberties')
+          this.PUSH_VALUE(sl.list, s.liberties - 1)
+          this.PUSH_VALUE(sl.list, k)
+          this.PUSH_VALUE(s, 'liberties')
 
           sl.list[k] = sl.list[s.liberties - 1];
           s.liberties--;
@@ -1778,8 +2050,8 @@ class Board {
     let pos = this.FIRST_STONE(s);
     do {
       /* Push color, string number and cyclic chain pointers. */
-      this.pushValue(this.string_number, pos);
-      this.pushValue(this.next_stone, pos);
+      this.PUSH_VALUE(this.string_number, pos);
+      this.PUSH_VALUE(this.next_stone, pos);
       this.DO_REMOVE_STONE(pos);
       captured.push(pos)
       pos = this.NEXT_STONE(pos);
@@ -1795,7 +2067,7 @@ class Board {
         const neighbor = this.string_neighbors[s].list[k];
 
         this.remove_neighbor(neighbor, s);
-        this.pushValue(this.string[neighbor], 'liberties');
+        this.PUSH_VALUE(this.string[neighbor], 'liberties');
 
         if (this.string[neighbor].liberties < this.MAX_LIBERTIES){
           this.string_libs[neighbor].list[this.string[neighbor].liberties] = pos;
@@ -1810,7 +2082,7 @@ class Board {
         const neighbor = this.string_neighbors[s].list[k];
 
         this.remove_neighbor(neighbor, s);
-        this.pushValue(this.string[neighbor], 'liberties');
+        this.PUSH_VALUE(this.string[neighbor], 'liberties');
 
         //相邻是撞气
         if (this.NEIGHBOR_OF_STRING(pos, neighbor, other)) {
@@ -1853,7 +2125,7 @@ class Board {
     const other = this.OTHER_COLOR(color);
 
     /* Get the next free string number. */
-    this.pushValue(this, 'next_string');
+    this.PUSH_VALUE(this, 'next_string');
     let s = this.next_string++;
     // 断言：s < MAX_STRINGS
     this.string_number[pos] = s;
@@ -1884,7 +2156,7 @@ class Board {
         /* Add the neighbor to our list. */
         this.ADD_NEIGHBOR(s, p);
         /* Add us to our neighbor's list. */
-        this.pushValue(this.string[s2], 'neighbors');
+        this.PUSH_VALUE(this.string[s2], 'neighbors');
         this.ADD_NEIGHBOR(s2, pos);
         this.MARK_STRING(p);
       }
@@ -1904,20 +2176,20 @@ class Board {
     // 更新棋子循环列表
     const pos2 = this.string[s].origin;
     this.next_stone[pos] = this.next_stone[pos2];
-    this.pushValue(this.next_stone, pos2);
+    this.PUSH_VALUE(this.next_stone, pos2);
     this.next_stone[pos2] = pos;
 
     /* Do we need to update the origin? */
     // 更新origin，保持pos为当前棋串棋子最小
     if (pos < pos2) {
-      this.pushValue(this.string[s], 'origin');
+      this.PUSH_VALUE(this.string[s], 'origin');
       this.string[s].origin = pos;
     }
 
     this.string_number[pos] = s;
 
     /* The size of the string has increased by one. */
-    this.pushValue(this.string[s], 'size');
+    this.PUSH_VALUE(this.string[s], 'size');
     this.string[s].size++;
 
     /* If s has too many liberties, we don't know where they all are and
@@ -1956,9 +2228,9 @@ class Board {
       } else if (this.UNMARKED_COLOR_STRING(p, other)) {
         // 我方、敌方棋串增加撞气
         const s2 = this.string_number[p];
-        this.pushValue(this.string[s], 'neighbors');
+        this.PUSH_VALUE(this.string[s], 'neighbors');
         this.ADD_NEIGHBOR(s, p);
-        this.pushValue(this.string[s2], 'neighbors');
+        this.PUSH_VALUE(this.string[s2], 'neighbors');
         this.ADD_NEIGHBOR(s2, pos);
         this.MARK_STRING(p);
       }
@@ -1980,7 +2252,7 @@ class Board {
      */
     pos = this.FIRST_STONE(s2);
     do {
-      this.pushValue(this.string_number, pos);
+      this.PUSH_VALUE(this.string_number, pos);
       this.string_number[pos] = s;
       last = pos;
       pos = this.NEXT_STONE(pos);
@@ -1988,8 +2260,8 @@ class Board {
 
     /* Link the two cycles together. */
     let pos2 = this.string[s].origin;
-    this.pushValue(this.next_stone, last);
-    this.pushValue(this.next_stone,pos2);
+    this.PUSH_VALUE(this.next_stone, last);
+    this.PUSH_VALUE(this.next_stone,pos2);
     this.next_stone[last] = this.next_stone[pos2];
     this.next_stone[pos2] = this.string[s2].origin;
 
@@ -2033,7 +2305,7 @@ class Board {
       const t = this.string_neighbors[s2].list[k];
       this.remove_neighbor(t, s2);
       if (this.string[t].mark !== this.string_mark) {
-        this.pushValue(this.string[t], 'neighbors');
+        this.PUSH_VALUE(this.string[t], 'neighbors');
         this.string_neighbors[t].list[this.string[t].neighbors++] = s;
 
         if(!this.string_neighbors[s]){
@@ -2054,7 +2326,7 @@ class Board {
     const other = this.OTHER_COLOR(color);
 
     /* Get the next free string number. */
-    this.pushValue(this, 'next_string');
+    this.PUSH_VALUE(this, 'next_string');
     let s = this.next_string++;
     // PARANOID1(s < MAX_STRINGS, pos);
     this.string_number[pos] = s;
@@ -2090,7 +2362,7 @@ class Board {
         this.ADD_AND_MARK_LIBERTY(s, p);
       } else if (this.UNMARKED_COLOR_STRING(p, other)) {
         this.ADD_NEIGHBOR(s, p);
-        this.pushValue(this.string[this.string_number[p]], 'neighbors');
+        this.PUSH_VALUE(this.string[this.string_number[p]], 'neighbors');
         this.ADD_NEIGHBOR(this.string_number[p], pos);
         this.MARK_STRING(p);
       } else if (this.UNMARKED_COLOR_STRING(p, color)) {
@@ -2117,7 +2389,7 @@ class Board {
      * so that NEIGHBOR_OF_STRING() and friends don't get confused with the
      * stone.
      */
-    this.pushVertex(pos)
+    this.PUSH_VERTEX(pos)
     this.board[pos] = color;
     this.hash.invert_stone(this.board_hash, pos, color)
 
