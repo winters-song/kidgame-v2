@@ -4,8 +4,8 @@ import {
 import {routine_id, REVERSE_RESULT} from "./Liberty";
 
 /* Statistics. */
-// let reading_node_counter = 0
-// let nodes_when_called = 0
+let reading_node_counter = 0
+let nodes_when_called = 0
 
 class ReadingMoves {
   constructor(cfg) {
@@ -54,8 +54,7 @@ export const Reading = {
       if (move_ptr) {
         move_ptr[0] = move_pos[0]
       }
-      // SGFTRACE(move_pos, WIN, trace_message);				
-      return codes.WIN;							
+      return codes.WIN;
     }									
     else if (REVERSE_RESULT(code) > savecode[0]) {
       // 得到结果比现在的好，则更新
@@ -76,8 +75,6 @@ export const Reading = {
       if (move_ptr) {
         move_ptr[0] = savemove[0] //保存结果
       }
-    } else {
-      // SGFTRACE(0, 0, NULL);
     }
     return savecode[0];
   },
@@ -128,7 +125,7 @@ export const Reading = {
    * pointer to it is saved and there is no attempt to free up any
    * storage.
    */
-  //int move
+  //int move, ReadingMoves: moves
   ADD_CANDIDATE_MOVE(move, this_score, moves, this_message)	{
     let u
     for (u = 0; u < moves.num; u++){
@@ -161,10 +158,9 @@ export const Reading = {
     const b = this.board
     let result = [] //pointer
     let the_move = [NO_MOVE];
-    the_move[1] = 'attack'
     let liberties = b.countlib(str);
 
-    // nodes_when_called = reading_node_counter;
+    nodes_when_called = reading_node_counter;
     /* Don't even spend time looking in the cache if there are more than
      * enough liberties. We need this before the persistent cache lookup
      * to avoid results inconsistent with find_defense().
@@ -175,32 +171,19 @@ export const Reading = {
     }
 
     // 搜索缓存
-    // let origin = b.find_origin(str);
-    // if (this.search_persistent_reading_cache(ATTACK, origin, result, the_move)) {
-    //   if (move){
-    //     move = the_move;
-    //   }
-    //   return result;
-    // }
+    let origin = b.find_origin(str);
+    if (this.search_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move)) {
+      if (move){
+        move[0] = the_move;
+      }
+      return result;
+    }
 
-    // memset(shadow, 0, sizeof(shadow));
+    b.shadow = []
     result = this.do_attack(str, the_move);
-    // let nodes = reading_node_counter - nodes_when_called;
+    const nodes = reading_node_counter - nodes_when_called;
 
-    // if (debug & DEBUG_READING_PERFORMANCE) {
-    //   if (reading_node_counter - nodes_when_called
-    //     >= MIN_READING_NODES_TO_REPORT) {
-    //     if (result != 0)
-    //       gprintf("%oattack %1m(%1m) = %d %1M, %d nodes ", str, origin, result,
-    //         the_move, nodes);
-    //     else
-    //       gprintf("%oattack %1m(%1m) = %d, %d nodes ", str, origin, result,
-    //         nodes);
-    //     dump_stack();
-    //   }
-    // }
-
-    // this.store_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move, nodes);
+    this.store_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move, nodes);
 
     if (move){
       move[0] = the_move[0];
@@ -223,10 +206,11 @@ export const Reading = {
    */
   find_defense(str, move) {
     const b = this.board
+    let result = []
     const the_move = [NO_MOVE];
     const liberties = b.countlib(str);
 
-    // nodes_when_called = reading_node_counter;
+    nodes_when_called = reading_node_counter;
     /* Don't even spend time looking in the cache if there are more than
      * enough liberties.
      */
@@ -237,30 +221,19 @@ export const Reading = {
       return codes.WIN;
     }
 
-    // const origin = b.find_origin(str);
-    // if (search_persistent_reading_cache(FIND_DEFENSE, origin, &result, &the_move)) {
-    //   if (move)
-    //     *move = the_move;
-    //   return result;
-    // }
+    const origin = b.find_origin(str);
+    if (this.search_persistent_reading_cache(routine_id.FIND_DEFENSE, origin, result, the_move)) {
+      if (move){
+        move[0] = the_move[0];
+      }
+      return result;
+    }
 
-    // memset(shadow, 0, sizeof(shadow));
-    let result = this.do_find_defense(str, the_move)
-    // nodes = reading_node_counter - nodes_when_called;
+    b.shadow = []
+    result = this.do_find_defense(str, the_move)
+    const nodes = reading_node_counter - nodes_when_called;
 
-    // if (debug & DEBUG_READING_PERFORMANCE) {
-    //   if (reading_node_counter - nodes_when_called
-    //     >= MIN_READING_NODES_TO_REPORT) {
-    //     if (result != 0)
-    //       gprintf("%odefend %1m(%1m) = %d %1M, %d nodes ", str, origin, result,
-    //         the_move, nodes);
-    //     else
-    //       gprintf("%odefend %1m(%1m) = %d, %d nodes ", str, origin, result,
-    //         nodes);
-    //     dump_stack();
-    //   }
-    // }
-    // store_persistent_reading_cache(FIND_DEFENSE, origin, result, the_move, nodes);
+    this.store_persistent_reading_cache(routine_id.FIND_DEFENSE, origin, result, the_move, nodes);
 
     if (move){
       move[0] = the_move[0];
@@ -551,7 +524,7 @@ export const Reading = {
     let savecode = [0];
 
     // SETUP_TRACE_INFO("defend1", str);
-    // reading_node_counter++;
+    reading_node_counter++;
 
     // ASSERT1(IS_STONE(board[str]), str);
     // ASSERT1(countlib(str) == 1, str);
@@ -776,7 +749,7 @@ export const Reading = {
     let xpos = []
     let adjs = []
 
-    // reading_node_counter++;
+    reading_node_counter++;
 
     /* Pick up the position of the liberty. */
     b.findlib(str, 1, xpos);
@@ -939,8 +912,8 @@ export const Reading = {
 
     // SETUP_TRACE_INFO("attack4", str);
 
-    // ASSERT1(IS_STONE(board[str]), str);
-    // reading_node_counter++;
+    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+    reading_node_counter++;
 
     if (b.stackp > this.depth) {
       // SGFTRACE(0, 0, "stackp > depth");
@@ -1016,8 +989,117 @@ export const Reading = {
   special_attack4_moves() {},
   draw_back_moves() {},
 
-  edge_closing_backfill_moves() {},
-  edge_block_moves() {},
+
+  /* In the following position the reading is much simplifed if we start
+   * with the edge closing backfilling move at *.
+   *
+   * |OO...
+   * |.OOO.
+   * |.X.O.
+   * |XXXO.
+   * |.X.*.
+   * +-----
+   *
+   * This function identifies the situation
+   *
+   * ?XOb
+   * Xatc
+   * ----
+   *
+   * where a is a liberty of the attacked string, t is the proposed move,
+   * and b and c do not contain more O stones than X stones.
+   */
+  // 边线立收气， b和c攻方不多于守方棋子
+  edge_closing_backfill_moves(str, apos, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    for (let k = 0; k < 4; k++) {
+      let up = b.delta[k];
+      let right = b.delta[(k+1)%4];
+      //下方边界
+      if (b.ON_BOARD(apos - up)){
+        continue;
+      }
+      // 上方我方棋子X
+      if (b.board[apos + up] !== color){
+        return;
+      }
+      // 右方空，左方边界或我方
+      if (b.board[apos + right] === colors.EMPTY && (!b.ON_BOARD(apos - right) || b.board[apos - right] === color)){
+        /* Everything ok so far. */
+      }
+      else if (b.board[apos - right] === colors.EMPTY && (!b.ON_BOARD(apos + right) || b.board[apos + right] === color)) {
+        /* Negate right direction. */
+        right = -right;
+      }
+      else{
+        return;
+      }
+
+      if (b.board[apos + up + right] !== other){
+        return;
+      }
+
+      //b点必须在棋盘上
+      let bpos = apos + up + 2 * right;
+      if (!b.ON_BOARD(bpos))
+        return;
+
+      let cpos = apos + 2 * right;
+
+      let number_x = 0;
+      let number_o = 0;
+      if (b.board[bpos] === color)
+        number_x++;
+      else if (b.board[bpos] === other)
+        number_o++;
+
+      if (b.board[cpos] === color)
+        number_x++;
+      else if (b.board[cpos] === other)
+        number_o++;
+
+      if (number_o > number_x)
+        return;
+
+      this.ADD_CANDIDATE_MOVE(apos + right, 0, moves, "edge_closing_backfill");
+      return;
+    }
+  },
+
+  /* In positions like
+   *
+   *   OOX..
+   *   XXO*.
+   *   x.X..
+   *   -----
+   *
+   * where the X stones to the left are being attacked, it is usually
+   * important to start by considering the move at *. Thus we propose
+   * the move at * with a high initial score.
+   *
+   * Also, it is often needed to prevent "crawling" along first line
+   * which can eventually give defender more liberties, like here:
+   *
+   *   O.OO..X
+   *   OXXO..X
+   *   ...X*..
+   *   -------
+   *
+   * This function identifies the situation
+   *
+   *   XO.?   bdf?
+   *   .X.o   aceg
+   *   ----   ----
+   *
+   * where a is a liberty of the attacked string, b is a stone of the
+   * attacked string, and e and f are the considered moves.
+   */
+  edge_block_moves(str, apos, moves) {
+
+  },
 
 
   /* ================================================================ */
@@ -1027,6 +1109,7 @@ export const Reading = {
   /* Add the chainbreaking moves relative to the string (str) to the
    * (moves) struct.
    */
+  // 相邻1口气对方棋串
   break_chain_moves(str, moves){
     const b = this.board
     const xpos = []
@@ -1053,7 +1136,56 @@ export const Reading = {
   break_chain4_moves() {},
 
   superstring_break_chain_moves() {},
-  double_atari_chain2_moves() {},
+
+  /*
+   * If `str' points to a group, double_atari_chain2_moves() adds all
+   * moves which make a double atari on some strings in the surrounding
+   * chain to the moves[] array.  In addition, if `generate_more_moves'
+   * is set, it adds moves that make atari on a string in the
+   * surrounding chain and are adjacent to another string with 3
+   * liberties.
+   */
+  // 双打吃识别
+  double_atari_chain2_moves(str, moves, generate_more_moves) {
+    const b = this.board
+    const adjs = []
+    const libs = []
+    const mw = []
+
+    let adj = b.chainlinks2(str, adjs, 2);
+    for (let r = 0; r < adj; r++) {
+      b.findlib(adjs[r], 2, libs);
+      for (let k = 0; k < 2; k++) {
+        mw[libs[k]]++;
+        // 找到双打吃点位
+        if (mw[libs[k]] === 2) {
+          /* Found a double atari, but don't play there unless the move
+           * is safe for the defender.
+           */
+          if (!b.is_self_atari(libs[k], b.board[str])){
+            this.ADD_CANDIDATE_MOVE(libs[k], 1, moves, "double_atari_chain2-A");
+          }
+        }
+      }
+    }
+
+    if (generate_more_moves) {
+      const adjs3 = []
+
+      let adj3 = b.chainlinks2(str, adjs3, 3);
+      for (let r = 0; r < adj3; r++) {
+        b.findlib(adjs3[r], 3, libs);
+        for (let k = 0; k < 3; k++) {
+          if (mw[libs[k]] == 1) {
+            mw[libs[k]] = 2;
+            if (!b.is_self_atari(libs[k], b.board[str])){
+              this.ADD_CANDIDATE_MOVE(libs[k], -3, moves, "double_atari_chain2-B");
+            }
+          }
+        }
+      }
+    }
+  },
 
 
   /* ================================================================ */

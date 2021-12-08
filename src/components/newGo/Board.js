@@ -121,6 +121,9 @@ class Board {
     this.NS = this.MAX_BOARD + 1
     this.WE = 1
 
+    /* Coordinates for the eight directions, ordered
+     * south, west, north, east, southwest, northwest, northeast, southeast.
+     */
     this.deltai = [ 1,  0, -1,  0,  1, -1, -1, 1];
     this.deltaj = [ 0, -1,  0,  1, -1, -1,  1, 1];
     this.delta  = [ this.NS, -1, -this.NS, 1, this.NS-1, -this.NS-1, -this.NS+1, this.NS+1];
@@ -400,7 +403,7 @@ class Board {
     /* If the move is a pass, we can skip some steps. */
     if (pos !== PASS_MOVE) {
       this.ASSERT_ON_BOARD1(pos);
-      this.ASSERT1(this.board[pos] == colors.EMPTY, pos);
+      this.ASSERT1(this.board[pos] === colors.EMPTY, pos);
       /* Do play the move. */
       // 不允许自杀
       captured = this.do_play_move(pos, color);
@@ -447,7 +450,7 @@ class Board {
   play_move(pos,  color) {
     this.ASSERT1(this.stackp === 0, pos);
     // 黑棋、白棋落子
-    this.ASSERT1(color == colors.WHITE || color === colors.BLACK, pos);
+    this.ASSERT1(color === colors.WHITE || color === colors.BLACK, pos);
     // 落子位置为pass或者棋盘范围内
     this.ASSERT1(pos === PASS_MOVE || this.ON_BOARD1(pos), pos);
     //  pass或者当前位置没有棋子
@@ -1779,7 +1782,7 @@ class Board {
     else {
       const s = this.string[this.string_number[pos]];
       const sl = this.string_libs[this.string_number[pos]];
-      if (s.liberties == 1 && s.size == 1 && this.is_ko(sl.list[0], this.OTHER_COLOR(s.color), null))
+      if (s.liberties === 1 && s.size === 1 && this.is_ko(sl.list[0], this.OTHER_COLOR(s.color), null))
         return 1;
     }
 
