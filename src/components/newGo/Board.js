@@ -1105,7 +1105,7 @@ class Board {
     this.string_mark++;
 
     for (let k = 0; k < 4; k++) {
-      let d = delta[k];
+      let d = this.delta[k];
       if (this.UNMARKED_LIBERTY(pos + d)) {
         if (libs){
           libs[liberties] = pos + d;
@@ -1121,7 +1121,7 @@ class Board {
         let pos2 = this.FIRST_STONE(s);
         do {
           for (let l = 0; l < 4; l++) {
-            let d2 = delta[l];
+            let d2 = this.delta[l];
             if (this.UNMARKED_LIBERTY(pos2 + d2)) {
               if (libs){
                 libs[liberties] = pos2 + d2;
@@ -1545,7 +1545,7 @@ class Board {
     this.ASSERT1(this.board[move] === colors.EMPTY, move);
 
     for (let k = 0; k < 4; k++) {
-      let pos = move + delta[k];
+      let pos = move + this.delta[k];
       if (this.board[pos] === colors.EMPTY)
         return 0;
       if (this.board[pos] === color) {
@@ -1569,7 +1569,7 @@ class Board {
     }
 
     for (let k = 0; k < 4; k++) {
-      let pos = lib + delta[k];
+      let pos = lib + this.delta[k];
       if (this.board[pos] === colors.EMPTY || this.board[pos] === other)
         return 0;
       if (this.board[pos] === color && this.string[this.string_number[pos]].liberties < 2)
@@ -1701,13 +1701,13 @@ class Board {
   adjacent_strings(str1, str2) {
     this.ASSERT_ON_BOARD1(str1);
     this.ASSERT_ON_BOARD1(str2);
-    this.ASSERT1(this.IS_STONE(board[str1]), str1);
-    this.ASSERT1(this.IS_STONE(board[str2]), str2);
+    this.ASSERT1(this.IS_STONE(this.board[str1]), str1);
+    this.ASSERT1(this.IS_STONE(this.board[str2]), str2);
 
     const s1 = this.string_number[str1];
     const s2 = this.string_number[str2];
 
-    for (let k = 0; k < string[s1].neighbors; k++)
+    for (let k = 0; k < this.string[s1].neighbors; k++)
       if (this.string_neighbors[s1].list[k] === s2)
         return 1;
 
@@ -2502,10 +2502,7 @@ class Board {
         }
       }
     }
-
   }
-
 }
-
 
 export default Board
