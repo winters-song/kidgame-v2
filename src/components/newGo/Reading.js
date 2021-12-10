@@ -478,8 +478,8 @@ export const Reading = {
     // static unsigned lm[BOARDMAX];
     let liberty_mark = -1
     let lm = []
-    // ASSERT1(libs != NULL, str);
-    // ASSERT1(move != NULL, str);
+    b.ASSERT1(libs !== null, str);
+    b.ASSERT1(move !== null, str);
 
     for (let k = 0; k < liberties; k++) {
       /* accuratelib() seems to be more efficient than fastlib() here,
@@ -1006,7 +1006,70 @@ export const Reading = {
     return this.RETURN_RESULT([0], [0], move, "saved move");
   },
 
-  special_rescue_moves() {},
+  /*
+   * special_rescue_moves(str, lib, *move) is called with (str) a
+   * string having a liberty at (lib).
+   *
+   * This adds moves on a second order liberty to the list of candidate
+   * moves in the struct *moves; e.g. in shapes like:
+   *
+   *   .        O        O       X.XXO
+   *  O.*  or  ..*  or  O.*  or  XOOXO
+   *   O        O        O       ...*.
+   *                             -----
+   *
+   * This will occasionally save a string where no other move will. To
+   * reduce the branching caused by these moves, we require that the
+   * opponent can be trivially captured when trying to intercept on the
+   * corresponding first order liberty.
+   */
+  special_rescue_moves(str, lib, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    /* Use approxlib() to test for trivial capture. */
+    const otherlib = b.approxlib(lib, other, 3, null);
+    if (otherlib > 2)
+      return;
+
+    /* Loop over the four neighbours of the liberty, (lib + d). */
+    for (let k = 0; k < 4; k++) {
+      let d = b.delta[k];
+      if (b.board[lib + d] === colors.EMPTY) {
+
+        /* Don't play into a self atari unless we have a potential snapback. */
+        if (b.is_self_atari(lib + d, color) && otherlib > 1)
+          continue;
+
+        /* Be more demanding when the string has four liberties. (Mostly
+         * because attack4() otherwise would need more move generators.)
+         * More precisely we require not only the first order liberty to
+         * become a self atari for the opponent but also one more of the
+         * neighbors of the proposed move. See reading:144 for a
+         * position where we otherwise would try to defend at D9 and
+         * attack4() then lacks move generators to stop black from
+         * continuing towards the top left corner.
+         */
+        if (b.countlib(str) > 3) {
+          let number_protected = 0;
+
+          for (let r = 0; r < 4; r++) {
+            if (b.board[lib + d + b.delta[r]] === colors.EMPTY
+              && b.approxlib(lib + d + b.delta[r], other, 3, null) < 3)
+              number_protected++;
+            if (number_protected === 2)
+              break;
+          }
+
+          if (number_protected < 2)
+            continue;
+        }
+
+        this.ADD_CANDIDATE_MOVE(lib + d, 0, moves, "special_rescue");
+      }
+    }
+  },
 
   bamboo_rescue_moves() {},
 
