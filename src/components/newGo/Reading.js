@@ -1,5 +1,5 @@
 import {
-  codes, NO_MOVE,
+  codes, colors, NO_MOVE,
 } from './Constants'
 import {routine_id, REVERSE_RESULT} from "./Liberty";
 
@@ -44,12 +44,20 @@ const safe_atari_score              = 8;
 
 export const Reading = {
 
-
   /* This macro checks whether the reported result is a loss, so we have won
- * and can exit, or else if it is the best result so far.
- * Note that SGFTRACE must have been setup.
- */
+   * and can exit, or else if it is the best result so far.
+   * Note that SGFTRACE must have been setup.
+   *
+   * 只有WIN时有返回值
+   *  const result = this.CHECK_RESULT...
+   *  if(result !== undefinded){
+   *    return result
+   *  }
+   */
   CHECK_RESULT(savecode, savemove, code, move_pos, move_ptr, trace_message) {
+    const b = this.board
+    b.ASSERT1(typeof savemove === 'object', null)
+    b.ASSERT1(typeof savecode === 'object', null)
     if (code === 0) {
       if (move_ptr) {
         move_ptr[0] = move_pos[0]
@@ -63,13 +71,23 @@ export const Reading = {
     }		
   },
 
+  /*
+   *  只有WIN时有返回值
+   *  const result = this.CHECK_RESULT_UNREVERSED...
+   *  if(result !== undefinded){
+   *    return result
+   *  }
+   * */
   CHECK_RESULT_UNREVERSED(savecode, savemove, code, move_pos,	move_ptr, trace_message) {
     // 反转code
     return this.CHECK_RESULT(savecode, savemove, REVERSE_RESULT(code), move_pos, move_ptr, trace_message)
   },
 
-
+  // return this.RETURN_RESULT
   RETURN_RESULT(savecode, savemove, move_ptr, trace_message) {
+    const b = this.board
+    b.ASSERT1(typeof savemove === 'object', null)
+    b.ASSERT1(typeof savecode === 'object', null)
     // 非失败，且有move值，更新move
     if (savecode[0]) {
       if (move_ptr) {
@@ -83,8 +101,18 @@ export const Reading = {
   /* Play a collected batch of moves and see if any of them works.  This
    * is a defense version.
    */
-  DEFEND_TRY_MOVES(no_deep_branching, attack_hint, str, move, color, moves, savecode, savemove )	{
+  /*
+   *  attack_hint = [] (pointer)
+   *
+   *  const result = this.DEFEND_TRY_MOVES...
+   *  if(result !== undefinded){
+   *    return result
+   *  }
+   */
+  DEFEND_TRY_MOVES(no_deep_branching, attack_hint, str, move, color, moves, savemove, savecode )	{
     const b = this.board
+    b.ASSERT1(typeof attack_hint === 'object', null)
+
     for (let k = moves.num_tried; k < moves.num; k++) {
       let ko_move = [];
       let dpos = moves.pos[k];
@@ -94,7 +122,10 @@ export const Reading = {
         b.popgo();
 
         if (!ko_move[0]) {
-          this.CHECK_RESULT(savecode, savemove, acode, dpos, move, "defense effective");
+          const result = this.CHECK_RESULT(savecode, savemove, acode, dpos, move, "defense effective");
+          if(result !== undefined) {
+            return result
+          }
         }
         else {
           if (acode !== codes.WIN) {
@@ -105,13 +136,56 @@ export const Reading = {
       }
 
       if (no_deep_branching && b.stackp >= this.branch_depth){
-        this.RETURN_RESULT(savecode, savemove, move, "branching limit");
+        return this.RETURN_RESULT(savecode, savemove, move, "branching limit");
       }
     }
 
     moves.num_tried = moves.num;
   },
 
+  // defense_hint=[] (pointer)
+  ATTACK_TRY_MOVES (no_deep_branching, defense_hint, str, move, other, moves, savemove, savecode )	{
+    const b = this.board
+    b.ASSERT1(typeof defense_hint === 'object', null)
+
+    for (let k = moves.num_tried; k < moves.num; k++) {
+      let ko_move = [];
+      let apos = moves.pos[k];
+
+      if ((b.board_ko_pos !== NO_MOVE || !b.send_two_return_one(apos, other))
+    && b.komaster_trymove(apos, other, moves.message[k], str, ko_move, b.stackp <= this.ko_depth && savecode === 0)) {
+        let dcode = this.do_find_defense(str, defense_hint);
+
+        if (REVERSE_RESULT(dcode) > savecode && this.do_attack(str, null)) {
+          if (!ko_move[0]) {
+            if (dcode === 0) {
+              b.popgo();
+              return this.RETURN_RESULT(codes.WIN, apos, move, "attack effective");
+            }
+
+            savemove[0] = apos;
+            savecode[0] = REVERSE_RESULT(dcode);
+          }
+          else {
+            savemove[0] = apos;
+            savecode[0] = codes.KO_B;
+          }
+        }
+
+        b.popgo();
+      }
+
+      if (no_deep_branching && b.stackp >= this.branch_depth)
+        return this.RETURN_RESULT(savecode, savemove, move, "branching limit");
+    }
+
+    moves.num_tried = moves.num;
+  },
+
+  /* Attack version of the macro above.  This one is a bit more
+   * complicated, because when defender fails to defend, attacker has to
+   * prove that he can capture the string before claiming victory.
+   */
 
   UPDATE_SAVED_KO_RESULT(savecode, save, code, move) {
     if (code !== 0 && REVERSE_RESULT(code) > savecode[0]) {
@@ -127,6 +201,9 @@ export const Reading = {
    */
   //int move, ReadingMoves: moves
   ADD_CANDIDATE_MOVE(move, this_score, moves, this_message)	{
+    const b = this.board
+    b.ASSERT1(typeof defense_hint === 'number', null)
+
     let u
     for (u = 0; u < moves.num; u++){
       if (moves.pos[u] === move) {
@@ -139,6 +216,18 @@ export const Reading = {
       moves.score[moves.num] = this_score;
       moves.message[moves.num] = this_message;
       moves.num++;
+    }
+  },
+
+  REMOVE_CANDIDATE_MOVE(move, moves) {
+    for (let u = moves.num_tried; u < moves.num; u++) {
+      if (moves.pos[u] === move) {
+        moves.pos[u] = moves.pos[moves.num - 1];
+        moves.score[u] = moves.score[moves.num - 1];
+        moves.message[u] = moves.message[moves.num - 1];
+        moves.num--;
+        break;
+      }
     }
   },
 
@@ -526,8 +615,8 @@ export const Reading = {
     // SETUP_TRACE_INFO("defend1", str);
     reading_node_counter++;
 
-    // ASSERT1(IS_STONE(board[str]), str);
-    // ASSERT1(countlib(str) == 1, str);
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 1, str);
 
     /* lib will be the liberty of the string. */
 
@@ -555,8 +644,10 @@ export const Reading = {
     this.set_up_snapback_moves(str, lib, moves);
 
     this.order_moves(str, moves, color, "read_function_name", move[0]);
-    this.DEFEND_TRY_MOVES(0, null, str, move, color, moves, savemove, savecode);
-
+    const result = this.DEFEND_TRY_MOVES(0, null, str, move, color, moves, savemove, savecode);
+    if(result !== undefined){
+      return result
+    }
     /* If the string is a single stone and a capture would give a ko,
      * try to defend it with ko by backfilling.
      *
@@ -573,7 +664,10 @@ export const Reading = {
           if ((liberties === 1 || !b.is_self_atari(apos[0], other)) && b.trymove(apos[0], color, "defend1-C", str)) {
             let acode = this.do_attack(str, null);
             b.popgo();
-            this.CHECK_RESULT(savecode, savemove, acode, apos, move, "backfilling");
+            const result = this.CHECK_RESULT(savecode, savemove, acode, apos, move, "backfilling");
+            if(result !== undefined){
+              return result
+            }
           }
         }
       }
@@ -582,17 +676,386 @@ export const Reading = {
     return this.RETURN_RESULT(savecode, savemove, move, "saved move");
   },
 
-  defend2() {},
+  /* If str points to a group with two liberties, defend2 determines
+   * whether the group can be saved by extending, or by capturing part of
+   * its surrounding chain. A group is considered safe if either part of
+   * the surrounding chain may be captured, or if it can get 3
+   * liberties. It is presumed that the opponent could kill if tenuki.
+   * If both extensions work, it prefers the one which maximizes
+   * liberties.
+   *
+   * *move returns the move to save the stones.
+   */
+  defend2(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
 
-  defend3() {},
+    const xpos = [NO_MOVE];
+    let liberties;
+    const libs = [];
+    let liberties2;
+    const libs2 = [];
+    const savemove = [0];
+    const savecode = [0];
+    const suggest_move = [NO_MOVE];
+    let string_size;
+    let be_aggressive;
 
-  defend4() {},
+    // SETUP_TRACE_INFO("defend2", str);
+    reading_node_counter++;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    liberties = b.findlib(str, 2, libs);
+
+    if (this.fast_defense(str, liberties, libs, xpos)){
+      return this.RETURN_RESULT(codes.WIN, xpos, move, "fast defense");
+    }
+
+    /* Collect moves to try in the first batch.
+     * 1. First order liberties.
+     * 2. Chain breaking moves.
+     * 3. Second order liberties moving up from first line to second.
+     * 4. Edge clamps.
+     */
+    const moves = new ReadingMoves({
+      num : 0,
+      num_tried : 0
+    })
+
+    /* We don't want to play self-atari liberties, unless the string is a
+     * single stone (in which case it might be a snapback move).  Sacrifices
+     * might be good moves, but not in tactical reading.
+     */
+    string_size = b.countstones(str);
+    if (string_size === 1 || !b.is_self_atari(libs[0], color))
+      this.ADD_CANDIDATE_MOVE(libs[0], 0, moves, "liberty");
+    if (string_size === 1 || !b.is_self_atari(libs[1], color))
+      this.ADD_CANDIDATE_MOVE(libs[1], 0, moves, "liberty");
+
+    this.break_chain_moves(str, moves);
+    this.break_chain2_efficient_moves(str, moves);
+    this.propose_edge_moves(str, libs, liberties, moves, color);
+    this.edge_clamp_moves(str, moves);
+
+    if (b.stackp <= this.depth) {
+      for (let k = 0; k < liberties; k++){
+        this.special_rescue_moves(str, libs[k], moves);
+      }
+      this.bamboo_rescue_moves(str, liberties, libs, moves);
+    }
+
+    if (b.stackp <= this.backfill_depth){
+      this.special_rescue2_moves(str, libs, moves);
+    }
+
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    let result = this.DEFEND_TRY_MOVES(0, suggest_move);
+    if(result !== undefined){
+      return result
+    }
+
+    /* Look for backfilling moves. */
+    for (let k = 0; k < liberties; k++) {
+      if (b.is_self_atari(libs[k], other)) {
+        liberties2 = b.approxlib(libs[k], color, 6, libs2);
+        /* Note: liberties2 must be smaller than 5, otherwise libs[k] had been
+         * a direct defense.
+         */
+        for (let r = 0; r < liberties2; r++) {
+          xpos[0] = libs2[r];
+          /* If the newly placed stone would be in atari, but not a single
+           * stone, we don't even try.
+           */
+          if (!b.is_self_atari(xpos[0], color) && b.has_neighbor(xpos[0], color))
+            this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "backfill-A");
+        }
+      }
+
+      liberties2 = b.approxlib(libs[k], other, 3, libs2);
+      if (liberties2 <= 2) {
+        for (let r = 0; r < liberties2; r++) {
+          xpos[0] = libs2[r];
+          if (!b.is_self_atari(xpos, color))
+            this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "backfill-B");
+        }
+      }
+    }
+
+    this.special_rescue4_moves(str, libs, moves);
+
+    /* Only order and test the new set of moves. */
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
+    if(result !== undefined){
+      return result
+    }
+    /* If we haven't found any useful moves in first batches, be more
+     * aggressive in break_chain[23]_moves().
+     */
+    be_aggressive = moves.num === 0;
+
+    if (b.stackp <= this.superstring_depth){
+      this.superstring_break_chain_moves(str, 4, moves);
+    }
+
+    /* If nothing else works, we try playing a liberty of the
+     * super_string.
+     */
+    if (b.stackp <= this.superstring_depth) {
+      this.superstring_moves(str, moves, 3, 0);
+      this.squeeze_moves(str, moves);
+    }
+
+    this.break_chain2_defense_moves(str, moves, be_aggressive);
+
+    if (b.stackp <= this.backfill_depth){
+      this.special_rescue5_moves(str, libs, moves);
+    }
+
+    if (b.stackp <= this.break_chain_depth || (be_aggressive && b.stackp <= this.backfill_depth))
+      this.break_chain3_moves(str, moves, be_aggressive);
+
+    if (be_aggressive && b.stackp <= this.backfill_depth)
+      this.break_chain4_moves(str, moves, be_aggressive);
+
+    /* Only order and test the new set of moves. */
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
+    if(result !== undefined){
+      return result
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  },
+
+  defend3(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const xpos = [NO_MOVE];
+    let liberties;
+    let libs = [];
+    const suggest_move = [NO_MOVE];
+
+    // SETUP_TRACE_INFO("defend3", str);
+    reading_node_counter++;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 3, str);
+
+    liberties = b.findlib(str, 3, libs);
+
+    if (this.fast_defense(str, liberties, libs, xpos)){
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "fast defense");
+    }
+
+    /* Collect moves to try in the first batch.
+     * 1. First order liberties.
+     * 2. Chain breaking moves.
+     * 3. Second order liberties moving up from first line to second.
+     * 4. Edge clamps.
+     */
+    const moves = new ReadingMoves({
+      num : liberties,
+      num_tried : 0
+    })
+
+    for (let k = 0; k < liberties; k++) {
+      moves.pos[k] = libs[k];
+      moves.score[k] = 0;
+      moves.message[k] = "liberty";
+    }
+
+    this.break_chain_moves(str, moves);
+    this.break_chain2_efficient_moves(str, moves);
+    this.propose_edge_moves(str, libs, liberties, moves, color);
+    this.edge_clamp_moves(str, moves);
+
+    if (b.stackp <= this.backfill2_depth){
+      this.hane_rescue_moves(str, libs, moves);
+    }
+
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    let result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    if(result !== undefined){
+      return result
+    }
+
+    /* If nothing else works, try to defend with second order liberties. */
+    if (b.stackp <= this.backfill_depth)
+      this.special_rescue3_moves(str, libs, moves);
+
+    if (b.stackp <= this.depth) {
+      for (let k = 0; k < liberties; k++){
+        this.special_rescue_moves(str, libs[k], moves);
+      }
+      this.bamboo_rescue_moves(str, liberties, libs, moves);
+    }
+
+    if (this.get_level() >= 8 && b.stackp <= this.backfill2_depth){
+      this.superstring_break_chain_moves(str, 4, moves);
+    }
+
+    if (b.stackp <= this.break_chain_depth)
+      this.break_chain2_defense_moves(str, moves, 0);
+
+    if (b.stackp <= this.backfill_depth) {
+      this.special_rescue5_moves(str, libs, moves);
+      this.special_rescue6_moves(str, libs, moves);
+    }
+
+    /* Only order and test the new set of moves. */
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    if(result !== undefined){
+      return
+    }
+
+    /* If nothing else works, we try playing a liberty of the
+     * super_string.
+     */
+    if (this.get_level() >= 8 && b.stackp <= this.backfill2_depth) {
+      this.superstring_moves(str, moves, 3, 0);
+      this.squeeze_moves(str, moves);
+    }
+
+    if (b.stackp <= this.break_chain_depth){
+      this.break_chain3_moves(str, moves, 0);
+    }
+
+    /* Only order and test the new set of moves. */
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    if(result !== undefined){
+      return result
+    }
+
+    return this.RETURN_RESULT([0], [0], move, "saved move");
+  },
+
+  defend4(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const xpos = [NO_MOVE];
+    let liberties;
+    let libs =[];
+    const suggest_move = [NO_MOVE];
+
+    // SETUP_TRACE_INFO("defend4", str);
+    reading_node_counter++;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 4, str);
+
+    liberties = b.findlib(str, 4, libs);
+
+    if (this.fast_defense(str, liberties, libs, xpos)){
+      return this.RETURN_RESULT(codes.WIN, xpos, move, "fast defense");
+    }
+
+    /* Collect moves to try in the first batch.
+     * 1. First order liberties.
+     * 2. Chain breaking moves.
+     */
+    const moves = new ReadingMoves({
+      num : liberties,
+      num_tried : 0
+    })
+
+    for (let k = 0; k < liberties; k++) {
+      moves.pos[k] = libs[k];
+      moves.score[k] = 0;
+      moves.message[k] = "liberty";
+    }
+
+    this.break_chain_moves(str, moves);
+    this.break_chain2_efficient_moves(str, moves);
+
+    if (b.stackp <= this.backfill_depth) {
+      this.break_chain2_defense_moves(str, moves, 0);
+      this.break_chain3_moves(str, moves, 0);
+      this.break_chain4_moves(str, moves, 0);
+
+      if (b.stackp <= this.superstring_depth){
+        this.superstring_moves(str, moves, 4, 0);
+      }
+      this.squeeze_moves(str, moves);
+    }
+
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    let result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    if(result !== undefined){
+      return result
+    }
+
+    if (b.stackp <= this.depth) {
+      for (let k = 0; k < liberties; k++){
+        this.special_rescue_moves(str, libs[k], moves);
+      }
+      this.bamboo_rescue_moves(str, liberties, libs, moves);
+    }
+
+    this.order_moves(str, moves, color, 'read_function_name', move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    if(result !== undefined){
+      return result
+    }
+
+    return this.RETURN_RESULT([0], [0], move, "saved move");
+  },
 
   special_rescue_moves() {},
 
   bamboo_rescue_moves() {},
 
-  special_rescue2_moves() {},
+  /* In a situation like this:
+   *
+   *   OOXXXX     the following code can find the
+   *   .OXOOX     defensive move at 'c'.
+   *   .cO.OX
+   *   .X.OOX
+   *   ------
+   *
+   *   OOXXXX     It also can find more general moves like 'c' here.
+   *   .OXOOX
+   *   cXO.OX
+   *   ...OOX
+   *   ------
+   */
+  special_rescue2_moves(str, libs, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const newlibs = [];
+
+    for (let r = 0; r < 2; r++) {
+      /* Let alib be one of the liberties and require it to be suicide
+       * for the opponent.
+       */
+      let alib = libs[r];
+      if (!b.is_suicide(alib, other))
+        continue;
+
+      for (let k = 0; k < 4; k++) {
+        let newstr = alib + b.delta[k];
+        // 眼位相邻我方棋串不是本棋串
+        if (b.board[newstr] === color && !b.same_string(newstr, str)) {
+          let liberties = b.findlib(newstr, 4, newlibs);
+
+          for (let s = 0; s < liberties && s < 4; s++) {
+            if (!b.is_self_atari(newlibs[s], color)){
+              this.ADD_CANDIDATE_MOVE(newlibs[s], 0, moves, "special_rescue2");
+            }
+          }
+          this.break_chain_moves(newstr, moves);
+          this.break_chain2_efficient_moves(newstr, moves);
+          this.edge_clamp_moves(newstr, moves);
+        }
+      }
+    }
+  },
 
   special_rescue3_moves() {},
 
@@ -628,13 +1091,14 @@ export const Reading = {
    * +-----
    *
    */
+  // 倒扑或打劫救单口气棋串
   set_up_snapback_moves (str, lib, moves) {
     const b = this.board
     const color = b.board[str];
     const other = b.OTHER_COLOR(color);
     const libs2 = [];
 
-    // ASSERT1(countlib(str) == 1, str);
+    b.ASSERT1(b.countlib(str) === 1, str);
 
     /* This can only work if our string is a single stone and the
      * opponent is short of liberties.
@@ -650,8 +1114,206 @@ export const Reading = {
 
   superstring_moves() {},
   squeeze_moves () {},
-  edge_clamp_moves () {},
-  propose_edge_moves() {},
+
+  /* In positions like
+   *
+   * |.XXOO.
+   * |XXOX..
+   * |OOOX*.
+   * |......
+   * +------
+   *
+   * the O stones to the left are best defended by the move at *.
+   *
+   * This function tries to find an adjacent string (apos) with exactly
+   * three liberties. One of the liberties (bpos) must be on the edge
+   * (but not in the corner). Diagonal to this liberty must be one stone
+   * of the attacked string (cpos) and another liberty (dpos) of the
+   * adjacent string. The third liberty (epos) must be adjacent to
+   * (dpos). Furthermore must an O stone at (dpos) get at least three
+   * liberties and and X stone at (epos) must get at most three
+   * liberties.
+   *
+   * |.XXOO.
+   * |XXOXe.
+   * |OOcad.
+   * |...b..
+   * +------
+   *
+   * The defense move at (dpos) is proposed if the above conditions
+   * are satisfied.
+   */
+  edge_clamp_moves (str, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const adjs = []
+    const libs = []
+
+    /* Pick up neighbors with three liberties. */
+    let adj = b.chainlinks2(str, adjs, 3);
+
+    for (let r = 0; r < adj; r++) {
+      const apos = adjs[r];
+      /* Find a liberty at the edge. */
+      let bpos = NO_MOVE;
+      b.findlib(apos, 3, libs);
+      for (let k = 0; k < 3; k++) {
+        if (b.is_edge_vertex(libs[k])) {
+          bpos = libs[k];
+          break;
+        }
+      }
+      if (bpos === NO_MOVE)
+        continue;
+
+      /* Edge liberty found. Establish up and right directions. */
+      for (let k = 0; k < 4; k++) {
+        let up = b.delta[k];
+        if (b.ON_BOARD(bpos - up))
+          continue;
+        if (b.board[bpos + up] !== other)
+          continue;
+
+        for (let l = 0; l < 2; l++) {
+          let right = b.delta[(k+1)%4];
+          if (l === 1)
+            right = -right;
+
+          let cpos = bpos + up - right;
+          let dpos = bpos + up + right;
+
+          if (b.board[cpos] !== color || !b.same_string(cpos, str))
+            continue;
+
+          if (b.board[dpos] !== colors.EMPTY || !b.liberty_of_string(dpos, apos))
+            continue;
+
+          let epos = dpos + up;
+
+          if (b.board[epos] !== colors.EMPTY || !b.liberty_of_string(epos, apos))
+            continue;
+
+          if (b.approxlib(dpos, color, 3, null) < 3)
+            continue;
+
+          if (b.approxlib(epos, other, 4, null) > 3)
+            continue;
+
+          /* (dpos) looks like a good move. Add it to the list with a
+                 * substantial initial score.
+           */
+          this.ADD_CANDIDATE_MOVE(dpos, 10, moves, "edge_clamp");
+        }
+      }
+    }
+
+  },
+
+  /*
+   * This function handles some special cases on the edge.
+   *
+   * 1. If (str) points to a string and 'a' an edge liberty of it,
+   *    there is no point of trying to defend the string by crawling
+   *    along the edge if there is no hope of ever getting more liberties.
+   *    This is of course if the blocking enemy group has enough liberties
+   *    of its own.
+   *
+   *      XX       XX
+   *      O.       Oa
+   *      --       --
+   *
+   *    This function searches the edge towards the corner and sees if there
+   *    is a friendly stone on one of the two first lines. If not, the move
+   *    is removed from the  list of moves.
+   *
+   * 2. If (str) points to a string and 'a' an edge liberty of it,
+   *    the drawing back/climbing up move 'b' is often correct attack or
+   *    defense. Another good move to try is 'c' (but usually not for
+   *    defense of a 2 liberty string).
+   *
+   *      X.?        Xbc
+   *      O..        Oa.
+   *      ---        ---
+   *
+   *    This function adds the points configured like 'b' and 'c' relative to
+   *    (str) to the list of moves.
+   *
+   * color is the color to move.
+   */
+  // 是否可以爬的逻辑，边线攻防
+  propose_edge_moves(str, libs, liberties, moves, to_move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    for (let r = 0; r < liberties; r++) {
+      let apos = libs[r];
+      for (let k = 0; k < 4; k++) {
+        let up = b.delta[k];
+        //下方边界
+        if (b.ON_BOARD(apos - up))
+          continue;
+
+        for (let l = 0; l < 2; l++) {
+          let right = b.delta[(k+1)%4];
+          if (l === 1)
+            right = -right;
+
+          // b=X, 大于4气，我方是O
+          if (b.board[apos + up] === other	   /* other on top of liberty */
+            && b.countlib(apos + up) > 4     /* blocking group must be secure */
+            && color === to_move) {         /* only applicable as defense */
+
+            /* Case 1: other above the liberty (crawl along the edge). */
+            let xpos = apos;
+
+            while (b.ON_BOARD(xpos)) {
+              if (b.board[xpos] === color || b.board[xpos + up] === color){
+                break;
+              }
+              xpos += right;
+            }
+
+            /* If no friendly stone found, then it is pointless and we
+             * can just as well remove the move.
+             */
+            if (!b.ON_BOARD(xpos)) {
+              this.REMOVE_CANDIDATE_MOVE(apos, moves);
+            }
+          }
+          /*
+          *      X . c
+          *        a .
+          *      -----
+          * */
+          else if (b.board[apos + up] === colors.EMPTY  /* empty above the liberty */
+            && b.board[apos - right + up] === other
+            && b.board[apos + right] === colors.EMPTY) { /* empty to the right */
+
+            /* Case 2: Try to escape or contain. */
+
+            /* Add b
+             * If adjacent X stone in atari, boost the initial score of this
+             * move.
+             */
+            // b是否可提子，不同得分
+            if (b.countlib(apos + up - right) === 1)
+              this.ADD_CANDIDATE_MOVE(apos + up, 10, moves, "propose_edge-A");
+            else {
+              this.ADD_CANDIDATE_MOVE(apos + up, 0, moves, "propose_edge-B");
+
+              /* Add c if empty */
+              // c为空, 我方X加分
+              if (b.board[apos + right + up] === colors.EMPTY && (liberties !== 2 || color !== to_move)) {
+                this.ADD_CANDIDATE_MOVE(apos + right + up, 0, moves, "propose_edge-C");
+              }
+            }
+          }
+        }
+      }
+    }
+  },
 
 
 
@@ -661,18 +1323,18 @@ export const Reading = {
   /* Like attack. If the opponent is komaster reading functions will not try
    * to take ko.
    */
-
+  // move: []
   do_attack(str, move){
+
     const b = this.board
     const color = b.board[str];
     let xpos = [NO_MOVE];
-    xpos[1] = 'do_attack'
 
     let result = 0;
 
     // SETUP_TRACE_INFO("attack", str);
-
-    // ASSERT1(color != 0, str);
+    b.ASSERT1(move === null || typeof move === 'object', str);
+    b.ASSERT1(color !== 0, str);
     /* if assertions are turned off, silently fails */
     if (color === 0){
       return 0;
@@ -741,6 +1403,7 @@ export const Reading = {
   },
 
   attack1(str, move) {
+
     const b = this.board
     const color = b.board[str];
     const other = b.OTHER_COLOR(color);
@@ -749,6 +1412,7 @@ export const Reading = {
     let xpos = []
     let adjs = []
 
+    b.ASSERT1(move === null || typeof move === 'object', str);
     reading_node_counter++;
 
     /* Pick up the position of the liberty. */
@@ -775,9 +1439,9 @@ export const Reading = {
       else if (b.countstones(xpos[0]) === 1) {
         if (b.komaster !== other) {
           /* If the defender is allowed to take the ko the result is KO_A. */
-          let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_A, xpos, move, "last liberty - ko");
-          if(res === codes.WIN){
-            return res
+          const result = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_A, xpos, move, "last liberty - ko");
+          if(result !== undefined){
+            return result
           }
         }
         else {
@@ -810,9 +1474,9 @@ export const Reading = {
     else {
       /* Illegal ko capture. */
       if (b.komaster !== color) {
-        let res = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_B, xpos, move, "last liberty - ko");
-        if(res === codes.WIN){
-          return res
+        const result = this.CHECK_RESULT_UNREVERSED(savecode, savemove, codes.KO_B, xpos, move, "last liberty - ko");
+        if(result !== undefined){
+          return result
         }
       }
     }
@@ -866,7 +1530,10 @@ export const Reading = {
               let dcode = this.do_find_defense(str, null);
               if (dcode !== codes.WIN && this.do_attack(str, null)) {
                 b.popgo();
-                this.CHECK_RESULT(savecode, savemove, dcode, apos, move, "attack effective");
+                const result = this.CHECK_RESULT(savecode, savemove, dcode, apos, move, "attack effective");
+                if(result === codes.WIN){
+                  return result
+                }
               } else {
                 b.popgo();
               }
@@ -891,7 +1558,192 @@ export const Reading = {
 
   },
 
-  attack2() {},
+
+  /* If str points to a group with exactly two liberties
+   * attack2 determines whether it can be captured in ladder or net.
+   * If yes, *move is the killing move. move may be null if caller
+   * is only interested in whether it can be captured.
+   *
+   * Returns KO_A or KO_B if it can be killed conditioned on ko. Returns
+   * KO_A if it can be killed provided (other) is willing to ignore any
+   * ko threat. Returns KO_B if (other) wins provided he has a ko threat
+   * which must be answered. Can give a return code KO_B yet *move=0 if
+   * the winning move is an illegal ko capture. In this case, making a
+   * ko threat and having it answered should transform the position to
+   * one where the return code is KO_A.
+   *
+   * See the comment before defend1 about ladders and reading depth.
+   */
+  attack2(str, move) {
+
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const hpos = [];
+    let xpos = [NO_MOVE];
+    const libs = [];
+    const libs2 = [];
+    const adjs = []
+    const savemove = [0];
+    const savecode = [0];
+    let atari_possible = 0;
+    let adjacent_liberties = 0;
+    let suggest_move = [NO_MOVE];
+
+    const moves = new ReadingMoves({
+      num : 0,
+      num_tried : 0
+    })
+    b.ASSERT1(move === null || typeof move === 'object', str);
+
+    // SETUP_TRACE_INFO("attack2", str);
+    reading_node_counter++;
+
+    str = b.find_origin(str);
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    for (let pass = 0; pass < 4; pass++) {
+
+      switch (pass) {
+        case 0:
+          /* The attack may fail if a boundary string is in atari and cannot
+           * be defended.  First we must try defending such a string.
+           *
+           * We start by trying to defend the boundary string by looking for an
+           * adjacent string which is in atari.
+           */
+          let adj = b.chainlinks2(str, adjs, 1);
+          for (let r = 0; r < adj; r++) {
+            /* If stackp > depth and any boundary chain is in atari, assume safe.
+             * However, if the captured chain is only of size 1, there can still
+             * be a working ladder, so continue if that is the case.
+             * Also if the string in atari shares its liberty with the
+             * attacked string, drawing it out may enable the ladder to
+             * continue.
+             */
+            if (b.stackp > this.depth && b.countstones(adjs[r]) > 1 && !b.have_common_lib(str, adjs[r], null)) {
+              return this.RETURN_RESULT([0], [0], move, "boundary in atari");
+            }
+
+            /* Pick up moves breaking the second order chain. */
+            if (b.stackp <= this.depth)
+              this.break_chain_moves(adjs[r], moves);
+
+            b.findlib(adjs[r], 1, hpos);
+            this.ADD_CANDIDATE_MOVE(hpos[0], 0, moves, "save_boundary");
+          }
+
+          /* Get the two liberties of (str). */
+          let liberties = b.findlib(str, 2, libs);
+          b.ASSERT1(liberties === 2, str);
+
+          if (b.DIRECT_NEIGHBORS(libs[0], libs[1]))
+            adjacent_liberties = 1;
+
+          for (let k = 0; k < 2; k++) {
+            let apos = libs[k];
+            if (!b.is_self_atari(apos, other))
+              atari_possible = 1;
+            /* We only want to consider the move at (apos) if:
+                   * stackp <= backfill_depth
+                   * -or-  stackp <= depth and it is an isolated stone
+                   * -or-  it is not in immediate atari
+                   */
+            if (b.stackp <= this.backfill_depth
+              || ((b.stackp <= this.depth || adjacent_liberties) && !b.has_neighbor(apos, other))
+              || !b.is_self_atari(apos, other))
+              this.ADD_CANDIDATE_MOVE(apos, 0, moves, "liberty");
+
+            /* Try backfilling if atari is impossible. */
+            if (b.stackp <= this.backfill_depth
+              && b.approxlib(apos, other, 2, libs2) === 1) {
+              this.ADD_CANDIDATE_MOVE(libs2[0], 0, moves, "backfill");
+              /* If there is a neighbor in atari, we also try back-capturing. */
+              for (let r = 0; r < 4; r++) {
+                let bpos = libs2[0] + b.delta[r];
+                if (b.board[bpos] === other && b.chainlinks2(bpos, adjs, 1) > 0) {
+                  /* FIXME: If there is more than one neighbor in atari, we
+                         * currently just take one randomly. This is maybe not good
+                         * enough. We might also want to check against snapback.
+                   *
+                   * FIXME: What is the purpose of this? It produces some
+                   * completely irrelevant moves (e.g. if bpos is a huge string
+                   * with many liberties and adjs[0] is somewhere else on the
+                   * board).
+                   */
+                  b.findlib(adjs[0], 1, xpos);
+                  this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "back-capture");
+                }
+              }
+            }
+          }
+
+          /* If we can't make a direct atari, look for edge blocking moves. */
+          if (!atari_possible){
+            for (let k = 0; k < 2; k++){
+              this.edge_block_moves(str, libs[k], moves);
+            }
+          }
+
+          /* If one of the surrounding chains have only two liberties, which
+           * coincide with the liberties of the attacked string, we try to
+           * backcapture.
+           */
+
+          adj = b.chainlinks2(str, adjs, 2);
+          for (let r = 0; r < adj; r++) {
+            let apos = adjs[r];
+            if (b.liberty_of_string(libs[0], apos) && b.liberty_of_string(libs[1], apos)){
+              this.break_chain_moves(apos, moves);
+            }
+          }
+
+          this.propose_edge_moves(str, libs, liberties, moves, other);
+
+          break;
+
+        case 1:
+          if (b.stackp <= this.backfill_depth) {
+            this.special_attack2_moves(str, libs, moves);
+            this.special_attack3_moves(str, libs, moves);
+            this.special_attack4_moves(str, libs, moves);
+          }
+          break;
+
+        case 2:
+          this.find_cap_moves(str, moves);
+          break;
+
+        case 3:
+          /* If it is not possible to make a direct atari, we try filling
+           * a liberty of the superstring.
+           */
+          if (this.get_level() >= 8
+            && b.stackp <= this.backfill_depth
+            && (b.stackp <= this.superstring_depth || !atari_possible)) {
+            let liberty_cap = 2;
+            if (b.stackp <= this.backfill2_depth)
+              liberty_cap = 3;
+            this.superstring_moves(str, moves, liberty_cap, 1);
+            this.squeeze_moves(str, moves);
+          }
+          break;
+
+        default:
+          throw new Error('abort')
+      } /* switch (pass) */
+
+      this.order_moves(str, moves, other, 'read_function_name', move);
+      const result = this.ATTACK_TRY_MOVES(0, suggest_move, str, move, other, moves, savemove, savecode);
+      if(result !== undefined){
+        return result
+      }
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  },
+
   attack3() {},
 
   /* attack4 tries to capture a string with 4 liberties. */
@@ -912,7 +1764,7 @@ export const Reading = {
 
     // SETUP_TRACE_INFO("attack4", str);
 
-    this.ASSERT1(this.IS_STONE(this.board[str]), str);
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
     reading_node_counter++;
 
     if (b.stackp > this.depth) {
@@ -942,7 +1794,7 @@ export const Reading = {
 
           /* Get the four liberties of (str). */
           let liberties = b.findlib(str, 4, libs);
-          // ASSERT1(liberties == 4, str);
+          b.ASSERT1(liberties === 4, str);
 
           for (let k = 0; k < 4; k++) {
             let apos = libs[k];
@@ -973,18 +1825,109 @@ export const Reading = {
           break;
 
         default:
-          // abort();
+          throw new Error("abort")
       }
 
       this.order_moves(str, moves, other, 'read_function_name', move);
-      this.ATTACK_TRY_MOVES(1, suggest_move);
-    } /* for (pass = ... */
+      const result = this.ATTACK_TRY_MOVES(1, suggest_move, str, move, other, moves, savemove, savecode);
+      if(result !== undefined){
+        return result
+      }
+    }
 
     return this.RETURN_RESULT(savecode, savemove, move, "saved move");
   },
 
-  find_cap_moves() {},
-  special_attack2_moves() {},
+  /* If (str) points to a string with 2 - 4 liberties,
+   * find_cap_moves(str, &moves)
+   * looks for a configuration of the following type:
+   *
+   *  Xa
+   *  b*
+   *
+   * where X are elements of the string in question and a and b are
+   * two of its liberties.
+   *
+   * For larger strings, this can find moves like
+   *
+   * XXXXX
+   * XX.XX
+   * X.*.X
+   * XX.XX
+   * XXXXX
+   *
+   * even though they are not capping moves.
+   */
+  find_cap_moves(str, moves) {
+    const b = this.board
+    const libs = []
+
+    const numlibs = b.findlib(str, 4, libs);
+    if (numlibs > 4 || numlibs < 2)
+      return;
+
+    for (let i = 0; i < numlibs - 1; i++) {
+      for (let j = i + 1; j < numlibs; j++) {
+        let alib = libs[i];
+        let blib = libs[j];
+
+        /* Check if the two liberties are located like the figure above. */
+        // 2口气小尖位置
+        if (!b.DIAGONAL_NEIGHBORS(alib, blib))
+          continue;
+
+        let ai = b.I(alib);
+        let aj = b.J(alib);
+        let bi = b.I(blib);
+        let bj = b.J(blib);
+        /* Which of the two corner points should we use? One of them is
+         * always occupied by the string at (str), the other one is either
+         * free or occupied by something else.
+         */
+        //找到*=.位置
+        if (b.BOARD(bi, aj) === colors.EMPTY)
+          this.ADD_CANDIDATE_MOVE(b.POS(bi, aj), 10, moves, "find_cap");
+        else if (b.BOARD(ai, bj) === colors.EMPTY)
+          this.ADD_CANDIDATE_MOVE(b.POS(ai, bj), 10, moves, "find_cap");
+      }
+    }
+  },
+
+  /* In a situation like this:
+   *
+   * -----        the code that
+   * cO.OX        follows can find
+   * XXOOX        the attacking move
+   * XO.OX        at c.
+   * XOOOX
+   * XXXXX
+   *
+   * The name of the function corresponds to special_rescue2, which is
+   * fairly similar to this situation.
+   */
+  special_attack2_moves(str, libs, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    const newlibs = [];
+    let xpos;
+
+    for (let k = 0; k < 2; k++) {
+      // X不入气，O两口气（c的右边）
+      if (b.is_suicide(libs[k], other) && (b.approxlib(libs[k], color, 3, newlibs) === 2)) {
+        // 找到c位
+        if (b.newlibs[0] !== libs[1-k])
+          xpos = newlibs[0];
+        else
+          xpos = newlibs[1];
+        // X在c不是自打吃
+        if (!b.is_self_atari(xpos, other)) {
+          this.ADD_CANDIDATE_MOVE(xpos, 0, moves, "special_attack2");
+        }
+      }
+    }
+  },
+
   special_attack3_moves() {},
   special_attack4_moves() {},
   draw_back_moves() {},
@@ -1098,7 +2041,65 @@ export const Reading = {
    * attacked string, and e and f are the considered moves.
    */
   edge_block_moves(str, apos, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
 
+    /* Search for the right orientation. */
+    for (let k = 0; k < 4; k++) {
+      let up = b.delta[k];
+      // 下方边界
+      if (b.ON_BOARD(apos - up)){
+        continue;
+      }
+      // 位置b
+      if (b.board[apos + up] !== color || !b.same_string(apos + up, str)){
+        return;
+      }
+
+      for (let l = 0; l < 2; l++) {
+        let  right = b.delta[(k+1)%4];
+        if (l === 1){
+          right = -right;
+        }
+
+        let cpos = apos + right;
+        let dpos = apos + right + up;
+        let epos = cpos + right;
+        let fpos = dpos + right;
+
+        // c=X, d=O, e=. , f=.
+        if (b.board[cpos] === color && b.board[dpos] === other
+          && b.board[epos] === colors.EMPTY && b.board[fpos] === colors.EMPTY) {
+
+          if (b.countlib(dpos) === 1) {
+            let gpos = epos + right;
+
+            /* Check if we have the first situation. */
+            // g不是X, O优先f
+            if (b.board[gpos] !== color){
+              this.ADD_CANDIDATE_MOVE(fpos, 30, moves, "edge_block-A");
+            }
+          }
+          else {
+            /* Look along board edge to see if the defender's string can
+             * run away to a friend.
+             */
+            // d不是1口气，防止渡过
+            for (let edge_scan = epos; ; edge_scan += right) {
+              // g=X or ?=X
+              if (b.board[edge_scan] === color || b.board[edge_scan + up] === color) {
+                this.ADD_CANDIDATE_MOVE(epos, 10, moves, "edge_block-B");
+                break;
+              }
+              // g或? 不为空
+              if (b.board[edge_scan] !== colors.EMPTY || b.board[edge_scan + up] !== colors.EMPTY)
+                break;
+            }
+          }
+        }
+      }
+    }
   },
 
 
@@ -1126,8 +2127,94 @@ export const Reading = {
 
   defend_secondary_chain1_moves() {},
   defend_secondary_chain2_moves() {},
-  break_chain2_efficient_moves() {},
-  do_find_break_chain2_efficient_moves() {},
+
+  /*
+   * Find moves which immediately capture chain links with 2
+   * liberties, in the sense that the links cannot escape atari.
+   *
+   * The used heuristics are slightly sloppy, so useless moves may
+   * appear occasionally. This should, however, only lead to slightly
+   * worse performance but not to incorrect results.
+   */
+  break_chain2_efficient_moves(str, moves) {
+    const adjs = [];
+    /* Find links with 2 liberties. */
+    const adj = this.board.chainlinks2(str, adjs, 2);
+
+    for (let r = 0; r < adj; r++){
+      this.do_find_break_chain2_efficient_moves(str, adjs[r], moves);
+    }
+  },
+
+  do_find_break_chain2_efficient_moves(str, adj, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    const adjs2 = []
+    const libs = []
+    b.ASSERT1(b.countlib(adj) === 2, adj);
+
+    const adj2 = b.chainlinks2(adj, adjs2, 1);
+    if (adj2 === 1 && b.countlib(str) > 2) {
+      const apos = [];
+      this.break_chain_moves(adjs2[0], moves);
+      b.findlib(adjs2[0], 1, apos);
+      if (!b.is_self_atari(apos, color))
+        this.ADD_CANDIDATE_MOVE(apos, 0, moves, "break_chain2_efficient-A");
+      return;
+    }
+
+    if (adj2 > 1)
+      return;
+
+    b.findlib(adj, 2, libs);
+    for (let k = 0; k < 2; k++){
+      if (b.approxlib(libs[k], other, 3, null) <= 2 && !b.is_self_atari(libs[1 - k], color)){
+        this.ADD_CANDIDATE_MOVE(libs[1 - k], 0, moves, "break_chain2_efficient-B");
+      }
+    }
+
+    /* A common special case is this kind of edge position
+     *
+     * ..XXX.
+     * X.XOO.
+     * XOOX*.
+     * ......
+     * ------
+     *
+     * where a move at * is most effective for saving the two stones
+     * to the left.
+     *
+     * The code below tries to identify this case. We use the crude
+     * heuristic that the two liberties of the X stone we want to
+     * capture should be placed diagonally and that one liberty should
+     * be on the edge. Then we propose to play the other liberty.
+     * Notice that both moves may be proposed when attacking a stone
+     * on 2-2.
+     *
+     * Update: This was too crude. Also require that the X stone is on
+     * the second line and that the proposed move is not a self-atari.
+     */
+    if (!b.DIAGONAL_NEIGHBORS(libs[0], libs[1]))
+      return;
+
+    /* Since we know that the two liberties are diagonal, the following
+     * construction gives the two vertices "between" the liberties.
+     */
+    const pos1 = b.NORTH(Math.max(libs[0], libs[1]));
+    const pos2 = b.SOUTH(Math.min(libs[0], libs[1]));
+    if ((b.board[pos1] !== other || !b.is_edge_vertex(pos2) || !b.same_string(pos1, adj))
+      && (b.board[pos2] !== other || !b.is_edge_vertex(pos1) || !b.same_string(pos2, adj)))
+      return;
+
+    if (b.is_edge_vertex(libs[0]) && !b.is_self_atari(libs[1], color))
+      this.ADD_CANDIDATE_MOVE(libs[1], 1, moves, "break_chain2_efficient-C");
+
+    if (b.is_edge_vertex(libs[1]) && !b.is_self_atari(libs[0], color))
+      this.ADD_CANDIDATE_MOVE(libs[0], 1, moves, "break_chain2_efficient-C");
+  },
+
   break_chain2_moves() {},
 
   break_chain2_defense_moves() {},
@@ -1176,7 +2263,7 @@ export const Reading = {
       for (let r = 0; r < adj3; r++) {
         b.findlib(adjs3[r], 3, libs);
         for (let k = 0; k < 3; k++) {
-          if (mw[libs[k]] == 1) {
+          if (mw[libs[k]] === 1) {
             mw[libs[k]] = 2;
             if (!b.is_self_atari(libs[k], b.board[str])){
               this.ADD_CANDIDATE_MOVE(libs[k], -3, moves, "double_atari_chain2-B");

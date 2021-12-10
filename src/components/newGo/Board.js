@@ -1417,7 +1417,50 @@ class Board {
   }
 
   // find_common_libs(){}
-  // have_common_lib() {}
+
+  /* Determine whether two strings have at least one common liberty.
+   * If they do and lib != NULL, one common liberty is returned in *lib.
+   */
+  // 两棋串至少有1口公气
+  have_common_lib(str1, str2, lib) {
+    let libs1;
+    const all_libs1 = []
+
+    this.ASSERT_ON_BOARD1(str1);
+    this.ASSERT_ON_BOARD1(str2);
+    this.ASSERT1(this.IS_STONE(this.board[str1]), str1);
+    this.ASSERT1(this.IS_STONE(this.board[str2]), str2);
+
+    let n = this.string_number[str1];
+    let liberties1 = this.string[n].liberties;
+
+    if (liberties1 > this.string[this.string_number[str2]].liberties) {
+      n = this.string_number[str2];
+      liberties1 = this.string[n].liberties;
+      let tmp = str1;
+      str1 = str2;
+      str2 = tmp;
+    }
+
+    if (liberties1 <= this.MAX_LIBERTIES)
+      /* Speed optimization: don't copy liberties with findlib */
+      libs1 = this.string_libs[n].list;
+    else {
+      this.findlib(str1, this.MAXLIBS, all_libs1);
+      libs1 = all_libs1;
+    }
+
+    for (let k = 0; k < liberties1; k++) {
+      if (this.NEIGHBOR_OF_STRING(libs1[k], this.string_number[str2], this.board[str2])) {
+        if (lib){
+          lib[0] = libs1[k];
+        }
+        return 1;
+      }
+    }
+
+    return 0;
+  }
 
   countstones(str) {
     this.ASSERT_ON_BOARD1(str);
@@ -1540,6 +1583,7 @@ class Board {
    *   stone in atari
    * - When capturing back the original position is repeated
    */
+  // 打二还一
   send_two_return_one(move, color) {
     const other = this.OTHER_COLOR(color);
     let lib = NO_MOVE;
@@ -1557,11 +1601,14 @@ class Board {
         }
         friendly_neighbor = pos;
         let s = this.string_number[pos];
+        // 找到*相邻O：1颗子，2口气
         if (this.string[s].size !== 1 || this.string[s].liberties !== 2){
           return 0;
         }
+        // 获得2口气中不是move的另一气位置
         lib = this.string_libs[s].list[0] + this.string_libs[s].list[1] - move;
       }
+      // 相邻对方1气，忽略
       else if (this.board[pos] === other && this.string[this.string_number[pos]].liberties === 1){
         return 0;
       }

@@ -240,7 +240,7 @@ export const Utils = {
 
   ASSERT1(x, pos){
     if(!x) {
-      console.error(pos)
+      throw new Error(pos)
     }
   }
 }
