@@ -20,6 +20,7 @@ class WormData{
 }
 export const Worm = {
   make_worms() {
+    const b = this.board
     /* Build the basic worm data:  color, origin, size, liberties. */
     // 建立棋串基本信息
     this.build_worms();
@@ -41,147 +42,148 @@ export const Worm = {
 
     this.find_worm_attacks_and_defenses();
 
-    // gg_assert(stackp == 0);
+    b.ASSERT1(b.stackp === 0, null);
 
     // /* Count liberties of different orders and initialize cutstone fields. */
-    // for (let pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   if (IS_STONE(board[pos]) && is_worm_origin(pos, pos)) {
-    //     int lib1, lib2, lib3, lib4;
-    //
-    //     ping_cave(pos, &lib1, &lib2, &lib3, &lib4);
-    //     ASSERT1(worm[pos].liberties == lib1, pos);
-    //     worm[pos].liberties2 = lib2;
-    //     worm[pos].liberties3 = lib3;
-    //     worm[pos].liberties4 = lib4;
-    //     worm[pos].cutstone = 0;
-    //     worm[pos].cutstone2 = 0;
-    //     propagate_worm(pos);
-    //   }
-    // }
-    //
-    // gg_assert(stackp == 0);
-    //
-    // /*
-    //  * There are two concepts of cutting stones in the worm array.
-    //  *
-    //  * worm.cutstone:
-    //  *
-    //  *     A CUTTING STONE is one adjacent to two enemy strings,
-    //  *     which do not have a liberty in common. The most common
-    //  *     type of cutting string is in this situation.
-    //  *
-    //  *     XO
-    //  *     OX
-    //  *
-    //  *     A POTENTIAL CUTTING STONE is adjacent to two enemy
-    //  *     strings which do share a liberty. For example, X in:
-    //  *
-    //  *     XO
-    //  *     O.
-    //  *
-    //  *     For cutting strings we set worm[m][n].cutstone=2. For potential
-    //  *     cutting strings we set worm[m][n].cutstone=1. For other strings,
-    //  *     worm[m][n].cutstone=0.
-    //  *
-    //  * worm.cutstone2:
-    //  *
-    //  *     Cutting points are identified by the patterns in the
-    //  *     connections database. Proper cuts are handled by the fact
-    //  *     that attacking and defending moves also count as moves
-    //  *     cutting or connecting the surrounding dragons.
-    //  *
-    //  * The cutstone field will now be set. The cutstone2 field is set
-    //  * later, during find_cuts(), called from make_dragons().
-    //  *
-    //  * We maintain both fields because the historically older cutstone
-    //  * field is needed to deal with the fact that e.g. in the position
-    //  *
-    //  *
-    //  *    OXX.O
-    //  *    .OOXO
-    //  *    OXX.O
-    //  *
-    //  * the X stones are amalgamated into one dragon because neither cut
-    //  * works as long as the two O stones are in atari. Therefore we add
-    //  * one to the cutstone field for each potential cutting point,
-    //  * indicating that these O stones are indeed worth rescuing.
-    //  *
-    //  * For the time being we use both concepts in parallel. It's
-    //  * possible we also need the old concept for correct handling of lunches.
-    //  */
-    //
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   int w1 = NO_MOVE;
-    //   int w2 = NO_MOVE;
-    //   int k;
-    //   int pos2;
-    //
-    //   /* Only work on each worm once. This is easiest done if we only
-    //    * work with the origin of each worm.
-    //    */
-    //   if (!IS_STONE(board[pos]) || !is_worm_origin(pos, pos))
-    //     continue;
-    //
-    //   /* Try to find two adjacent worms (w1) and (w2)
-    //    * of opposite colour from (pos).
-    //    */
-    //   for (pos2 = BOARDMIN; pos2 < BOARDMAX; pos2++) {
-    //     /* Work only with the opposite color from (pos). */
-    //     if (board[pos2] != OTHER_COLOR(board[pos]))
-    //       continue;
-    //
-    //     for (k = 0; k < 4; k++) {
-    //       if (!ON_BOARD(pos2 + delta[k])
-    //         || worm[pos2 + delta[k]].origin != pos)
-    //         continue;
-    //
-    //       ASSERT1(board[pos2 + delta[k]] == board[pos], pos);
-    //
-    //       /* If we have not already found a worm which meets the criteria,
-    //        * store it into (w1), otherwise store it into (w2).
-    //        */
-    //       if (w1 == NO_MOVE)
-    //         w1 = worm[pos2].origin;
-    //       else if (!is_same_worm(pos2, w1))
-    //         w2 = worm[pos2].origin;
-    //     }
-    //   }
-    //
-    //   /*
-    //    *  We now verify the definition of cutting stones. We have
-    //    *  verified that the string at (pos) is adjacent to two enemy
-    //    *  strings at (w1) and (w2). We need to know if these
-    //    *  strings share a liberty.
-    //    */
-    //
-    //   /* Only do this if we really found something. */
-    //   if (w2 != NO_MOVE) {
-    //     worm[pos].cutstone = 2;
-    //     if (count_common_libs(w1, w2) > 0)
-    //       worm[pos].cutstone = 1;
-    //
-    //     DEBUG(DEBUG_WORMS, "Worm at %1m has w1 %1m and w2 %1m, cutstone %d\n",
-    //       pos, w1, w2, worm[pos].cutstone);
-    //   }
-    // }
-    //
-    // gg_assert(stackp == 0);
-    //
-    // /* Set the genus of all worms. */
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   if (IS_STONE(board[pos]) && is_worm_origin(pos, pos)) {
-    //     worm[pos].genus = genus(pos);
-    //     propagate_worm(pos);
-    //   }
-    // }
-    // gg_assert(stackp == 0);
-    //
-    // /* Now we try to improve the values of worm.attack and worm.defend.
-    //  * If we find that capturing the string at str also defends the
-    //  * string at str2, or attacks it, then we add points of attack and
-    //  * defense. We don't add attacking point for strings that can't be
-    //  * defended.
-    //  */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos]) && this.is_worm_origin(pos, pos)) {
+        let lib1 = [], 
+          lib2 = [], 
+          lib3 = [], 
+          lib4 = [];
+    
+        this.ping_cave(pos, lib1, lib2, lib3, lib4);
+        b.ASSERT1(this.worm[pos].liberties === lib1[0], pos);
+        this.worm[pos].liberties2 = lib2[0];
+        this.worm[pos].liberties3 = lib3[0];
+        this.worm[pos].liberties4 = lib4[0];
+        this.worm[pos].cutstone = 0;
+        this.worm[pos].cutstone2 = 0;
+        this.propagate_worm(pos);
+      }
+    }
+    b.ASSERT1(b.stackp === 0, null);
+    
+    /*
+     * There are two concepts of cutting stones in the worm array.
+     *
+     * worm.cutstone:
+     *
+     *     A CUTTING STONE is one adjacent to two enemy strings,
+     *     which do not have a liberty in common. The most common
+     *     type of cutting string is in this situation.
+     *
+     *     XO
+     *     OX
+     *
+     *     A POTENTIAL CUTTING STONE is adjacent to two enemy
+     *     strings which do share a liberty. For example, X in:
+     *
+     *     XO
+     *     O.
+     *
+     *     For cutting strings we set worm[m][n].cutstone=2. For potential
+     *     cutting strings we set worm[m][n].cutstone=1. For other strings,
+     *     worm[m][n].cutstone=0.
+     *
+     * worm.cutstone2:
+     *
+     *     Cutting points are identified by the patterns in the
+     *     connections database. Proper cuts are handled by the fact
+     *     that attacking and defending moves also count as moves
+     *     cutting or connecting the surrounding dragons.
+     *
+     * The cutstone field will now be set. The cutstone2 field is set
+     * later, during find_cuts(), called from make_dragons().
+     *
+     * We maintain both fields because the historically older cutstone
+     * field is needed to deal with the fact that e.g. in the position
+     *
+     *
+     *    OXX.O
+     *    .OOXO
+     *    OXX.O
+     *
+     * the X stones are amalgamated into one dragon because neither cut
+     * works as long as the two O stones are in atari. Therefore we add
+     * one to the cutstone field for each potential cutting point,
+     * indicating that these O stones are indeed worth rescuing.
+     *
+     * For the time being we use both concepts in parallel. It's
+     * possible we also need the old concept for correct handling of lunches.
+     */
+    
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      let w1 = NO_MOVE;
+      let w2 = NO_MOVE;
+    
+      /* Only work on each worm once. This is easiest done if we only
+       * work with the origin of each worm.
+       */
+      if (!b.IS_STONE(b.board[pos]) || !this.is_worm_origin(pos, pos))
+        continue;
+    
+      /* Try to find two adjacent worms (w1) and (w2)
+       * of opposite colour from (pos).
+       */
+      for (let pos2 = b.BOARDMIN; pos2 < b.BOARDMAX; pos2++) {
+        /* Work only with the opposite color from (pos). */
+        if (b.board[pos2] !== b.OTHER_COLOR(b.board[pos]))
+          continue;
+    
+        for (let k = 0; k < 4; k++) {
+          if (!b.ON_BOARD(pos2 + b.delta[k])
+            || this.worm[pos2 + b.delta[k]].origin !== pos)
+            continue;
+    
+          b.ASSERT1(b.board[pos2 + b.delta[k]] === b.board[pos], pos);
+    
+          /* If we have not already found a worm which meets the criteria,
+           * store it into (w1), otherwise store it into (w2).
+           */
+          if (w1 === NO_MOVE)
+            w1 = this.worm[pos2].origin;
+          else if (!this.is_same_worm(pos2, w1))
+            w2 = this.worm[pos2].origin;
+        }
+      }
+    
+      /*
+       *  We now verify the definition of cutting stones. We have
+       *  verified that the string at (pos) is adjacent to two enemy
+       *  strings at (w1) and (w2). We need to know if these
+       *  strings share a liberty.
+       */
+    
+      /* Only do this if we really found something. */
+      if (w2 !== NO_MOVE) {
+        this.worm[pos].cutstone = 2;
+        if (b.count_common_libs(w1, w2) > 0)
+          this.worm[pos].cutstone = 1;
+    
+        // DEBUG(DEBUG_WORMS, "Worm at %1m has w1 %1m and w2 %1m, cutstone %d\n", pos, w1, w2, worm[pos].cutstone);
+      }
+    }
+    
+    b.ASSERT1(b.stackp === 0, null);
+
+    
+    /* Set the genus of all worms. */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos]) && this.is_worm_origin(pos, pos)) {
+        this.worm[pos].genus = this.genus(pos);
+        this.propagate_worm(pos);
+      }
+    }
+
+    b.ASSERT1(b.stackp === 0, null);
+    
+    /* Now we try to improve the values of worm.attack and worm.defend.
+     * If we find that capturing the string at str also defends the
+     * string at str2, or attacks it, then we add points of attack and
+     * defense. We don't add attacking point for strings that can't be
+     * defended.
+     */
     // {
     //   int color;
     //   int str;
@@ -404,8 +406,9 @@ export const Worm = {
     //   propagate_worm(pos);
     // }
     //
-    // if (!disable_threat_computation)
-    //   find_worm_threats();
+    if (!this.disable_threat_computation){
+      this.find_worm_threats();
+    }
     //
     // /* Identify INESSENTIAL strings.
     //  *
@@ -430,22 +433,22 @@ export const Worm = {
     //  * opponent's eye space.
     //  */
     //
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   if (IS_STONE(board[pos])
-    //     && worm[pos].origin == pos
-    //     && worm[pos].genus == 0
-    //     && worm[pos].liberties2 == 0
-    //     && !worm[pos].cutstone
-    //     && worm[pos].lunch == NO_MOVE) {
-    //     int edge;
-    //     int border_color = examine_cavity(pos, &edge);
-    //     if (border_color != GRAY && edge < 3) {
-    //       DEBUG(DEBUG_WORMS, "Worm %1m identified as inessential.\n", pos);
-    //       worm[pos].inessential = 1;
-    //       propagate_worm(pos);
-    //     }
-    //   }
-    // }
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos])
+        && this.worm[pos].origin === pos
+        && this.worm[pos].genus === 0
+        && this.worm[pos].liberties2 === 0
+        && !this.worm[pos].cutstone
+        && this.worm[pos].lunch === NO_MOVE) {
+        let edge = [];
+        let border_color = this.examine_cavity(pos, edge);
+        if (border_color != colors.GRAY && edge[0] < 3) {
+          // DEBUG(DEBUG_WORMS, "Worm %1m identified as inessential.\n", pos);
+          this.worm[pos].inessential = 1;
+          this.propagate_worm(pos);
+        }
+      }
+    }
   },
 
 
@@ -685,7 +688,6 @@ export const Worm = {
 
   find_worm_attacks_and_defenses() {
     const b = this.board
-    // const libs = [];
     const attack_point = [] //pointer
     const defense_point = [] //pointer
 
@@ -713,50 +715,52 @@ export const Worm = {
     }
 
     console.log('nodes:', this.get_reading_node_counter())
-    // gg_assert(stackp == 0);
+    b.ASSERT1(b.stackp === 0, null);
 
     /* 2. Use pattern matching to find a few more attacks. */
-    // this.find_attack_patterns();
-    // gg_assert(stackp == 0);
+    this.find_attack_patterns();
+    b.ASSERT1(b.stackp === 0, null);
 
     /* 3. Now find defense moves. */
-    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
-    //   if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
-    //     continue;
-    //
-    //   if (this.worm[str].attack_codes[0] !== 0) {
-    //
-    //     // TRACE("considering defense of %1m\n", str);
-    //     const dcode = this.find_defense(str, defense_point);
-    //     if (dcode !== 0) {
-    //       // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
-    //       if (defense_point !== NO_MOVE){
-    //         this.change_defense(str, defense_point[0], dcode);
-    //       }
-    //     }
-    //     else {
-    //       /* If the point of attack is not adjacent to the worm,
-    //        * it is possible that this is an overlooked point of
-    //        * defense, so we try and see if it defends.
-    //        */
-    //       attack_point[0] = this.worm[str].attack_points[0];
-    //       if (!b.liberty_of_string(attack_point[0], str))
-    //         if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
-    //           const acode = this.attack(str, null);
-    //           if (acode !== codes.WIN) {
-    //             this.change_defense(str, attack_point[0], REVERSE_RESULT(acode));
-    //             // TRACE("worm at %1m can be defended at %1m with code %d\n", str, attack_point, REVERSE_RESULT(acode));
-    //           }
-    //           b.popgo();
-    //         }
-    //     }
-    //   }
-    // }
-    // // gg_assert(stackp == 0);
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
+        continue;
+    
+      if (this.worm[str].attack_codes[0] !== 0) {
+    
+        // TRACE("considering defense of %1m\n", str);
+        const dcode = this.find_defense(str, defense_point);
+        if (dcode !== 0) {
+          // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
+          if (defense_point !== NO_MOVE){
+            this.change_defense(str, defense_point[0], dcode);
+          }
+        }
+        else {
+          /* If the point of attack is not adjacent to the worm,
+           * it is possible that this is an overlooked point of
+           * defense, so we try and see if it defends.
+           */
+          attack_point[0] = this.worm[str].attack_points[0];
+          if (!b.liberty_of_string(attack_point[0], str))
+            if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
+              const acode = this.attack(str, null);
+              if (acode !== codes.WIN) {
+                this.change_defense(str, attack_point[0], REVERSE_RESULT(acode));
+                // TRACE("worm at %1m can be defended at %1m with code %d\n", str, attack_point, REVERSE_RESULT(acode));
+              }
+              b.popgo();
+            }
+        }
+      }
+    }
+    b.ASSERT1(b.stackp === 0, null);
+
     //
     // /* 4. Use pattern matching to find a few more defense moves. */
-    // this.find_defense_patterns();
-    // gg_assert(stackp == 0);
+    this.find_defense_patterns();
+    b.ASSERT1(b.stackp === 0, null);
+
 
     /*
      * 5. Find additional attacks and defenses by testing all immediate
@@ -764,55 +768,58 @@ export const Worm = {
      *    matching and by trying whether each attack or defense point
      *    attacks or defends other strings.
      */
-    // for (str = BOARDMIN; str < BOARDMAX; str++) {
-    //   color = board[str];
-    //   if (!IS_STONE(color) || !is_worm_origin(str, str))
-    //     continue;
-    //
-    //   other = OTHER_COLOR(color);
-    //
-    //   if (worm[str].attack_codes[0] == 0)
-    //     continue;
-    //
-    //   /* There is at least one attack on this group. Try the
-    //    * liberties.
-    //    */
-    //   liberties = findlib(str, MAXLIBS, libs);
-    //
-    //   for (k = 0; k < liberties; k++) {
-    //     int pos = libs[k];
-    //     if (!attack_move_known(pos, str)) {
-    //       /* Try to attack on the liberty. Don't consider
-    //        * send-two-return-one moves.
-    //        */
-    //       if (!send_two_return_one(pos, other)
-    //         && trymove(pos, other, "make_worms", str)) {
-    //         if (board[str] == EMPTY || attack(str, NULL)) {
-    //           if (board[str] == EMPTY)
-    //             dcode = 0;
-    //           else
-    //             dcode = find_defense(str, NULL);
-    //
-    //           if (dcode != WIN)
-    //             change_attack(str, pos, REVERSE_RESULT(dcode));
-    //         }
-    //         popgo();
-    //       }
-    //     }
-    //     /* Try to defend at the liberty. */
-    //     if (!defense_move_known(pos, str)) {
-    //       if (worm[str].defense_codes[0] != 0)
-    //         if (trymove(pos, color, "make_worms", NO_MOVE)) {
-    //           acode = attack(str, NULL);
-    //           if (acode != WIN)
-    //             change_defense(str, pos, REVERSE_RESULT(acode));
-    //           popgo();
-    //         }
-    //     }
-    //   }
-    // }
-    // gg_assert(stackp == 0);
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      const color = b.board[str];
+      const other = b.OTHER_COLOR(color);
+      if (!b.IS_STONE(color) || !this.is_worm_origin(str, str))
+        continue;
+    
+      if (this.worm[str].attack_codes[0] === 0)
+        continue;
+    
+      /* There is at least one attack on this group. Try the
+       * liberties.
+       */
+      const libs = [];
+      let liberties = b.findlib(str, b.MAXLIBS, libs);
+    
+      for (let k = 0; k < liberties; k++) {
+        let pos = libs[k];
+        if (!this.attack_move_known(pos, str)) {
+          /* Try to attack on the liberty. Don't consider
+           * send-two-return-one moves.
+           */
+          let dcode
+          if (!b.send_two_return_one(pos, other) && b.trymove(pos, other, "make_worms", str)) {
+            if (b.board[str] === colors.EMPTY || this.attack(str, null)) {
+              if (b.board[str] === colors.EMPTY)
+                dcode = 0;
+              else
+                dcode = this.find_defense(str, null);
+    
+              if (dcode !== codes.WIN)
+                this.change_attack(str, pos, REVERSE_RESULT(dcode));
+            }
+            b.popgo();
+          }
+        }
+        /* Try to defend at the liberty. */
+        if (!this.defense_move_known(pos, str)) {
+          if (this.worm[str].defense_codes[0] !== 0)
+            if (b.trymove(pos, color, "make_worms", NO_MOVE)) {
+              let acode = this.attack(str, null);
+              if (acode !== codes.WIN)
+                this.change_defense(str, pos, REVERSE_RESULT(acode));
+              b.popgo();
+            }
+        }
+      }
+    }
+    b.ASSERT1(b.stackp === 0, null);
+
   },
+
+  find_worm_threats() {},
 
   is_same_worm(w1, w2) {
     return this.worm[w1].origin === this.worm[w2].origin;
@@ -881,8 +888,8 @@ export const Worm = {
   propagate_worm2(str){
     const b = this.board
 
-    // ASSERT_ON_BOARD1(str);
-    // ASSERT1(IS_STONE(worm[str].color), str);
+    b.ASSERT_ON_BOARD1(str);
+    b.ASSERT1(b.IS_STONE(this.worm[str].color), str);
 
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.board[pos] === b.board[str] && this.is_same_worm(pos, str) && pos !== str){
@@ -892,8 +899,103 @@ export const Worm = {
   },
 
   worm_reasons() {},
-  ping_cave() {},
-  ping_recurse() {},
+
+
+/* ping_cave(str, *lib1, ...) is applied when (str) points to a string.
+ * It computes the vector (*lib1, *lib2, *lib3, *lib4), 
+ * where *lib1 is the number of liberties of the string, 
+ * *lib2 is the number of second order liberties (empty vertices
+ * at distance two) and so forth.
+ *
+ * The definition of liberties of order >1 is adapted to the problem
+ * of detecting the shape of the surrounding cavity. In particular
+ * we want to be able to see if a group is loosely surrounded.
+ *
+ * A liberty of order n is an empty space which may be connected
+ * to the string by placing n stones of the same color on the board, 
+ * but no fewer. The path of connection may pass through an intervening group
+ * of the same color. The stones placed at distance >1 may not touch a
+ * group of the opposite color. At the edge, also diagonal neighbors
+ * count as touching. The path may also not pass through a liberty at distance
+ * 1 if that liberty is flanked by two stones of the opposing color. This
+ * reflects the fact that the O stone is blocked from expansion to the
+ * left by the two X stones in the following situation:
+ * 
+ *          X.
+ *          .O
+ *          X.
+ *
+ * On the edge, one stone is sufficient to block expansion:
+ *
+ *          X.
+ *          .O
+ *          --
+ */
+  ping_cave(str, lib1, lib2, lib3, lib4) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let libs = [];
+    let mrc = [];
+    let mse = [];
+  
+  /* Find and mark the first order liberties. */
+    lib1[0] = b.findlib(str, b.MAXLIBS, libs);
+    for (let k = 0; k < lib1[0]; k++){
+      mse[libs[k]] = 1;
+    }
+
+    /* Reset mse at liberties which are flanked by two stones of the
+    * opposite color, or one stone and the edge.
+    */
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+      if (b.ON_BOARD(pos)
+        && mse[pos]
+        && ((( !b.ON_BOARD(b.SOUTH(pos)) || b.board[b.SOUTH(pos)] === other)
+        && (   !b.ON_BOARD(b.NORTH(pos)) || b.board[b.NORTH(pos)] === other))
+        || ((  !b.ON_BOARD(b.WEST(pos))  || b.board[b.WEST(pos)]  === other)
+      && (!b.ON_BOARD(b.EAST(pos))  || b.board[b.EAST(pos)]  === other)))) {
+        mse[pos] = 0;
+      }
+    
+    lib2[0] = 0;
+    mrc = []
+    this.ping_recurse(str, lib2, mse, mrc, color);
+
+    lib3[0] = 0;
+    mrc = []
+    this.ping_recurse(str, lib3, mse, mrc, color);
+
+    lib4[0] = 0;
+    mrc = []
+    this.ping_recurse(str, lib4, mse, mrc, color);
+  },
+
+  ping_recurse(pos, counter, mx, mr, color) {
+    const b = this.board
+    mr[pos] = 1;
+  
+    for (let k = 0; k < 4; k++) {
+      let apos = pos + b.delta[k];
+      if (b.board[apos] === colors.EMPTY
+        && mx[apos] === 0
+        && mr[apos] === 0
+        && !this.touching(apos, b.OTHER_COLOR(color))) {
+        counter[0]++;
+        mr[apos] = 1;
+        mx[apos] = 1;
+      }
+    }
+    
+    if (!b.is_ko_point(pos)) {
+      for (let k = 0; k < 4; k++) {
+        let apos = pos + b.delta[k];
+        if (b.ON_BOARD(apos) && mr[apos] === 0 && (mx[apos] === 1 || b.board[apos] === color))
+          this.ping_recurse(apos, counter, mx, mr, color);
+      }
+    }
+  },
   touching() {},
   genus() {},
   markcomponent() {},
