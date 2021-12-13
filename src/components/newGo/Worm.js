@@ -711,6 +711,8 @@ export const Worm = {
         this.change_attack(str, attack_point[0], acode);
       }
     }
+
+    console.log('nodes:', this.get_reading_node_counter())
     // gg_assert(stackp == 0);
 
     /* 2. Use pattern matching to find a few more attacks. */

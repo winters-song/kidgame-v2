@@ -200,5 +200,24 @@ export const Utils = {
       timers[n] = now;
       return dt;
     }
-  }
+  },
+
+  /* This function computes the superstring at (str) as described above,
+   * but omitting connections of type 5. Then it constructs a list of
+   * liberties of the superstring which are not already liberties of
+   * (str).
+   *
+   * If liberty_cap is nonzero, only liberties of substrings of the
+   * superstring which have fewer than liberty_cap liberties are
+   * generated.
+   */
+  find_superstring_liberties(str, num_libs, libs, liberty_cap) {
+    this.do_find_superstring(str, null, null, num_libs, libs, this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
+  },
+  find_proper_superstring_liberties(){},
+  find_superstring_stones_and_liberties() {},
+  superstring_chainlinks() {},
+  proper_superstring_chainlinks() {},
+
+  do_find_superstring() {}
 }

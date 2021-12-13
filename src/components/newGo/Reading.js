@@ -1,5 +1,5 @@
 import {
-  codes, colors, NO_MOVE,
+  codes, colors, NO_MOVE, PASS_MOVE,
 } from './Constants'
 import {routine_id, REVERSE_RESULT} from "./Liberty";
 
@@ -24,22 +24,26 @@ const MAX_MOVES = 50
  * reading.
  */
 /*                                              0   1   2   3   4  >4  */
-const defend_lib_score              = [-5, -4,  0,  3,  5, 50];
-const defend_not_adjacent_lib_score = [ 0,  0,  2,  3,  5];
-const defend_capture_score          = [ 0,  6,  9, 13, 18, 24];
-const defend_atari_score            = [ 0,  2,  4,  6,  7, 8];
-const defend_save_score             = [ 0,  3,  6,  8, 10, 12];
-const defend_open_score             = [ 0,  1,  2,  3,  4];
-const attack_own_lib_score          = [10, -4,  2,  3,  4];
-const attack_string_lib_score       = [-5,  2,  3,  7, 10, 19];
-const attack_capture_score          = [-4,  4, 10, 15, 20, 25];
-const attack_save_score             = [ 0, 10, 13, 18, 21, 24];
-const attack_open_score             = [ 0,  0,  2,  4,  4];
-const defend_not_edge_score         = 5;
-const attack_not_edge_score         = 1;
-const attack_ko_score               = -15;
-const cannot_defend_penalty         = -20;
-const safe_atari_score              = 8;
+let defend_lib_score              = [-5, -4,  0,  3,  5, 50];
+let defend_not_adjacent_lib_score = [ 0,  0,  2,  3,  5];
+let defend_capture_score          = [ 0,  6,  9, 13, 18, 24];
+let defend_atari_score            = [ 0,  2,  4,  6,  7, 8];
+let defend_save_score             = [ 0,  3,  6,  8, 10, 12];
+let defend_open_score             = [ 0,  1,  2,  3,  4];
+let attack_own_lib_score          = [10, -4,  2,  3,  4];
+let attack_string_lib_score       = [-5,  2,  3,  7, 10, 19];
+let attack_capture_score          = [-4,  4, 10, 15, 20, 25];
+let attack_save_score             = [ 0, 10, 13, 18, 21, 24];
+let attack_open_score             = [ 0,  0,  2,  4,  4];
+let defend_not_edge_score         = 5;
+let attack_not_edge_score         = 1;
+let attack_ko_score               = -15;
+let cannot_defend_penalty         = -20;
+let safe_atari_score              = 8;
+
+let safeMoveInitialized = 0;
+let safe_move_cache = {}
+let safe_move_cache_when = {}
 
 
 export const Reading = {
@@ -160,7 +164,7 @@ export const Reading = {
           if (!ko_move[0]) {
             if (dcode === 0) {
               b.popgo();
-              return this.RETURN_RESULT(codes.WIN, apos, move, "attack effective");
+              return this.RETURN_RESULT([codes.WIN], [apos], move, "attack effective");
             }
 
             savemove[0] = apos;
@@ -202,7 +206,8 @@ export const Reading = {
   //int move, ReadingMoves: moves
   ADD_CANDIDATE_MOVE(move, this_score, moves, this_message)	{
     const b = this.board
-    b.ASSERT1(typeof defense_hint === 'number', null)
+    b.ASSERT1(typeof move === 'number', null)
+    b.ASSERT1(typeof this_score === 'number', null)
 
     let u
     for (u = 0; u < moves.num; u++){
@@ -350,7 +355,6 @@ export const Reading = {
     const b = this.board
     const xpos = [NO_MOVE];
     let dcode = 0;
-    let retval;
 
     // SETUP_TRACE_INFO("find_defense", str);
 
@@ -383,6 +387,7 @@ export const Reading = {
       xpos[0] = move[0];
     }
 
+    let retval = []
     if (b.stackp <= this.depth
       && this.tt_get(this.ttable, routine_id.FIND_DEFENSE, str, NO_MOVE, this.depth - b.stackp, null, retval, null, xpos) === 2) {
       /* Note that if return value is 1 (too small depth), the move will
@@ -393,21 +398,21 @@ export const Reading = {
       if (move){
         move[0] = xpos[0];
       }
-      return retval;
+      return retval[0];
     }
 
     if (liberties === 1){
       dcode = this.defend1(str, xpos);
     }
-    // else if (liberties === 2){
-    //   dcode = this.defend2(str, xpos);
-    // }
-    // else if (liberties === 3){
-    //   dcode = this.defend3(str, xpos);
-    // }
-    // else if (liberties === 4){
-    //   dcode = this.defend4(str, xpos);
-    // }
+    else if (liberties === 2){
+      dcode = this.defend2(str, xpos);
+    }
+    else if (liberties === 3){
+      dcode = this.defend3(str, xpos);
+    }
+    else if (liberties === 4){
+      dcode = this.defend4(str, xpos);
+    }
 
     if (dcode) {
       this.READ_RETURN(routine_id.FIND_DEFENSE, str, this.depth - b.stackp, move, xpos, dcode);
@@ -711,7 +716,7 @@ export const Reading = {
     liberties = b.findlib(str, 2, libs);
 
     if (this.fast_defense(str, liberties, libs, xpos)){
-      return this.RETURN_RESULT(codes.WIN, xpos, move, "fast defense");
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "fast defense");
     }
 
     /* Collect moves to try in the first batch.
@@ -752,7 +757,7 @@ export const Reading = {
     }
 
     this.order_moves(str, moves, color, 'read_function_name', move);
-    let result = this.DEFEND_TRY_MOVES(0, suggest_move);
+    let result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
     }
@@ -837,6 +842,8 @@ export const Reading = {
     const xpos = [NO_MOVE];
     let liberties;
     let libs = [];
+    const savemove = [0];
+    const savecode = [0];
     const suggest_move = [NO_MOVE];
 
     // SETUP_TRACE_INFO("defend3", str);
@@ -878,7 +885,7 @@ export const Reading = {
     }
 
     this.order_moves(str, moves, color, 'read_function_name', move);
-    let result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    let result = this.DEFEND_TRY_MOVES(1, suggest_move,  str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
     }
@@ -908,7 +915,7 @@ export const Reading = {
 
     /* Only order and test the new set of moves. */
     this.order_moves(str, moves, color, 'read_function_name', move);
-    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return
     }
@@ -932,7 +939,7 @@ export const Reading = {
       return result
     }
 
-    return this.RETURN_RESULT([0], [0], move, "saved move");
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
   },
 
   defend4(str, move) {
@@ -941,6 +948,8 @@ export const Reading = {
     const xpos = [NO_MOVE];
     let liberties;
     let libs =[];
+    const savemove = [0];
+    const savecode = [0];
     const suggest_move = [NO_MOVE];
 
     // SETUP_TRACE_INFO("defend4", str);
@@ -952,7 +961,7 @@ export const Reading = {
     liberties = b.findlib(str, 4, libs);
 
     if (this.fast_defense(str, liberties, libs, xpos)){
-      return this.RETURN_RESULT(codes.WIN, xpos, move, "fast defense");
+      return this.RETURN_RESULT([codes.WIN], xpos, move, "fast defense");
     }
 
     /* Collect moves to try in the first batch.
@@ -985,7 +994,7 @@ export const Reading = {
     }
 
     this.order_moves(str, moves, color, 'read_function_name', move);
-    let result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    let result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
     }
@@ -998,12 +1007,12 @@ export const Reading = {
     }
 
     this.order_moves(str, moves, color, 'read_function_name', move);
-    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
     }
 
-    return this.RETURN_RESULT([0], [0], move, "saved move");
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
   },
 
   /*
@@ -1337,7 +1346,7 @@ export const Reading = {
             normal = -normal;
 
           cpos = apos + normal;
-          if (b.board[cpos] != colors.EMPTY)
+          if (b.board[cpos] !== colors.EMPTY)
             continue;
 
           dpos = bpos + normal;
@@ -1498,7 +1507,7 @@ export const Reading = {
             this.ADD_CANDIDATE_MOVE(cpos + up, 0, moves, "special_rescue6-B");
           }
           else if (b.countlib(cpos) <= 3
-            && (b.board[bpos + right] == colors.EMPTY || (b.board[bpos + right] == other && b.countlib(bpos + right) <= 4))
+            && (b.board[bpos + right] === colors.EMPTY || (b.board[bpos + right] === other && b.countlib(bpos + right) <= 4))
             && !b.is_self_atari(cpos + right, color)) {
               this.ADD_CANDIDATE_MOVE(cpos + right, 0, moves, "special_rescue6-C");
           }
@@ -1567,7 +1576,7 @@ export const Reading = {
     let ss_liberties = [];
     let ss_libs = [];
 
-    b.find_superstring_liberties(str, ss_liberties, ss_libs, liberty_cap);
+    this.find_superstring_liberties(str, ss_liberties, ss_libs, liberty_cap);
     if (ss_liberties[0] <= 5) {
       for (let k = 0; k < ss_liberties[0]; k++) {
         let apos = ss_libs[k];
@@ -1914,7 +1923,7 @@ export const Reading = {
       if (move){
         move[0] = xpos[0];
       }
-      return retval;
+      return retval[0];
     }
 
     /* Treat the attack differently depending on how many liberties the
@@ -1922,21 +1931,21 @@ export const Reading = {
     if (liberties === 1) {
       result = this.attack1(str, xpos);
     }
-    // else if (liberties === 2) {
-    //   if (stackp > depth + 10) {
-    //     result = simple_ladder(str, xpos);
-    //   } else {
-    //     result = attack2(str, xpos);
-    //   }
-    // }
-    // else if (liberties === 3){
-    //   result = attack3(str, xpos);
-    // }
-    // else if (liberties === 4) {
-    //   result = attack4(str, xpos);
-    // }
+    else if (liberties === 2) {
+      if (b.stackp > this.depth + 10) {
+        result = this.simple_ladder(str, xpos);
+      } else {
+        result = this.attack2(str, xpos);
+      }
+    }
+    else if (liberties === 3){
+      result = this.attack3(str, xpos);
+    }
+    else if (liberties === 4) {
+      result = this.attack4(str, xpos);
+    }
 
-    // ASSERT1(result >= 0 && result <= WIN, str);
+    b.ASSERT1(result >= 0 && result <= codes.WIN, str);
 
     if (result) {
       this.READ_RETURN(routine_id.ATTACK, str, this.depth - b.stackp, move, xpos, result);
@@ -2065,13 +2074,13 @@ export const Reading = {
         let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
         // 相邻的相邻1口气（我方）棋串， 且不是要被提子的棋串
         for (let k = 0; k < adj2; k++) {
-          let ko_move;
+          let ko_move = [];
           if (adjs2[k] === str){
             continue;
           }
           b.findlib(adjs2[k], 1, apos);
           if (b.komaster_trymove(apos, other, "attack1-D", str, ko_move, b.stackp <= this.ko_depth && savecode === 0)) {
-            if (!ko_move) {
+            if (!ko_move[0]) {
               let dcode = this.do_find_defense(str, null);
               if (dcode !== codes.WIN && this.do_attack(str, null)) {
                 b.popgo();
@@ -2395,6 +2404,9 @@ export const Reading = {
 
       this.order_moves(str, moves, other, 'read_function_name', move);
       const result = this.ATTACK_TRY_MOVES(1, suggest_move, str, move, other, moves, savemove, savecode);
+      if(result !== undefined){
+        return result
+      }
     } /* for (pass... */
 
     return this.RETURN_RESULT(savecode, savemove, move, "saved move");
@@ -2409,7 +2421,7 @@ export const Reading = {
     const adjs = [];
     const savemove = [0];
     const savecode = [0];
-    let suggest_move = NO_MOVE;
+    let suggest_move = [NO_MOVE];
 
     const moves = new ReadingMoves({
       num : 0,
@@ -2570,10 +2582,12 @@ export const Reading = {
       // X不入气，O两口气（c的右边）
       if (b.is_suicide(libs[k], other) && (b.approxlib(libs[k], color, 3, newlibs) === 2)) {
         // 找到c位
-        if (b.newlibs[0] !== libs[1-k])
+        if (newlibs[0] !== libs[1-k]){
           xpos = newlibs[0];
-        else
+        }
+        else{
           xpos = newlibs[1];
+        }
         // X在c不是自打吃
         if (!b.is_self_atari(xpos, other)) {
           this.ADD_CANDIDATE_MOVE(xpos, 0, moves, "special_attack2");
@@ -2582,9 +2596,212 @@ export const Reading = {
     }
   },
 
-  special_attack3_moves() {},
-  special_attack4_moves() {},
-  draw_back_moves() {},
+  /* In situations like these:
+   *
+   * ..XXX..   ...XX
+   * .XX.XX.   .cO.X
+   * XXOOOXX   ....X
+   * XO.O.OX   XOOXX
+   * XO.c.OX   XXXX.
+   * -------
+   *
+   * the code that follows can find the attacking move at c.
+   */
+  special_attack3_moves(str, libs, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    let xpos;
+    let apos;
+    let bpos;
+
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    for (let k = 0; k < 2; k++) {
+      apos = libs[k];
+      bpos = libs[1-k];
+
+      // 南北向
+      if (apos === b.SOUTH(bpos) || apos === b.NORTH(bpos)) {
+        if (b.board[b.WEST(apos)] === colors.EMPTY)
+          xpos = b.WEST(apos);
+        else if (b.board[b.EAST(apos)] === colors.EMPTY)
+          xpos = b.EAST(apos);
+        else
+          continue;
+      }
+      else if (apos === b.WEST(bpos) || apos === b.EAST(bpos)) {
+        if (b.board[b.SOUTH(apos)] === colors.EMPTY)
+          xpos = b.SOUTH(apos);
+        else if (b.board[b.NORTH(apos)] === colors.EMPTY)
+          xpos = b.NORTH(apos);
+        else
+          continue;
+      }
+      else
+        return; /* Incorrect configuration, give up. */
+
+      if (!b.is_self_atari(xpos, other))
+        this.ADD_CANDIDATE_MOVE(xpos, 0, moves, "special_attack3");
+    }
+  },
+
+  /* In situations like these:
+   *
+   * ...O.O...   ...O.O...
+   * XXXXOOXXX   XXXXOOXXX
+   * XOOOXXO*.   Xsssbbcd.
+   * .X.O.....   .X.sa.e..
+   * ---------   ---------
+   *
+   * the code that follows can find the attacking move at *.
+   *
+   * Also for situations in which c has three liberties, one of which in common
+   * with b, the respective attacking move is found (see reading:52 for an
+   * example).
+   */
+  // str指的是s位4子，X不能直接进攻（不入气）
+  special_attack4_moves(str, libs, moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    let adj, adjs = [];
+    let adj2, adjs2 = [];
+    let libs2 = [];
+    let apos;
+    let bpos = 0;
+    let cpos;
+    let dpos;
+    let epos;
+    let clibs;
+    let dlibs;
+    let elibs;
+    let bc_common_lib;
+    let s, u;
+
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    /* To avoid making this too general, we require that both
+     * liberties are self ataris for X.
+     */
+    if (!b.is_self_atari(libs[0], other) || !b.is_self_atari(libs[1], other))
+      return;
+
+    /* Pick up chain links with 2 liberties. */
+    adj = b.chainlinks2(str, adjs, 2);
+
+    for (let k = 0; k < 2; k++) {
+      apos = libs[k];
+
+      /* Check that (apos) also is a liberty of one of the two liberty
+       * chain links.
+       */
+      // 相邻棋串2口气，a位是其中1气
+      for (s = 0; s < adj; s++) {
+        if (b.liberty_of_string(apos, adjs[s])) {
+          bpos = adjs[s];
+          break;
+        }
+      }
+
+      /* Nothing found. */
+      if (s === adj)
+        continue;
+
+      /* Now require that (bpos) has a chain link, different from (str),
+       * also with two liberties, or with three liberties, but one in common
+       * with (bpos).
+       */
+      // 找到c(2气棋串)
+      adj2 = b.chainlinks3(bpos, adjs2, 3);
+
+      for (s = 0; s < adj2; s++) {
+        cpos = adjs2[s];
+        if (b.same_string(cpos, str))
+          continue;
+
+        /* Pick up the liberties of (cpos). */
+        clibs = b.findlib(cpos, 3, libs2);
+
+        /* No need to do something fancy if it is in atari already. */
+        if (clibs < 2)
+          continue;
+
+        /* (cpos) has three liberties, none of which in commmon with (bpos)
+         * attacking it seems too difficult. */
+        bc_common_lib = b.have_common_lib(bpos, cpos, null);
+        if (clibs > 2 && !bc_common_lib)
+          continue;
+
+        /* Try playing at a liberty. Before doing this, verify that
+         * (cpos) cannot get more than three liberties by answering on
+         * another liberty and that we are not putting ourselves in atari.
+         * We also should only allow ourselves to get fewer liberties than
+         * the defender in case (bpos) and (cpos) have a common liberty.
+         */
+        for (let t = 0; t < clibs; t++) {
+          dpos = libs2[t];
+
+          if (b.is_self_atari(dpos, other))
+            continue;
+
+          for (u = 0; u < clibs; u++) {
+            if (t === u)
+              continue;
+
+            epos = libs2[u];
+
+            elibs = b.approxlib(epos, color, 4, null);
+            // 长气>3口气
+            if (elibs > 3)
+              break;
+
+            dlibs = b.approxlib(dpos, other, 3, null);
+            if (elibs > dlibs && !bc_common_lib)
+              break;
+          }
+
+          if (u >= clibs) /* No break occurred. */
+            this.ADD_CANDIDATE_MOVE(dpos, 0, moves, "special_attack4");
+        }
+      }
+    }
+  },
+
+  /*
+   * If (str) points to a string, draw_back(str, &moves)
+   * looks for a move in the following configuration which attacks
+   * the string:
+   *
+   *      X*            X=attacker, O=defender
+   *      O.
+   *
+   * In the initial implementation we consider cases
+   * where X has exactly 2 liberties.
+   *
+   */
+  // 托退
+  draw_back_moves(str, moves) {
+    const b = this.board
+    let adj, adjs = [];
+    let libs = [];
+
+    adj = b.chainlinks2(str, adjs, 2);
+    for (let r = 0; r < adj; r++) {
+      b.findlib(adjs[r], 2, libs);
+      for (let k = 0; k < 2; k++) {
+        if (!b.liberty_of_string(libs[k], str)
+          && ((b.ON_BOARD1(b.SOUTH(libs[k])) && b.liberty_of_string(b.SOUTH(libs[k]), str))
+            || (b.ON_BOARD1(b.WEST(libs[k])) && b.liberty_of_string(b.WEST(libs[k]), str))
+            || (b.ON_BOARD1(b.NORTH(libs[k])) && b.liberty_of_string(b.NORTH(libs[k]), str))
+            || (b.ON_BOARD1(b.EAST(libs[k])) && b.liberty_of_string(b.EAST(libs[k]), str)))) {
+          this.ADD_CANDIDATE_MOVE(libs[k], 0, moves, "draw_back");
+        }
+      }
+    }
+  },
 
 
   /* In the following position the reading is much simplifed if we start
@@ -2814,8 +3031,8 @@ export const Reading = {
       const apos = [];
       this.break_chain_moves(adjs2[0], moves);
       b.findlib(adjs2[0], 1, apos);
-      if (!b.is_self_atari(apos, color))
-        this.ADD_CANDIDATE_MOVE(apos, 0, moves, "break_chain2_efficient-A");
+      if (!b.is_self_atari(apos[0], color))
+        this.ADD_CANDIDATE_MOVE(apos[0], 0, moves, "break_chain2_efficient-A");
       return;
     }
 
@@ -2869,14 +3086,357 @@ export const Reading = {
       this.ADD_CANDIDATE_MOVE(libs[0], 1, moves, "break_chain2_efficient-C");
   },
 
-  break_chain2_moves() {},
+  /* (str) points to a string with two or more liberties. break_chain2_moves()
+   * tries to defend this string by attacking a neighbouring string with
+   * two liberties.
+   * This is done by playing on either of its liberties
+   * (if (require_safe) is true these are only used if they are not
+   * self-ataris), taking a neighbour out of atari or by backfilling if
+   * both liberties are self-ataris.
+   */
+  break_chain2_moves(str, moves, require_safe, be_aggressive) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let adjs = [];
 
-  break_chain2_defense_moves() {},
-  do_find_break_chain3_moves() {},
-  break_chain3_moves() {},
-  break_chain4_moves() {},
+    let adj = b.chainlinks2(str, adjs, 2);
 
-  superstring_break_chain_moves() {},
+    for (let r = 0; r < adj; r++) {
+      let apos = adjs[r];
+      let libs = [];
+      let unsafe = [];
+      let dummy_adjs = [];
+
+      b.findlib(apos, 2, libs);
+
+      /* If stackp > backfill_depth, don't bother playing liberties of
+       * 2-liberty strings if those also have at least one neighbor in
+       * atari. This is intended to solve reading:171 and generally reduce
+       * the number of nodes.
+       */
+      if (b.stackp > this.backfill_depth && b.chainlinks2(apos, dummy_adjs, 1) > 0)
+        continue;
+
+      for (let k = 0; k < 2; k++) {
+        unsafe[k] = b.is_self_atari(libs[k], color);
+        if (!unsafe[k]
+          || b.is_ko(libs[k], color, null)
+          || (!require_safe && b.approxlib(libs[k], other, 5, null) < 5))
+          this.ADD_CANDIDATE_MOVE(libs[k], 0, moves, "break_chain2-A");
+      }
+
+      if (b.stackp <= this.break_chain_depth
+        || (be_aggressive && b.stackp <= this.backfill_depth)) {
+        /* If the chain link cannot escape easily, try to defend all adjacent
+         * friendly stones in atari (if any). If there are none, defend
+         * adjacent friendly stones with only two liberties.
+         */
+        if (b.approxlib(libs[0], other, 4, null) < 4
+          && b.approxlib(libs[1], other, 4, null) < 4) {
+          if (!this.defend_secondary_chain1_moves(adjs[r], moves, 2))
+            this.defend_secondary_chain2_moves(adjs[r], moves, 2);
+        }
+      }
+
+      if (unsafe[0] && unsafe[1] && (b.stackp <= this.backfill2_depth || b.have_common_lib(str, apos, null))) {
+        let lib = [];
+
+        /* Find backfilling moves. */
+        for (let k = 0; k < 2; k++) {
+          let libs2 = [];
+          if (b.approxlib(libs[k], other, 3, libs2) === 2) {
+            if (!b.is_self_atari(libs2[0], color))
+              this.ADD_CANDIDATE_MOVE(libs2[0], 0, moves, "break_chain2-B");
+            if (!b.is_self_atari(libs2[1], color))
+              this.ADD_CANDIDATE_MOVE(libs2[1], 0, moves, "break_chain2-B");
+          }
+
+          /* Consider this case (reading:188):
+           *
+           *   |.OOOXXX
+           *   |OXXXOOO
+           *   |.X.O...
+           *   +-------
+           *
+           * We cannot atari the corner X string immediatly, so we need to
+           * backfill.  However, to avoid generating too many variations,
+           * we require that the opponent string is well restrained.
+           * Otherwise it could just run away while we backfill.
+           */
+          if (b.approxlib(libs[0], other, 3, null) <= 2
+            && b.approxlib(libs[1], other, 3, null) <= 2) {
+            if (b.approxlib(libs[0], color, 1, lib) === 1
+            && b.approxlib(lib, color, 3, null) >= 3)
+            this.ADD_CANDIDATE_MOVE(lib, 0, moves, "break_chain2-C");
+
+            if (b.approxlib(libs[1], color, 1, lib) === 1 && b.approxlib(lib[0], color, 3, null) >= 3){
+              this.ADD_CANDIDATE_MOVE(lib[0], 0, moves, "break_chain2-C");
+            }
+          }
+        }
+      }
+    }
+  },
+
+  /*
+   * (str) points to a group to be defended.
+   * break_chain2_defense_moves is a wrapper around break_chain2_moves.
+   * It devalues all entries by 2.
+   *
+   * Rationale: Otherwise, these moves get overvalued by order_moves. In
+   * particular, if there is both a direct and a break_chain2 defense,
+   * then the latter one might be just an irrelevant intermediate forcing
+   * move. Hence, we should rather return the direct defense.
+   */
+  break_chain2_defense_moves(str, moves, be_aggressive) {
+    const b = this.board
+    let saved_num_moves = moves.num;
+
+    this.break_chain2_moves(str, moves, !(b.stackp <= this.backfill_depth), be_aggressive);
+    for (let k = saved_num_moves; k < moves.num; k++)
+      moves.score[k] = -2;
+  },
+
+  /* Helper function for break_chain3_moves() and
+   * superstring_break_chain_moves().
+   */
+  do_find_break_chain3_moves(chain_links, num_chain_links, moves, be_aggressive, caller_function_name) {
+    const b = this.board
+    const other = b.board[chain_links[0]];
+    const color = b.OTHER_COLOR(other);
+    let move_added = [];
+    let possible_moves = [];
+    let num_possible_moves = 0;
+
+    for (let r = 0; r < num_chain_links; r++) {
+      let libs = [];
+
+      /* We make a list in the (adjs) array of the liberties
+       * of boundary strings having exactly three liberties. We mark
+       * each liberty in the mw array so that we do not list any
+       * more than once.
+       */
+      b.findlib(chain_links[r], 3, libs);
+
+      /* If the 3 liberty chain easily can run away through one of the
+       * liberties, we don't play on any of the other liberties.
+       */
+      let lib1 = b.approxlib(libs[0], other, 4, null);
+      let lib2 = b.approxlib(libs[1], other, 4, null);
+      if (lib1 >= 4 && lib2 >= 4)
+        continue;
+      let lib3 = b.approxlib(libs[2], other, 4, null);
+
+      if ((lib1 >= 4 || lib2 >= 4) && lib3 >= 4)
+        continue;
+
+      if (lib1 >= 4) {
+        if (!move_added[libs[0]]) {
+          possible_moves[num_possible_moves++] = libs[0];
+          move_added[libs[0]] = 1;
+        }
+
+        continue;
+      }
+
+      if (lib2 >= 4) {
+        if (!move_added[libs[1]]) {
+          possible_moves[num_possible_moves++] = libs[1];
+          move_added[libs[1]] = 1;
+        }
+
+        continue;
+      }
+
+      if (lib3 >= 4) {
+        if (!move_added[libs[2]]) {
+          possible_moves[num_possible_moves++] = libs[2];
+          move_added[libs[2]] = 1;
+        }
+
+        continue;
+      }
+
+      /* No easy escape, try all liberties. */
+      for (let k = 0; k < 3; k++) {
+        if (!move_added[libs[k]]) {
+          possible_moves[num_possible_moves++] = libs[k];
+          move_added[libs[k]] = 1;
+        }
+      }
+
+      if (b.stackp <= this.backfill2_depth
+        || (be_aggressive && b.stackp <= this.backfill_depth))
+        this.defend_secondary_chain1_moves(chain_links[r], moves, 3);
+    }
+
+    for (let k = 0; k < num_possible_moves; k++) {
+      /* We do not wish to consider the move if it can be immediately
+       * recaptured, unless stackp < backfill2_depth.  Beyond
+       * backfill2_depth, the necessary capturing move might not get
+       * generated in follow-up for the attacker.  (This currently only
+       * makes a difference at stackp == backfill2_depth.)
+       */
+      let move = possible_moves[k];
+
+      if (b.stackp <= this.break_chain_depth
+        || (be_aggressive && b.stackp <= this.backfill_depth)
+        || b.approxlib(move, color, 2, null) > 1)
+        /* We use a negative initial score here as we prefer to find
+         * direct defense moves.
+         */
+        this.ADD_CANDIDATE_MOVE(move, -2, moves, caller_function_name);
+    }
+  },
+
+  /*
+ * (str) points to a group.
+ * If there is a string in the surrounding chain having
+ * exactly three liberties whose attack leads to the rescue of
+ * (str), break_chain3_moves(str, *moves) adds attack moves against
+ * the surrounding string as candidate moves.
+ */
+  break_chain3_moves(str, moves, be_aggressive) {
+    let chain_links = [];
+    let num_chain_links = this.board.chainlinks2(str, chain_links, 3);
+
+    if (num_chain_links > 0) {
+      this.do_find_break_chain3_moves(chain_links, num_chain_links, moves, be_aggressive, "break_chain3");
+    }
+  },
+
+  /*
+   * (str) points to a group.
+   * If there is a string in the surrounding chain having
+   * exactly four liberties whose attack leads to the rescue of
+   * (str), break_chain4_moves(str, *moves) adds attack moves against
+   * the surrounding string as candidate moves.
+   */
+  break_chain4_moves(str, moves, be_aggressive) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let u = 0;
+    let apos;
+    let adjs = [];
+    let libs = [];
+    let possible_moves = [];
+    let mw = [];
+
+    let adj = b.chainlinks2(str, adjs, 4);
+    for (let r = 0; r < adj; r++) {
+      let lib1 = 0, lib2 = 0, lib3 = 0, lib4 = 0;
+      apos = adjs[r];
+
+      /* We make a list in the (adjs) array of the liberties
+       * of boundary strings having exactly four liberties. We mark
+       * each liberty in the mw array so that we do not list any
+       * more than once.
+       */
+      b.findlib(apos, 4, libs);
+
+      /* If the 4 liberty chain easily can run away through one of the
+       * liberties, we don't play on any of the other liberties.
+       */
+      lib1 = b.approxlib(libs[0], other, 5, null);
+      lib2 = b.approxlib(libs[1], other, 5, null);
+      if (lib1 >= 5 && lib2 >= 5)
+        continue;
+      lib3 = b.approxlib(libs[2], other, 5, null);
+
+      if ((lib1 >= 5 || lib2 >= 5) && lib3 >= 5)
+        continue;
+      lib4 = b.approxlib(libs[3], other, 5, null);
+
+      if ((lib1 >= 5 || lib2 >= 5 || lib3 >= 5) && lib4 >= 5)
+        continue;
+
+      if (lib1 >= 5 && !mw[libs[0]]) {
+        mw[libs[0]] = 1;
+        possible_moves[u++] = libs[0];
+        continue;
+      }
+
+      if (lib2 >= 5 && !mw[libs[1]]) {
+        mw[libs[1]] = 1;
+        possible_moves[u++] = libs[1];
+        continue;
+      }
+
+      if (lib3 >= 5 && !mw[libs[2]]) {
+        mw[libs[2]] = 1;
+        possible_moves[u++] = libs[2];
+        continue;
+      }
+
+      if (lib4 >= 5 && !mw[libs[3]]) {
+        mw[libs[3]] = 1;
+        possible_moves[u++] = libs[3];
+        continue;
+      }
+
+      /* No easy escape, try all liberties. */
+      for (let k = 0; k < 4; k++) {
+        if (!mw[libs[k]]) {
+          mw[libs[k]] = 1;
+          possible_moves[u++] = libs[k];
+        }
+      }
+
+      if (b.stackp <= this.backfill2_depth || (be_aggressive && b.stackp <= this.backfill_depth))
+        this.defend_secondary_chain1_moves(adjs[r], moves, 4);
+    }
+
+    for (let v = 0; v < u; v++) {
+      /* We do not wish to consider the move if it can be
+       * immediately recaptured, unless stackp < backfill2_depth.
+       * Beyond backfill2_depth, the necessary capturing move might not
+       * get generated in follow-up for the attacker.
+       * (This currently only makes a difference at stackp == backfill2_depth.)
+       */
+      let xpos = possible_moves[v];
+      if (b.stackp <= this.break_chain_depth
+        || (be_aggressive && b.stackp <= this.backfill_depth)
+        || b.approxlib(xpos, color, 2, null) > 1)
+        /* We use a negative initial score here as we prefer to find
+         * direct defense moves.
+         */
+        this.ADD_CANDIDATE_MOVE(xpos, -2, moves, "break_chain4");
+    }
+  },
+
+  /* This function looks for moves attacking those components
+   * of the surrounding chain of the superstring (see find_superstring
+   * for the definition) which have fewer than liberty_cap liberties,
+   * and which are not adjacent to the string itself, since those
+   * are tested by break_chain_moves.
+   */
+  superstring_break_chain_moves(str, liberty_cap, moves) {
+    const b = this.board
+    let adj = [];
+    let adjs = [];
+    let chain_links3 = [];
+    let num_chain_links3 = 0;
+    let apos = [];
+
+    this.proper_superstring_chainlinks(str, adj, adjs, liberty_cap);
+    for (let k = 0; k < adj; k++) {
+      let liberties = b.countlib(adjs[k]);
+      if (liberties === 1) {
+        b.findlib(adjs[k], 1, apos);
+        this.ADD_CANDIDATE_MOVE(apos[0], 0, moves, "superstring_break_chain");
+      }
+      else if (liberties === 2)
+        this.do_find_break_chain2_efficient_moves(str, adjs[k], moves);
+      else if (liberties === 3)
+        b.chain_links3[num_chain_links3++] = adjs[k];
+    }
+
+    if (num_chain_links3 > 0) {
+      this.do_find_break_chain3_moves(chain_links3, num_chain_links3, moves, 0, "superstring_break_chain-3");
+    }
+  },
 
   /*
    * If `str' points to a group, double_atari_chain2_moves() adds all
@@ -2933,9 +3493,233 @@ export const Reading = {
   /*                Restricted Attack and Defense                     */
   /* ================================================================ */
 
-  restricted_defend1() {},
-  restricted_attack2() {},
-  in_list() {},
+  /* These functions try to attack and defend a string, avoiding moves
+   * from a certain set. It is assumed that as soon as the string gets
+   * three liberties, it is alive.
+   *
+   * These functions can be used to generate backfilling moves as
+   * follows: Suppose that we would like to make atari on a
+   * string, but the atari is not safe until we make a backfilling
+   * move. To find the backfilling move, we make a list of the
+   * liberties of the string under attack, declaring these moves
+   * forbidden. Neither player will play them while the restricted
+   * functions are in effect. We fill the liberty, creating a
+   * string which is under attack, and look for a defensive move
+   * which avoids the forbidden moves. This is the backfilling
+   * move.
+   *
+   * These are minimalist functions capable of reading a ladder
+   * and not much more.
+   */
+
+  /* Given a list of moves, restricted_defend1 tries to find a
+   * move that defends the string (str) with one liberty,
+   * not considering moves from the list.
+   */
+  restricted_defend1(str, move, num_forbidden_moves, forbidden_moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let xpos;
+    let lib = [];
+    const savemove = [0];
+    const savecode = [0];
+    let liberties;
+
+    reading_node_counter++;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 1, str);
+
+    /* (lib) will be the liberty of the string. */
+    liberties = b.findlib(str, 1, lib);
+    b.ASSERT1(liberties === 1, str);
+
+    /* Collect moves to try in the first batch.
+     * 1. First order liberty.
+     * 2. Chain breaking moves.
+     * 3. Moves to set up a snapback.
+     */
+    const moves = new ReadingMoves({
+      num : 1,
+      num_tried : 0
+    })
+    moves.pos[0] = lib[0];
+    moves.score[0] = 0;
+    moves.message[0] = "liberty";
+
+
+    this.break_chain_moves(str, moves);
+    this.set_up_snapback_moves(str, lib, moves);
+    this.order_moves(str, moves, color, 'read_function_name', NO_MOVE);
+
+    for (let k = 0; k < moves.num; k++) {
+      let ko_capture;
+
+      xpos = moves.pos[k];
+      if (this.in_list(xpos, num_forbidden_moves, forbidden_moves))
+        continue;
+      /* To avoid loops with double ko, we do not allow any ko captures,
+       * even legal ones, if the opponent is komaster.
+       */
+      if (b.is_ko(xpos, color, null))
+        ko_capture = 1;
+      else
+        ko_capture = 0;
+
+      if ((b.komaster !== other || !ko_capture) && b.trymove(xpos, color, moves.message[k], str)) {
+        let libs = b.countlib(str);
+        if (libs > 2) {
+          b.popgo();
+          if (move){
+            move[0] = xpos;
+          }
+          return codes.WIN;
+        }
+        if (libs === 2) {
+          let acode;
+
+          if (!ko_capture)
+            acode = this.restricted_attack2(str, null, num_forbidden_moves, forbidden_moves);
+          else
+            acode = this.restricted_attack2(str, null, num_forbidden_moves, forbidden_moves);
+          b.popgo();
+          if (acode === 0) {
+            // SGFTRACE(xpos, WIN, "defense effective");
+            if (move){
+              move[0] = xpos;
+            }
+            return codes.WIN;
+          }
+          /* if the move works with ko we save it, then look for something
+           * better.
+           */
+          this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, xpos);
+        }
+        else
+          b.popgo();
+      }
+      else {
+        let ko_pos = [];
+        if (b.stackp <= this.ko_depth
+          && savecode[0] === 0
+          && (b.komaster === colors.EMPTY || (b.komaster === color && b.kom_pos === xpos))
+          && b.is_ko(xpos, color, ko_pos)
+          && b.tryko(xpos, color, "restricted_defend1-B")) {
+          let libs = b.countlib(str);
+          if (libs > 2) {
+            b.popgo();
+            this.UPDATE_SAVED_KO_RESULT(savecode, savemove, 2, xpos);
+          }
+          else if (libs === 2) {
+            let acode = this.restricted_attack2(str, null, num_forbidden_moves, forbidden_moves);
+            b.popgo();
+            this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, xpos);
+          }
+          else
+            b.popgo();
+        }
+      }
+    }
+
+    if (savecode[0] !== 0) {
+      if (move){
+        move[0] = savemove[0];
+      }
+      // SGFTRACE(savemove, savecode, "saved move");
+      return savecode[0];
+    }
+
+    return 0;
+  },
+
+
+  /* Given a list of moves, restricted_attack2 tries to find a
+   * move that attacks the string (str) with two liberties,
+   * not considering moves from the list.
+   */
+  restricted_attack2(str, move, num_forbidden_moves, forbidden_moves) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let apos;
+    let libs = [];
+    const savemove = [0];
+    const savecode = [0];
+    let liberties;
+
+    // SETUP_TRACE_INFO("restricted_attack2", str);
+    reading_node_counter++;
+
+    str = b.find_origin(str);
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    /* The attack may fail if a boundary string is in atari and cannot
+     * be defended.  First we must try defending such a string.
+     */
+    /* Get the two liberties of (str). */
+    liberties = b.findlib(str, 2, libs);
+    b.ASSERT1(liberties === 2, str);
+
+    for (let k = 0; k < 2; k++) {
+      let ko_pos = [];
+      let ko_capture;
+
+      apos = libs[k];
+      if (this.in_list(apos, num_forbidden_moves, forbidden_moves))
+        continue;
+      /* To avoid loops with double ko, we do not allow any ko captures,
+       * even legal ones, if the opponent is komaster.
+       */
+      if (b.is_ko(apos, other, ko_pos))
+        ko_capture = 1;
+      else
+        ko_capture = 0;
+
+      if ((b.komaster !== color || !ko_capture)
+        && b.trymove(apos, other, "restricted_attack2", str)) {
+        if ((!ko_capture && !this.restricted_defend1(str, null, num_forbidden_moves, forbidden_moves))
+          || (ko_capture && !this.restricted_defend1(str, null, num_forbidden_moves, forbidden_moves))) {
+          b.popgo();
+          // SGFTRACE(apos, WIN, "attack effective");
+          if (move){
+            move[0] = apos;
+          }
+          return codes.WIN;
+        }
+        b.popgo();
+      }
+      else if (savecode[0] === 0
+        && (b.komaster === colors.EMPTY || (b.komaster === other && b.kom_pos === apos))
+        && b.tryko(apos, other, "restricted_attack2")) {
+        if (!this.restricted_defend1(str, null, num_forbidden_moves, forbidden_moves)) {
+          b.popgo();
+          savecode[0] = codes.KO_B;
+          savemove[0] = apos;
+        }
+        else
+          b.popgo();
+      }
+    }
+
+    if (savecode[0] !== 0) {
+      if (move){
+        move[0] = savemove[0];
+      }
+      // SGFTRACE(savemove, savecode, "saved move");
+      return savecode[0];
+    }
+
+    return 0;
+  },
+
+  in_list(move, num_moves, moves) {
+    for (let k = 0; k < num_moves; k++)
+      if (moves[k] === move)
+        return 1;
+    return 0;
+  },
 
   /* The string at (str) is under attack. The moves.num moves in
    * (moves) for color have been deemed interesting in
@@ -3157,16 +3941,303 @@ export const Reading = {
     }
   },
 
-  tune_move_ordering() {},
+  /* Set new values for the move ordering parameters. */
+  tune_move_ordering(params) {
+    for (let k = 0; k < 6; k++) {
+      defend_lib_score[k]                = params[k];
+      if (k < 5){
+        defend_not_adjacent_lib_score[k] = params[k + 6];
+      }
+      defend_capture_score[k]            = params[k + 11];
+      defend_atari_score[k]              = params[k + 17];
+      defend_save_score[k]               = params[k + 23];
+      if (k < 5) {
+        defend_open_score[k]             = params[k + 29];
+        attack_own_lib_score[k]          = params[k + 34];
+      }
+      attack_string_lib_score[k]         = params[k + 39];
+      attack_capture_score[k]            = params[k + 45];
+      attack_save_score[k]               = params[k + 51];
+      if (k < 5){
+        attack_open_score[k]             = params[k + 57];
+      }
+    }
+    defend_not_edge_score                = params[62];
+    attack_not_edge_score                = params[63];
+    attack_ko_score                      = params[64];
+    cannot_defend_penalty                = params[65];
+    safe_atari_score                     = params[66];
 
-  clear_safe_move_cache() {},
-  safe_move() {},
-  does_secure() {},
-  reset_reading_node_counter() {},
-  get_reading_node_counter() {},
+  },
+
+  clear_safe_move_cache() {
+    safe_move_cache_when = []
+  },
+
+  /* safe_move(move, color) checks whether a move at (move) is illegal
+   * or can immediately be captured. If stackp==0 the result is cached.
+   * If the move only can be captured by a ko, it's considered safe.
+   * This may or may not be a good convention.
+   *
+   * For performance reasons, the result of this function is cached.
+   */
+  safe_move(move, color) {
+    const b = this.board
+    let safe = 0;
+
+    if (!safeMoveInitialized) {
+      this.clear_safe_move_cache();
+      safeMoveInitialized = 1;
+    }
+
+    /* If we have this position cached, use the previous value.
+     * Only use cached values when stackp is 0 and reading is not being done
+     * at a modified depth.
+     */
+    if (b.stackp === 0
+      && this.depth_offset === 0
+      && safe_move_cache_when[move] && safe_move_cache_when[move][color -1] === b.position_number)
+      return safe_move_cache[move][color -1];
+
+    /* Otherwise calculate the value... */
+    let ko_move = [];
+    if (b.komaster_trymove(move, color, "safe_move", 0, ko_move, 1)) {
+      safe = REVERSE_RESULT(this.attack(move, null));
+      if (ko_move[0] && safe !== 0){
+        safe = codes.KO_B;
+      }
+      b.popgo();
+    }
+
+    /* ...and store it in the cache.
+     * FIXME: Only store result in cache when we're working at
+     * full depth.
+     *
+     * Comment: This is currently not a problem since no reduced depth
+     * reading is performed.
+     */
+    if (b.stackp === 0 && this.depth_offset === 0) {
+      if(!safe_move_cache_when[move]){
+        safe_move_cache_when[move] = {}
+      }
+      safe_move_cache_when[move][color - 1] = b.position_number;
+      if(!safe_move_cache[move]){
+        safe_move_cache[move] = {}
+      }
+      safe_move_cache[move][color - 1] = safe;
+    }
+
+    return safe;
+  },
+
+  /* Checks if a move by color makes an opponent move at pos a self atari.
+ */
+  does_secure(color, move, pos) {
+    const b = this.board
+    let result = 0;
+    if (b.trymove(move, color, null, NO_MOVE)) {
+      if (b.is_self_atari(pos, b.OTHER_COLOR(color)))
+        result = 1;
+      b.popgo();
+    }
+
+    return result;
+  },
+
+  reset_reading_node_counter() {
+    reading_node_counter = 0;
+  },
+  get_reading_node_counter() {
+    return reading_node_counter;
+  },
   draw_reading_shadow() {},
-  simple_ladder() {},
-  simple_ladder_defend() {},
+
+
+  /* ================================================================ */
+  /*              Code for special purposes.                          */
+  /* ================================================================ */
+
+  /* simple_ladder(str, &move) tries to capture a string (str)
+   * with exactly two liberties under simplified assumptions, which are
+   * adequate in a ladder. The rules are as follows:
+   *
+   * 1. The attacker is allowed to play at each of the two liberties,
+   *    but no other move. If the move was legal, the string now has
+   *    exactly one liberty.
+   * 2. The defender must move out of atari. This can only be done by
+   *    either extending at the liberty or capturing a neighboring
+   *    string which was in atari. All such moves may be tested.
+   * 3. Depending on the resulting number of liberties of the string
+   *    after the defender's move, we value each node as follows:
+   *
+   *    3 or more liberties:           the attack has failed
+   *    2 liberties:                   recurse
+   *    1 liberty:                     the attack has succeeded
+   *
+   *    illegal move for the defender: successful attack
+   *    illegal move for the attacker: failed attack
+   *
+   * Return codes are as usual 0 for failure, WIN for success, KO_A for
+   * a ko where the defender must make the first ko threat and KO_B for
+   * a ko where the attacked has to make the first threat. If the attack
+   * was successful, (*move) contains the attacking move, unless it is a
+   * null pointer.
+   *
+   * The differences compared to the attack2()/defend1() combination for
+   * reading ladders is that this one is a strict ladder reader which
+   * never allows the defender to have more than one liberty when it's
+   * in turn to move. This has a number of consequences.
+   *
+   * 1. This function will miss tactical captures involving other
+   *    techniques than the ladder.
+   *
+   * 2. This function is faster because it gives up faster when the
+   *    ladder doesn't work. In particular it can't branch out in a huge
+   *    tree of exotic variations.
+   *
+   * 3. This function always reads ladders to the very end. There are no
+   *    depth limits or other assumptions to stop reading prematurely.
+   *
+   * 4. If this function returns WIN, it is guaranteed that the defender
+   *    has no way whatsoever to escape, all possibilities are tried.
+   *    The converse is definitely not true.
+   */
+  simple_ladder(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let apos;
+    let libs = [];
+    let savemove = [0];
+    let savecode = [0];
+
+    // SETUP_TRACE_INFO("simple_ladder", str);
+    reading_node_counter++;
+    const moves = new ReadingMoves({
+      num : 0,
+      num_tried : 0
+    })
+
+    str = b.find_origin(str);
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 2, str);
+
+    /* Give up if we attacked depending on ko for too long. */
+    if (b.stackp > this.depth + 20 && b.komaster === b.OTHER_COLOR(b.board[str])) {
+      // SGFTRACE(0, 0, NULL);
+      if (move){
+        move[0] = PASS_MOVE;
+      }
+      return 0;
+    }
+
+    /* Get the two liberties of (str). */
+    b.findlib(str, 2, libs);
+
+    /* If the defender can get enough liberties by playing one of these
+     * two, then we have no choice but to block there and consequently,
+     * it is unnecesary to try the other liberty.
+     */
+
+    if (b.approxlib(libs[0], color, 4, null) <= 3)
+      this.ADD_CANDIDATE_MOVE(libs[1], 0, moves, "simple_ladder");
+    if (b.approxlib(libs[1], color, 4, null) <= 3)
+      this.ADD_CANDIDATE_MOVE(libs[0], 0, moves, "simple_ladder");
+
+    this.order_moves(str, moves, other, 'read_function_name', NO_MOVE);
+
+    for (let k = 0; k < moves.num; k++) {
+      let ko_move = [];
+
+      apos = moves.pos[k];
+      if (b.komaster_trymove(apos, other, moves.message[k], str, ko_move, savecode[0] === 0)) {
+        if (!ko_move[0]) {
+          let dcode = this.simple_ladder_defend(str, null);
+          if (dcode !== codes.WIN) {
+            if (dcode === 0) {
+              b.popgo();
+              // SGFTRACE(apos, WIN, "attack effective");
+              if (move){
+                move[0] = apos;
+              }
+              return codes.WIN;
+            }
+            this.UPDATE_SAVED_KO_RESULT(savecode, savemove, dcode, apos);
+          }
+        }
+        else {
+          if (this.simple_ladder_defend(str, null) !== codes.WIN) {
+            savemove[0] = apos;
+            savecode[0] = codes.KO_B;
+          }
+        }
+        b.popgo();
+      }
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  },
+
+  simple_ladder_defend(str, move) {
+    const b = this.board
+    const color = b.board[str];
+    let xpos;
+    let lib = [];
+    let savemove = [0];
+    let savecode = [0];
+
+    // SETUP_TRACE_INFO("simple_ladder_defend", str);
+    reading_node_counter++;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.countlib(str) === 1, str);
+
+    /* lib will be the liberty of the string. */
+    b.findlib(str, 1, lib);
+
+    const moves = new ReadingMoves({
+      num : 1,
+      num_tried : 0
+    })
+    moves.pos[0] = lib[0];
+    moves.score[0] = 0;
+    moves.message[0] = "liberty";
+
+    this.break_chain_moves(str, moves);
+    this.order_moves(str, moves, color, 'read_function_name', NO_MOVE);
+
+    for (let k = 0; k < moves.num; k++) {
+      let ko_move = [];
+
+      xpos = moves.pos[k];
+      if (b.komaster_trymove(xpos, color, moves.message[k], str, ko_move, savecode[0] === 0)) {
+        let acode;
+        let new_libs = b.countlib(str);
+        if (new_libs > 2)
+          acode = 0;
+        else if (new_libs < 2)
+          acode = codes.WIN;
+        else
+          acode = this.simple_ladder(str, null);
+        b.popgo();
+
+        if (!ko_move[0]){
+          const result = this.CHECK_RESULT(savecode, savemove, acode, xpos, move, "defense effective");
+          if(result !== undefined){
+            return result
+          }
+        }
+        else {
+          if (acode !== codes.WIN) {
+            savemove[0] = xpos;
+            savecode[0] = codes.KO_B;
+          }
+        }
+      }
+    }
+
+    return this.RETURN_RESULT(savecode, savemove, move, "saved move");
+  },
 
 
 }

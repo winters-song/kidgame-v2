@@ -655,6 +655,7 @@ class Board {
     let kpos = [];
     let previous_board_ko_pos = this.board_ko_pos
 
+    this.ASSERT1(typeof is_conditional_ko === 'object', str)
     is_conditional_ko[0] = 0;
     ko_move = this.is_ko(pos, color, kpos)
 
@@ -698,7 +699,7 @@ class Board {
       /* Conditional ko capture, set komaster parameters. */
       if (this.komaster === colors.EMPTY || this.komaster === colors.WEAK_KO) {
         this.set_new_komaster(color);
-        this.set_new_kom_pos(kpos);
+        this.set_new_kom_pos(kpos[0]);
         return 1;
       }
     }
@@ -715,8 +716,7 @@ class Board {
         || (this.komaster === colors.GRAY_WHITE && color === colors.WHITE)
         || (this.komaster === colors.GRAY_BLACK && color === colors.BLACK))
         && (this.IS_STONE(this.board[this.kom_pos])
-          || (!this.is_ko(this.kom_pos, other, null)
-            && this.is_suicide(this.kom_pos, other))))) {
+          || (!this.is_ko(this.kom_pos, other, null) && this.is_suicide(this.kom_pos, other))))) {
         this.set_new_komaster(colors.EMPTY);
         this.set_new_kom_pos(NO_MOVE);
       }
@@ -737,7 +737,7 @@ class Board {
     }
     else if (this.komaster === color) {
       /* This is where we update kom_pos after a nested capture. */
-      this.set_new_kom_pos(kpos);
+      this.set_new_kom_pos(kpos[0]);
     }
     else {
       /* We can reach here when komaster is EMPTY or WEAK_KO. If previous
@@ -2536,6 +2536,9 @@ class Board {
         }
         else {
           number_opponent[0]++;
+          if(!this.string[s]){
+            debugger;
+          }
           if (this.string[s].liberties === 1) {
             captured_stones[0] += this.string[s].size;
             for (let r = 0; r < this.string[s].neighbors; r++) {

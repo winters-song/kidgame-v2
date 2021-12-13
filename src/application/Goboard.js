@@ -39,7 +39,7 @@ function Puzzle (props){
 
     changeData(player, sgf, 1)
     window.player = player
-    // player.genmove()
+    player.genmove()
   }, [])
 
   return (
