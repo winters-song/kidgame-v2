@@ -44,7 +44,7 @@ export const Worm = {
 
     b.ASSERT1(b.stackp === 0, null);
 
-    // /* Count liberties of different orders and initialize cutstone fields. */
+    /* Count liberties of different orders and initialize cutstone fields. */
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.IS_STONE(b.board[pos]) && this.is_worm_origin(pos, pos)) {
         let lib1 = [], 
@@ -409,30 +409,30 @@ export const Worm = {
     if (!this.disable_threat_computation){
       this.find_worm_threats();
     }
-    //
-    // /* Identify INESSENTIAL strings.
-    //  *
-    //  * These are defined as surrounded strings which have no life
-    //  * potential unless part of their surrounding chain can be captured.
-    //  * We give a conservative definition of inessential:
-    //  *  - the genus must be zero
-    //  *  - there can no second order liberties
-    //  *  - there can be no more than two edge liberties
-    //  *  - if it is removed from the board, the remaining cavity has
-    //  *    border color the opposite color of the string
-    //  *  - it contains at most two edge vertices.
-    //  *
-    //  * If we get serious about identifying seki, we might want to add:
-    //  *
-    //  *  - if it has fewer than 4 liberties it is tactically dead.
-    //  *
-    //  * The last condition is helpful in excluding strings which are
-    //  * alive in seki.
-    //  *
-    //  * An inessential string can be thought of as residing inside the
-    //  * opponent's eye space.
-    //  */
-    //
+    
+    /* Identify INESSENTIAL strings.
+     *
+     * These are defined as surrounded strings which have no life
+     * potential unless part of their surrounding chain can be captured.
+     * We give a conservative definition of inessential:
+     *  - the genus must be zero
+     *  - there can no second order liberties
+     *  - there can be no more than two edge liberties
+     *  - if it is removed from the board, the remaining cavity has
+     *    border color the opposite color of the string
+     *  - it contains at most two edge vertices.
+     *
+     * If we get serious about identifying seki, we might want to add:
+     *
+     *  - if it has fewer than 4 liberties it is tactically dead.
+     *
+     * The last condition is helpful in excluding strings which are
+     * alive in seki.
+     *
+     * An inessential string can be thought of as residing inside the
+     * opponent's eye space.
+     */
+    
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.IS_STONE(b.board[pos])
         && this.worm[pos].origin === pos

@@ -162,9 +162,15 @@ export default class Genmove {
   //   show_dragons();
   }
 
+  silent_examine_position() {}
+
   genmove(color, value) {
     return this.do_genmove(color, 0.4, null, value) || PASS_MOVE;
   }
+
+  collect_move_reasons() {}
+
+  monte_carlo_genmove() {}
 
   /*
  * Perform the actual move generation.
@@ -175,7 +181,7 @@ export default class Genmove {
  * overlooks them).
  */
   do_genmove(color, pure_threat_value, allowed_moves, value) {
-    // let average_score, pessimistic_score, optimistic_score;
+    let average_score, pessimistic_score, optimistic_score;
     // let save_verbose;
     // let save_depth;
     let move;
@@ -217,7 +223,63 @@ export default class Genmove {
     this.examine_position(EXAMINE_ALL, 0);
     // time_report(1, "examine position", NO_MOVE, 1.0);
 
+
+    /* The score will be used to determine when we are safely
+   * ahead. So we want the most conservative score.
+   *
+   * We always want to have the score from our point of view. So
+   * negate it if we are black.
+   */
+  if (color === colors.WHITE) {
+    pessimistic_score = this.black_score;
+    optimistic_score = this.white_score;
+  }
+  else {
+    pessimistic_score = -this.white_score;
+    optimistic_score = -this.black_score;
+  }
+
+  if (color === colors.WHITE) {
+    average_score = (this.white_score + this.black_score)/ 2.0;
+  }
+  else{
+    average_score = -(this.white_score + this.black_score)/ 2.0;
+  }
+  // choose_strategy(color, average_score, game_status(color));
+
     // ......
     return move;
   }
+
+  move_considered() {}
+
+  revise_semeai(){}
+
+  revise_thrashing_dragon() {}
+
+  find_mirror_move() {}
+
+  compute_scores() {}
+
+  break_mirror_go() {}
+
+  should_resign() {}
+
+
+/*********************************************************************\
+ *                Mark a limited search area                         *
+\*********************************************************************/
+
+/* Activate or deactivate search limit. */
+  set_limit_search(value) {}
+
+  set_search_diamond() {}
+
+  reset_search_mask() {}
+
+  set_search_mask() {}
+
+  draw_search_area() {}
+
+  within_search_area() {}
 }
