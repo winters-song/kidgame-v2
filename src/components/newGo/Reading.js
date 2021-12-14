@@ -23,16 +23,19 @@ const MAX_MOVES = 50
 /* Parameters used in the ordering of moves to try in the tactical
  * reading.
  */
-/*                                              0   1   2   3   4  >4  */
+/*                                    0   1   2   3   4  >4  */
 let defend_lib_score              = [-5, -4,  0,  3,  5, 50];
 let defend_not_adjacent_lib_score = [ 0,  0,  2,  3,  5];
 let defend_capture_score          = [ 0,  6,  9, 13, 18, 24];
 let defend_atari_score            = [ 0,  2,  4,  6,  7, 8];
 let defend_save_score             = [ 0,  3,  6,  8, 10, 12];
 let defend_open_score             = [ 0,  1,  2,  3,  4];
+// 进攻获得气数
 let attack_own_lib_score          = [10, -4,  2,  3,  4];
 let attack_string_lib_score       = [-5,  2,  3,  7, 10, 19];
+// 进攻提掉棋子
 let attack_capture_score          = [-4,  4, 10, 15, 20, 25];
+// 进攻拯救棋子
 let attack_save_score             = [ 0, 10, 13, 18, 21, 24];
 let attack_open_score             = [ 0,  0,  2,  4,  4];
 let defend_not_edge_score         = 5;
@@ -121,7 +124,8 @@ export const Reading = {
       let ko_move = [];
       let dpos = moves.pos[k];
 
-      if (b.komaster_trymove(dpos, color, moves.message[k], str, ko_move, b.stackp <= this.ko_depth && savecode[0] === 0)) {
+      if (b.komaster_trymove(dpos, color, moves.message[k], str, ko_move, b.stackp <= this.ko_depth
+        && savecode[0] === 0)) {
         const acode = this.do_attack(str, attack_hint);
         b.popgo();
 
@@ -160,7 +164,7 @@ export const Reading = {
     && b.komaster_trymove(apos, other, moves.message[k], str, ko_move, b.stackp <= this.ko_depth && savecode === 0)) {
         let dcode = this.do_find_defense(str, defense_hint);
 
-        if (REVERSE_RESULT(dcode) > savecode && this.do_attack(str, null)) {
+        if (REVERSE_RESULT(dcode) > savecode[0] && this.do_attack(str, null)) {
           if (!ko_move[0]) {
             if (dcode === 0) {
               b.popgo();
@@ -179,8 +183,9 @@ export const Reading = {
         b.popgo();
       }
 
-      if (no_deep_branching && b.stackp >= this.branch_depth)
+      if (no_deep_branching && b.stackp >= this.branch_depth) {
         return this.RETURN_RESULT(savecode, savemove, move, "branching limit");
+      }
     }
 
     moves.num_tried = moves.num;
@@ -756,7 +761,7 @@ export const Reading = {
       this.special_rescue2_moves(str, libs, moves);
     }
 
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     let result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -792,7 +797,7 @@ export const Reading = {
     this.special_rescue4_moves(str, libs, moves);
 
     /* Only order and test the new set of moves. */
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -827,7 +832,7 @@ export const Reading = {
       this.break_chain4_moves(str, moves, be_aggressive);
 
     /* Only order and test the new set of moves. */
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     result = this.DEFEND_TRY_MOVES(0, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -884,7 +889,7 @@ export const Reading = {
       this.hane_rescue_moves(str, libs, moves);
     }
 
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     let result = this.DEFEND_TRY_MOVES(1, suggest_move,  str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -914,7 +919,7 @@ export const Reading = {
     }
 
     /* Only order and test the new set of moves. */
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return
@@ -933,7 +938,7 @@ export const Reading = {
     }
 
     /* Only order and test the new set of moves. */
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     result = this.DEFEND_TRY_MOVES(1, suggest_move);
     if(result !== undefined){
       return result
@@ -993,7 +998,7 @@ export const Reading = {
       this.squeeze_moves(str, moves);
     }
 
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     let result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -1006,7 +1011,7 @@ export const Reading = {
       this.bamboo_rescue_moves(str, liberties, libs, moves);
     }
 
-    this.order_moves(str, moves, color, 'read_function_name', move);
+    this.order_moves(str, moves, color, 'read_function_name', move[0]);
     result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
@@ -2048,8 +2053,8 @@ export const Reading = {
       for (let k = 0; k < liberties; k++) {
         apos[0] = libs[k];
         if (!b.is_self_atari(apos[0], other) && b.trymove(apos[0], other, "attack1-C")) {
-          console.info("attack1-C")
-          b.print_board()
+          // console.info("attack1-C")
+          // b.print_board()
           // 防守时回填
           let dcode = this.do_find_defense(str, null);
           if (dcode !== codes.WIN && this.do_attack(str, null)) {
@@ -2287,7 +2292,7 @@ export const Reading = {
           throw new Error('abort')
       } /* switch (pass) */
 
-      this.order_moves(str, moves, other, 'read_function_name', move);
+      this.order_moves(str, moves, other, 'read_function_name', move[0]);
       const result = this.ATTACK_TRY_MOVES(0, suggest_move, str, move, other, moves, savemove, savecode);
       if(result !== undefined){
         return result
@@ -2349,11 +2354,12 @@ export const Reading = {
             */
           if (b.stackp <= this.backfill_depth
           || (b.stackp <= this.depth && !b.has_neighbor(apos, other))
-          || !b.is_self_atari(apos, other))
+          || !b.is_self_atari(apos, other)) {
             this.ADD_CANDIDATE_MOVE(apos, 0, moves, "liberty");
-    
-            this.edge_closing_backfill_moves(str, apos, moves);
-            /* Look for edge blocking moves. */
+          }
+
+          this.edge_closing_backfill_moves(str, apos, moves);
+          /* Look for edge blocking moves. */
           this.edge_block_moves(str, apos, moves);
         }
     
@@ -2402,7 +2408,7 @@ export const Reading = {
         throw new Error('abort')
       }
 
-      this.order_moves(str, moves, other, 'read_function_name', move);
+      this.order_moves(str, moves, other, 'read_function_name', move[0]);
       const result = this.ATTACK_TRY_MOVES(1, suggest_move, str, move, other, moves, savemove, savecode);
       if(result !== undefined){
         return result
@@ -2494,7 +2500,7 @@ export const Reading = {
           throw new Error("abort")
       }
 
-      this.order_moves(str, moves, other, 'read_function_name', move);
+      this.order_moves(str, moves, other, 'read_function_name', move[0]);
       const result = this.ATTACK_TRY_MOVES(1, suggest_move, str, move, other, moves, savemove, savecode);
       if(result !== undefined){
         return result
@@ -2524,6 +2530,7 @@ export const Reading = {
    *
    * even though they are not capping moves.
    */
+  // 小尖：diagonal move
   find_cap_moves(str, moves) {
     const b = this.board
     const libs = []
@@ -2782,7 +2789,7 @@ export const Reading = {
    * where X has exactly 2 liberties.
    *
    */
-  // 托退
+  // 退
   draw_back_moves(str, moves) {
     const b = this.board
     let adj, adjs = [];
@@ -3760,20 +3767,20 @@ export const Reading = {
        * find. Friendly and opponent stones are related to color, i.e.
        * the player to move, not to the color of the string.
        */
-      let number_edges       = [0]; /* outside board */
-      let number_same_string = [0]; /* the string being attacked */
-      let number_own         = [0]; /* friendly stone */
-      let number_opponent    = [0]; /* opponent stone */
-      let captured_stones    = [0]; /* number of stones captured by this move */
-      let threatened_stones  = [0]; /* number of stones threatened by this move */
-      let saved_stones       = [0]; /* number of stones in atari saved */
-      let number_open        = [0]; /* empty intersection */
+
+      let data = {
+        number_edges       :0, /* outside board */
+        number_same_string :0, /* the string being attacked */
+        number_own         :0, /* friendly stone */
+        number_opponent    :0, /* opponent stone */
+        captured_stones    :0, /* number of stones captured by this move */
+        threatened_stones  :0, /* number of stones threatened by this move */
+        saved_stones       :0, /* number of stones in atari saved */
+        number_open        :0, /* empty intersection */
+      }
 
       /* We let the incremental_board code do the heavy work. */
-      b.incremental_order_moves(move, color, str,
-        number_edges, number_same_string, number_own,
-        number_opponent, captured_stones, threatened_stones,
-        saved_stones, number_open);
+      b.incremental_order_moves(move, color, str, data);
 
       /* Different score strategies depending on whether the move is
        * attacking or defending the string.
@@ -3787,7 +3794,7 @@ export const Reading = {
          */
 
         let libs = b.approxlib(move, color, 10, null);
-        if (number_same_string > 0) {
+        if (data.number_same_string > 0) {
           if (libs > 5 || (libs === 4 && b.stackp > this.fourlib_depth))
             moves.score[r] += defend_lib_score[5] + (libs - 4);
           else
@@ -3805,34 +3812,35 @@ export const Reading = {
 
         /* 2) Add the number of open liberties near the move to its score. */
         // gg_assert(number_open <= 4);
-        moves.score[r] += defend_open_score[number_open];
+        moves.score[r] += defend_open_score[data.number_open];
 
         /* 3) Add a bonus if the move is not on the edge.
          */
-        if (number_edges === 0 || captured_stones > 0)
+        if (data.number_edges === 0 || data.captured_stones > 0)
           moves.score[r] += defend_not_edge_score;
 
         /* 4) Add thrice the number of captured stones. */
-        if (captured_stones <= 5)
-          moves.score[r] += defend_capture_score[captured_stones];
+        if (data.captured_stones <= 5)
+          moves.score[r] += defend_capture_score[data.captured_stones];
         else
-          moves.score[r] += defend_capture_score[5] + captured_stones;
+          moves.score[r] += defend_capture_score[5] + data.captured_stones;
 
         /* 5) Add points for stones put into atari, unless this is a
          *    self atari.
          */
-        if (libs + captured_stones > 1) {
-          if (threatened_stones <= 5)
-            moves.score[r] += defend_atari_score[threatened_stones];
+        if (libs + data.captured_stones > 1) {
+          if (data.threatened_stones <= 5)
+            moves.score[r] += defend_atari_score[data.threatened_stones];
           else
-            moves.score[r] += defend_atari_score[5] + threatened_stones;
+            moves.score[r] += defend_atari_score[5] + data.threatened_stones;
         }
 
         /* 6) Add a bonus for saved stones. */
-        if (saved_stones <= 5)
-          moves.score[r] += defend_save_score[saved_stones];
-        else
+        if (data.saved_stones <= 5){
+          moves.score[r] += defend_save_score[data.saved_stones];
+        } else{
           moves.score[r] += defend_save_score[5];
+        }
       }
       else {
         /* Attack move.
@@ -3846,7 +3854,7 @@ export const Reading = {
         }
         moves.score[r] += attack_own_lib_score[libs];
 
-        if (libs === 0 && captured_stones === 1){
+        if (libs === 0 && data.captured_stones === 1){
           moves.score[r] += attack_ko_score;
         }
 
@@ -3856,8 +3864,8 @@ export const Reading = {
          *    self-ataris are also ok since they may be snapbacks, but
          *    only if a single stone is sacrificed.
          */
-        if ((libs + captured_stones > 1 || (string_libs <= 2 && number_own === 0))
-          && number_same_string > 0) {
+        if ((libs + data.captured_stones > 1 || (string_libs <= 2 && data.number_own === 0))
+          && data.number_same_string > 0) {
           let safe_atari;
           let liberties = b.approxlib(move, string_color, 5, null);
           if (liberties > 5 || (liberties === 4 && b.stackp > this.fourlib_depth)){
@@ -3865,11 +3873,11 @@ export const Reading = {
           }
           moves.score[r] += attack_string_lib_score[liberties];
 
-          safe_atari = (string_libs <= 2 && libs + captured_stones > 1);
+          safe_atari = (string_libs <= 2 && libs + data.captured_stones > 1);
           /* The defender can't play here without getting into atari, so
                  * we probably souldn't either.
            */
-          if (liberties === 1 && saved_stones === 0 && !safe_atari){
+          if (liberties === 1 && data.saved_stones === 0 && !safe_atari){
             moves.score[r] += cannot_defend_penalty;
           }
 
@@ -3883,26 +3891,30 @@ export const Reading = {
 
         /* 3) Add the number of open liberties near the move to its score. */
         // gg_assert(number_open <= 4);
-        moves.score[r] += attack_open_score[number_open];
+        moves.score[r] += attack_open_score[data.number_open];
 
         /* 4) Add a bonus if the move is not on the edge. */
-        if (number_edges === 0)
+        if (data.number_edges === 0){
           moves.score[r] += attack_not_edge_score;
+        }
 
         /* 5) Add twice the number of captured stones. */
-        if (captured_stones <= 5)
-          moves.score[r] += attack_capture_score[captured_stones];
-        else
+        if (data.captured_stones <= 5){
+          moves.score[r] += attack_capture_score[data.captured_stones];
+        } else {
           moves.score[r] += attack_capture_score[5];
+        }
 
         /* 6) Add a bonus for saved stones. */
-        if (saved_stones <= 5)
-          moves.score[r] += attack_save_score[saved_stones];
-        else
+        if (data.saved_stones <= 5){
+          moves.score[r] += attack_save_score[data.saved_stones];
+        } else {
           moves.score[r] += attack_save_score[5];
+        }
       }
-      if (moves.pos[r] === killer)
+      if (moves.pos[r] === killer){
         moves.score[r] += 50;
+      }
     }
 
     /* Now sort the moves.  We use selection sort since this array will

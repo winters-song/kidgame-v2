@@ -62,7 +62,7 @@ export class Hash{
   recalc (hd, p, ko_pos) {
     hd.hashval = 0
 
-    console.log(this.BOARDMIN)
+    // console.log(this.BOARDMIN)
     for (let pos = this.BOARDMIN; pos < this.BOARDMAX; pos++) {
       if (p[pos] === colors.WHITE) {
         HashData.xor(hd, this.white_hash[pos]);

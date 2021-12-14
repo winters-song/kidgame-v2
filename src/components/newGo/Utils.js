@@ -202,6 +202,39 @@ export const Utils = {
     }
   },
 
+  /* Find the stones of an extended string, where the extensions are
+   * through the following kinds of connections:
+   *
+   * 1. Solid connections (just like ordinary string).
+   *
+   *    OO
+   *
+   * 2. Diagonal connection or one space jump through an intersection
+   *    where an opponent move would be suicide or self-atari.
+   *
+   *    ...
+   *    O.O
+   *    XOX
+   *    X.X
+   *
+   * 3. Bamboo joint.
+   *
+   *    OO
+   *    ..
+   *    OO
+   *
+   * 4. Diagonal connection where both adjacent intersections are empty.
+   *
+   *    .O
+   *    O.
+   *
+   * 5. Connection through adjacent or diagonal tactically captured stones.
+   *    Connections of this type are omitted when the superstring code is
+   *    called from reading.c, but included when the superstring code is
+   *    called from owl.c
+   */
+
+
   /* This function computes the superstring at (str) as described above,
    * but omitting connections of type 5. Then it constructs a list of
    * liberties of the superstring which are not already liberties of

@@ -693,6 +693,11 @@ export const Worm = {
 
     /* 1. Start with finding attack points. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+
+      // if(str !== 55){
+      //   continue;
+      // }
+
       if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str)){
         continue;
       }
@@ -716,6 +721,7 @@ export const Worm = {
 
     console.log('nodes:', this.get_reading_node_counter())
     b.ASSERT1(b.stackp === 0, null);
+    return
 
     /* 2. Use pattern matching to find a few more attacks. */
     this.find_attack_patterns();
@@ -723,6 +729,7 @@ export const Worm = {
 
     /* 3. Now find defense moves. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+
       if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
         continue;
     

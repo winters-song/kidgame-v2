@@ -2508,48 +2508,54 @@ class Board {
   /* Help collect the data needed by order_moves() in reading.c.
    * It's the caller's responsibility to initialize the result parameters.
    */
-  incremental_order_moves(move, color, str,
-    number_edges, number_same_string,number_own, number_opponent,
-    captured_stones, threatened_stones, saved_stones, number_open) {
+  incremental_order_moves(move, color, str, data) {
 
     this.string_mark++;
 
     for(let i in directions) {
       const p = this[directions[i]](move)
-
+      // 边界
       if (!this.ON_BOARD(p)){
-        number_edges[0]++;
+        data.number_edges++;
       }
+      // 无棋子
       else if (this.board[p] === colors.EMPTY){
-        number_open[0]++;
+        data.number_open++;
       }
       else {
         const s = this.string_number[p];
+        // 同棋串
         if (this.string_number[str] === s){
-          number_same_string[0]++;
+          data.number_same_string++;
         }
+        // 我方
         if (this.board[p] === color) {
-          number_own[0]++;
+          data.number_own++;
+          // 拯救棋子
           if (this.string[s].liberties === 1){
-            saved_stones[0] += this.string[s].size;
+            data.saved_stones += this.string[s].size;
           }
         }
         else {
-          number_opponent[0]++;
+          // 对方棋子
+          data.number_opponent++;
           if(!this.string[s]){
             debugger;
           }
+          // 可提棋子
           if (this.string[s].liberties === 1) {
-            captured_stones[0] += this.string[s].size;
+            data.captured_stones += this.string[s].size;
             for (let r = 0; r < this.string[s].neighbors; r++) {
               let t = this.string[this.string_neighbors[s].list[r]];
+              // 提掉对方棋子同时又拯救了我方棋子
               if (t.liberties === 1){
-                saved_stones[0] += t.size;
+                data.saved_stones += t.size;
               }
             }
           }
+          // 威胁棋子，（对方2口气，可打）
           else if (this.string[s].liberties === 2 && this.UNMARKED_STRING(p)) {
-            threatened_stones[0] += this.string[s].size;
+            data.threatened_stones += this.string[s].size;
             this.MARK_STRING(p);
           }
         }
