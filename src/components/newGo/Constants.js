@@ -17,6 +17,13 @@ export const colors  = {
   NUM_KOMASTER_STATES: 7
 };
 
+
+/* Used in matchpat.c. Have to be different from WHITE, BLACK. */
+export const matchpat = {
+  ANCHOR_COLOR : 6,
+  ANCHOR_OTHER : 7
+}
+
 export const codes = {
   WIN : 5,
   KO_A: 4,

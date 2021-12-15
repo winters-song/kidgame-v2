@@ -1,6 +1,6 @@
 import {
   codes,
-  colors, NO_MOVE
+  colors, matchpat, NO_MOVE
 } from './Constants'
 import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
 
@@ -442,7 +442,7 @@ export const Worm = {
         && this.worm[pos].lunch === NO_MOVE) {
         let edge = [];
         let border_color = this.examine_cavity(pos, edge);
-        if (border_color != colors.GRAY && edge[0] < 3) {
+        if (border_color !== colors.GRAY && edge[0] < 3) {
           // DEBUG(DEBUG_WORMS, "Worm %1m identified as inessential.\n", pos);
           this.worm[pos].inessential = 1;
           this.propagate_worm(pos);
@@ -714,7 +714,7 @@ export const Worm = {
 
       const acode = this.attack(str, attack_point);
       if (acode !== 0) {
-        // DEBUG(DEBUG_WORMS, "worm at %1m can be attacked at %1m\n", str, attack_point);
+        console.log(`worm at ${str} can be attacked at ${attack_point}`);
         this.change_attack(str, attack_point[0], acode);
       }
     }
@@ -1008,8 +1008,19 @@ export const Worm = {
   markcomponent() {},
   examine_cavity() {},
   cavity_recurse() {},
-  find_attack_patterns() {},
-  attack_callback() {},
+
+  /* Find attacking moves by pattern matching, for both colors. */
+  find_attack_patterns() {
+    this.matchpat(this.attack_callback, matchpat.ANCHOR_OTHER, this.attpat_db, null, null);
+  },
+
+  /* Try to attack every X string in the pattern, whether there is an attack
+   * before or not. Only exclude already known attacking moves.
+   */
+  attack_callback(anchor, color, pattern, ll, data) {
+
+  },
+
   find_defense_patterns() {},
   defense_callback() {},
   get_lively_stones() {},

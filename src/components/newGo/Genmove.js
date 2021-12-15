@@ -1,4 +1,5 @@
 import {
+  colors,
   DEFAULT_LEVEL, NO_MOVE, PASS_MOVE
 } from './Constants'
 import {Globals} from "./Globals";
@@ -9,6 +10,7 @@ import {Reading} from "./Reading";
 import {MoveList} from "./MoveList";
 import {Persistent} from "./Persistent";
 import {Cache} from "./Cache"
+import {dragon_status} from "./Liberty";
 
 // const EXAMINE_WORMS =               1
 // const EXAMINE_INITIAL_INFLUENCE =   2
@@ -168,7 +170,14 @@ export default class Genmove {
     return this.do_genmove(color, 0.4, null, value) || PASS_MOVE;
   }
 
-  collect_move_reasons() {}
+  collect_move_reasons(color) {
+    this.worm_reasons(color);
+    this.semeai_move_reasons(color);
+    this.owl_reasons(color);
+    this.cut_reasons(color);
+    this.break_in_move_reasons(color);
+    this.unconditional_move_reasons(color);
+  }
 
   monte_carlo_genmove() {}
 
@@ -181,12 +190,13 @@ export default class Genmove {
  * overlooks them).
  */
   do_genmove(color, pure_threat_value, allowed_moves, value) {
+    const b = this.board
     let average_score, pessimistic_score, optimistic_score;
-    // let save_verbose;
-    // let save_depth;
+    let save_verbose;
+    let save_depth;
     let move;
     let dummy_value;
-    // let use_thrashing_dragon_heuristics = 0;
+    let use_thrashing_dragon_heuristics = 0;
 
     if (!value){
       value = dummy_value;
@@ -208,7 +218,7 @@ export default class Genmove {
     /* Store the depth value so we can check that it hasn't changed when
      * we leave this function.
      */
-    // save_depth = this.depth;
+    save_depth = this.depth;
 
     /* If in mirror mode, try to find a mirror move. */
     // if (play_mirror_go && (mirror_stones_limit < 0 || stones_on_board(WHITE | BLACK) <= mirror_stones_limit)
@@ -225,29 +235,109 @@ export default class Genmove {
 
 
     /* The score will be used to determine when we are safely
-   * ahead. So we want the most conservative score.
-   *
-   * We always want to have the score from our point of view. So
-   * negate it if we are black.
-   */
-  if (color === colors.WHITE) {
-    pessimistic_score = this.black_score;
-    optimistic_score = this.white_score;
-  }
-  else {
-    pessimistic_score = -this.white_score;
-    optimistic_score = -this.black_score;
-  }
+     * ahead. So we want the most conservative score.
+     *
+     * We always want to have the score from our point of view. So
+     * negate it if we are black.
+     */
+    if (color === colors.WHITE) {
+      pessimistic_score = this.black_score;
+      optimistic_score = this.white_score;
+    }
+    else {
+      pessimistic_score = -this.white_score;
+      optimistic_score = -this.black_score;
+    }
 
-  if (color === colors.WHITE) {
-    average_score = (this.white_score + this.black_score)/ 2.0;
-  }
-  else{
-    average_score = -(this.white_score + this.black_score)/ 2.0;
-  }
-  // choose_strategy(color, average_score, game_status(color));
+    if (color === colors.WHITE) {
+      average_score = (this.white_score + this.black_score)/ 2.0;
+    }
+    else{
+      average_score = -(this.white_score + this.black_score)/ 2.0;
+    }
+    // choose_strategy(color, average_score, game_status(color));
 
-    // ......
+    b.ASSERT1(b.stackp === 0, null);
+
+    /*
+     * Ok, information gathering is complete. Now start to find some moves!
+     */
+    /* Pick up moves that we know of already. */
+    // save_verbose = this.verbose;
+    // if (this.verbose > 0){
+    //   this.verbose--;
+    // }
+    // this.collect_move_reasons(color);
+    // this.verbose = save_verbose;
+    // time_report(1, "generate move reasons", NO_MOVE, 1.0);
+
+    /* Try to find empty corner moves. */
+    // this.fuseki(color);
+    // b.ASSERT1(this.stackp === 0, null);
+
+    /* Look for moves to break mirror play by the opponent. */
+    this.break_mirror_go(color);
+
+    /* If we are ahead by 5 points or more, consider a thrashing
+     * dragon dangerous and change its status from DEAD to
+     * UNKNOWN. Otherwise, pretend there is no thrashing dragon.
+     */
+    // if (!doing_scoring) {
+    //   use_thrashing_dragon_heuristics = this.revise_thrashing_dragon(color, pessimistic_score, 5.0);
+    // }
+
+    /* The general pattern database. */
+    // shapes(color);
+    // time_report(1, "shapes", NO_MOVE, 1.0);
+    // b.ASSERT1(this.stackp === 0, null);
+
+    /* Look for combination attacks and defenses against them. */
+    // this.combinations(color);
+    // time_report(1, "combinations", NO_MOVE, 1.0);
+    // b.ASSERT1(this.stackp === 0, null);
+
+
+    /* Review the move reasons and estimate move values. */
+    // if (review_move_reasons(&move, value, color,
+    //   pure_threat_value, pessimistic_score, allowed_moves,
+    //   use_thrashing_dragon_heuristics))
+    // TRACE("Move generation likes %1m with value %f\n", move, *value);
+    // gg_assert(stackp == 0);
+    // time_report(1, "review move reasons", NO_MOVE, 1.0);
+
+
+    /* If the move value is 6 or lower, we look for endgame patterns too. */
+    // if (*value <= 6.0 && !disable_endgame_patterns) {
+    //   endgame_shapes(color);
+    //   endgame(color);
+    //   gg_assert(stackp == 0);
+    //   if (review_move_reasons(&move, value, color, pure_threat_value,
+    //     pessimistic_score, allowed_moves,
+    //     use_thrashing_dragon_heuristics))
+    //   TRACE("Move generation likes %1m with value %f\n", move, *value);
+    //   gg_assert(stackp == 0);
+    //   time_report(1, "endgame", NO_MOVE, 1.0);
+    // }
+
+    /* If no move found yet, revisit any semeai and change the
+    * status of the opponent group from DEAD to UNKNOWN, then
+    * run shapes and endgame_shapes again. This may turn up a move.
+    */
+    // if (move === PASS_MOVE) {
+    //   if (this.revise_semeai(color)) {
+    //     this.shapes(color);
+    //     this.endgame_shapes(color);
+    //     if (this.review_move_reasons(move, value, color, pure_threat_value,
+    //       pessimistic_score, allowed_moves, use_thrashing_dragon_heuristics)) {
+    //       // TRACE("Upon reconsideration move generation likes %1m with value %f\n", move, *value);
+    //     }
+    //   }
+    // }
+
+    b.ASSERT1(b.stackp === 0);
+    b.ASSERT1(b.test_gray_border() < 0);
+    b.ASSERT1(this.depth === save_depth);
+
     return move;
   }
 
@@ -255,13 +345,81 @@ export default class Genmove {
 
   revise_semeai(){}
 
-  revise_thrashing_dragon() {}
+  /* If the opponent's last move added a stone to a dead dragon,
+   * revise it's status to UNKNOWN. This will cause genmove to
+   * generate moves restraining the dragon. We only do this if
+   * we are ahead by 'advantage', and no owl threat has been found.
+   */
+  revise_thrashing_dragon(color, our_score, advantage) {
+    const b = this.board
+    let safe_stones = [];
+    let strength = [];
+
+    /* Trust the owl code's opinion if we are behind. */
+    if (our_score < advantage){
+      return 0;
+    }
+
+    if (this.disable_threat_computation
+      || !this.thrashing_dragon
+      || this.dragon[this.thrashing_dragon].status !== dragon_status.DEAD)
+      return 0;
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+      if (b.ON_BOARD(pos) && this.thrashing_stone[pos]
+        && this.worm[pos].unconditional_status !== dragon_status.DEAD) {
+        this.dragon[pos].status = dragon_status.UNKNOWN;
+        this.DRAGON2(pos).safety = dragon_status.ALIVE;
+      }
+
+    this.set_strength_data(b.OTHER_COLOR(color), safe_stones, strength);
+    this.compute_influence(b.OTHER_COLOR(color), safe_stones, strength, this.OPPOSITE_INFLUENCE(color),
+      NO_MOVE, "revised thrashing dragon");
+    this.compute_refined_dragon_weaknesses();
+
+    return 1;
+  }
 
   find_mirror_move() {}
 
-  compute_scores() {}
+  /* Computer two territory estimates: for *upper, the status of all
+   * cricital stones gets resolved in White's favor; vice verso for
+   * black.
+   */
+  compute_scores(use_chinese_rules) {
+    let safe_stones = [];
+    let strength = [];
 
-  break_mirror_go() {}
+    // dragon.c
+    this.set_strength_data(colors.WHITE, safe_stones, strength);
+    // influence.c
+    this.compute_influence(colors.EMPTY, safe_stones, strength, this.move_influence, NO_MOVE, "White territory estimate");
+    this.white_score = this.influence_score(this.move_influence, use_chinese_rules);
+    // dragon.c
+    this.set_strength_data(colors.BLACK, safe_stones, strength);
+    this.compute_influence(colors.EMPTY, safe_stones, strength, this.move_influence, NO_MOVE, "White territory estimate");
+    this.black_score = this.influence_score(this.move_influence, use_chinese_rules);
+
+  }
+
+  /* Detect if a white opponent has played mirror go for at least 10
+   * moves and if so play on tengen.
+   *
+   * Mirror breaking moves in other situations are handled by patterns
+   * in patterns.db.
+   */
+  break_mirror_go(color) {
+    const b = this.board
+    let tengen = b.POS((b.board_size - 1) / 2, (b.board_size - 1) / 2);
+    if (b.board[tengen] === colors.EMPTY
+      && color === colors.BLACK
+      && b.stones_on_board(colors.BLACK | colors.WHITE) > 10
+      && this.test_symmetry_after_move(tengen, color, 1)) {
+      // move_reasons.c
+      this.set_minimum_move_value(tengen, 30.0);
+      // TRACE("Play %1m to break mirror go, value 30.\n", tengen);
+    }
+  }
 
   should_resign() {}
 

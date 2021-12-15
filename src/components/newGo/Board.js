@@ -250,7 +250,14 @@ class Board {
     this.new_position();
   }
 
-  // test_gray_border() {}
+  test_gray_border() {
+    for (let k = 0; k < this.BOARDSIZE; k++)
+      if (!this.ON_BOARD2(this.I(k), this.J(k)))
+        if (this.board[k] !== colors.GRAY)
+          return k;
+
+    return -1;
+  }
 
   /* ================================================================ */
   /*                      Temporary moves   (临时落子)                  */

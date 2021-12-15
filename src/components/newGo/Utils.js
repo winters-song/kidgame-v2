@@ -1,5 +1,6 @@
 import {
-  NO_MOVE, OWL_NODE_LIMIT, SEMEAI_NODE_LIMIT
+  colors,
+  NO_MOVE, OWL_NODE_LIMIT, PASS_MOVE, SEMEAI_NODE_LIMIT
 } from './Constants'
 
 const NUMBER_OF_TIMERS = 4
@@ -34,6 +35,53 @@ const BREAKIN_DEPTH	     = 14
 
 
 export const Utils = {
+
+  change_dragon_status() {},
+  defend_against(){},
+  cut_possible() {},
+  does_attack() {},
+  does_defend() {},
+  somewhere() {},
+  visible_along_edge() {},
+
+  /* Is the board symmetric (or rather antisymmetric) with respect to
+   * mirroring in tengen after a specific move has been played? If the
+   * move is PASS_MOVE, check the current board.
+   *
+   * If strict is set we require that each stone is matched by a stone
+   * of the opposite color at the mirrored vertex. Otherwise we only
+   * require that each stone is matched by a stone of either color.
+   */
+  test_symmetry_after_move(move, color, strict) {
+    const b = this.board
+    let result = 1;
+
+    if (move !== PASS_MOVE) {
+      if (b.board[move] !== colors.EMPTY)
+        return 0;
+      if (!b.trymove(move, color, "find_mirror_move", NO_MOVE))
+        return 0;
+    }
+
+    for (let pos = b.BOARDMIN; pos < b.MIRROR_MOVE(pos); pos++) {
+      let sum;
+      if (!b.ON_BOARD(pos))
+        continue;
+
+      sum = b.board[pos] + b.board[b.MIRROR_MOVE(pos)];
+      if (sum !== colors.EMPTY + colors.EMPTY && sum !== colors.BLACK + colors.WHITE) {
+        if (strict || sum === colors.EMPTY + colors.WHITE || sum === colors.EMPTY + colors.BLACK) {
+          result = 0;
+          break;
+        }
+      }
+    }
+
+    if (move !== PASS_MOVE)
+      b.popgo();
+
+    return result;
+  },
 
 
   /* Set the various reading depth parameters. If mandated_depth_value
@@ -244,6 +292,8 @@ export const Utils = {
    * superstring which have fewer than liberty_cap liberties are
    * generated.
    */
+  // 找到强联络的大龙
+  // liberty_cap： 子串气数限制
   find_superstring_liberties(str, num_libs, libs, liberty_cap) {
     this.do_find_superstring(str, null, null, num_libs, libs, this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
   },
@@ -252,5 +302,224 @@ export const Utils = {
   superstring_chainlinks() {},
   proper_superstring_chainlinks() {},
 
-  do_find_superstring() {}
+  do_find_superstring(str, num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, proper, type) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+
+    let num_my_stones = [0];
+    let my_stones = [];
+
+    let mx = new Array(b.BOARDMAX).fill(0); /* stones */
+    let ml = new Array(b.BOARDMAX).fill(0); /* liberties */
+    let ma = new Array(b.BOARDMAX).fill(0); /* adjacent strings */
+
+    if (num_stones){
+      num_stones[0] = 0;
+    }
+    if (num_libs){
+      num_libs[0] = 0;
+    }
+    if (num_adj){
+      num_adj[0] = 0;
+    }
+
+    /* Include the string itself in the superstring. Only record stones,
+     * liberties, and/or adjacent strings if proper==0.
+     */
+    this.superstring_add_string(str, num_my_stones, my_stones,
+      num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, !proper);
+
+    /* Loop over all found stones, looking for more strings to include
+     * in the superstring. The loop is automatically extended over later
+     * found stones as well.
+     */
+    for (let r = 0; r < num_my_stones[0]; r++) {
+      let pos = my_stones[r];
+
+      for (let k = 0; k < 4; k++) {
+        /* List of relative coordinates. (pos) is marked by *.
+         *
+         *  ef.
+         *  gb.
+         *  *ac
+         *  .d.
+         *
+         */
+        let right = b.delta[k];
+        let up = b.delta[(k+1)%4];
+
+        let apos = pos + right;
+        let bpos = pos + right + up;
+        let cpos = pos + 2*right;
+        let dpos = pos + right - up;
+        let epos = pos + 2*up;
+        let fpos = pos + right + 2*up;
+        let gpos = pos + up;
+        let unsafe_move;
+
+        if (!b.ON_BOARD(apos))
+          continue;
+
+        /* Case 1. Nothing to do since stones are added string by string. */
+
+        /* Case 2. */
+        if (b.board[apos] === colors.EMPTY) {
+          if (type === 2)
+            unsafe_move = b.approxlib(apos, other, 2, null) < 2;
+          else
+            unsafe_move = b.is_self_atari(apos, other);
+
+          if (unsafe_move && type === 1 && b.is_ko(apos, other, null))
+            unsafe_move = 0;
+
+          if (unsafe_move) {
+            if (b.board[bpos] === color && !mx[bpos])
+              this.superstring_add_string(bpos, num_my_stones, my_stones,
+                num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+            if (b.board[cpos] === color && !mx[cpos])
+              this.superstring_add_string(cpos, num_my_stones, my_stones,
+                num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+            if (b.board[dpos] === color && !mx[dpos])
+              this.superstring_add_string(dpos, num_my_stones, my_stones,
+                num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+          }
+        }
+
+        /* Case 3. */
+        /* Notice that the order of these tests is significant. We must
+         * check bpos before fpos and epos to avoid accessing memory
+         * outside the board array. (Notice that fpos is two steps away
+         * from pos, which we know is on the board.)
+         */
+        if (b.board[apos] === color && b.board[bpos] === colors.EMPTY
+          && b.board[fpos] === color && b.board[epos] === color && !mx[epos]
+          && b.board[gpos] === colors.EMPTY)
+          this.superstring_add_string(epos, num_my_stones, my_stones,
+            num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+        /* Don't bother with f, it is part of the string just added. */
+
+        /* Case 4. */
+        if (b.board[bpos] === color && !mx[bpos]
+          && b.board[apos] === colors.EMPTY && b.board[gpos] === colors.EMPTY)
+          this.superstring_add_string(bpos, num_my_stones, my_stones,
+            num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+
+        /* Case 5. */
+        if (type === 1) {
+          for (let l = 0; l < 2; l++) {
+            let upos;
+
+            if (l === 0) {
+              /* adjacent lunch */
+              upos = apos;
+            }
+            else {
+              /* diagonal lunch */
+              upos = bpos;
+            }
+
+            if (b.board[upos] !== other)
+              continue;
+
+            upos = b.find_origin(upos);
+
+            /* Only do the reading once. */
+            if (mx[upos] === 1)
+              continue;
+
+            mx[upos] = 1;
+
+            if (this.attack(upos, null) && !this.find_defense(upos, null)) {
+              let lunch_stones = [];
+              let num_lunch_stones = b.findstones(upos, b.MAX_BOARD*b.MAX_BOARD, lunch_stones);
+              for (let m = 0; m < num_lunch_stones; m++) {
+                for (let n = 0; n < 8; n++) {
+                  let vpos = lunch_stones[m] + b.delta[n];
+                  if (b.board[vpos] === color && !mx[vpos]){
+                    this.superstring_add_string(vpos, num_my_stones, my_stones,
+                      num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (num_libs && maxlibs > 0 && num_libs[0] >= maxlibs){
+          return;
+        }
+      }
+    }
+  },
+
+  /* Add a new string to a superstring. Record stones, liberties, and
+   * adjacent strings as asked for.
+   */
+  superstring_add_string(str, num_my_stones, my_stones,
+    num_stones, stones, num_libs, libs, maxlibs,num_adj, adjs, liberty_cap, mx, ml, ma, do_add) {
+    const b = this.board
+
+    b.ASSERT1(mx[str] === 0, str);
+
+    /* Pick up the stones of the new string. */
+    let new_stones = b.findstones(str, b.board_size * b.board_size, my_stones);
+
+    b.mark_string(str, mx, 1);
+    if (stones) {
+      // gg_assert(num_stones);
+      for (let k = 0; k < new_stones; k++) {
+        if (do_add) {
+          stones[num_stones[0]] = my_stones[num_my_stones[0] + k];
+          num_stones[0]++;
+        }
+      }
+    }
+    num_my_stones[0] += new_stones;
+
+    /* Pick up the liberties of the new string. */
+    if (libs) {
+      // gg_assert(num_libs);
+      /* Get the liberties of the string. */
+      let my_libs = [];
+      let num_my_libs = b.findlib(str, b.MAXLIBS, my_libs);
+
+      /* Remove this string from the superstring if it has too many
+       * liberties.
+       */
+      if (liberty_cap > 0 && num_my_libs > liberty_cap)
+        num_my_stones[0] -= new_stones;
+
+      for (let k = 0; k < num_my_libs; k++) {
+        if (ml[my_libs[k]])
+          continue;
+        ml[my_libs[k]] = 1;
+        if (do_add && (liberty_cap === 0 || num_my_libs <= liberty_cap)) {
+          libs[num_libs[0]] = my_libs[k];
+          num_libs[0]++;
+          if (num_libs[0] === maxlibs){
+            break;
+          }
+        }
+      }
+    }
+
+    /* Pick up adjacent strings to the new string. */
+    if (adjs) {
+      // gg_assert(num_adj);
+      let my_adjs = [];
+      let num_my_adj = b.chainlinks(str, my_adjs);
+      for (let k = 0; k < num_my_adj; k++) {
+        if (liberty_cap > 0 && b.countlib(my_adjs[k]) > liberty_cap)
+          continue;
+        if (ma[my_adjs[k]])
+          continue;
+        ma[my_adjs[k]] = 1;
+        if (do_add) {
+          adjs[num_adj[0]] = my_adjs[k];
+          num_adj[0]++;
+        }
+      }
+    }
+  }
 }
