@@ -1,6 +1,7 @@
 import {
  codes
 } from './Constants'
+import {transformation2} from "./patterns/transform";
 
 /* Routine names used by persistent and non-persistent caching schemes. */
 export const routine_id ={
@@ -50,4 +51,9 @@ export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
 
-export const REVERSE_RESULT = function(result){ return codes.WIN - result}	
+export function REVERSE_RESULT(result){ return codes.WIN - result}
+
+export function TRANSFORM2(x, y, tx, ty, trans) {
+  tx[0] = transformation2[trans][0][0] * (x) + transformation2[trans][0][1] * (y);
+  ty[0] = transformation2[trans][1][0] * (x) + transformation2[trans][1][1] * (y);
+}
