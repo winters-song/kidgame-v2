@@ -1,4 +1,4 @@
-import {matchpat} from "./Constants";
+import {colors, matchpat} from "./Constants";
 import {CLASS_o, CLASS_O, CLASS_x, CLASS_X, EAST_EDGE, NORTH_EDGE, SOUTH_EDGE, WEST_EDGE} from "./patterns/Patterns";
 import {dragon_status} from "./Liberty";
 
@@ -41,51 +41,53 @@ export const Matchpat = {
    *
    * This should be called once for each pattern database.
    */
-  fixup_patterns_for_board_size(pattern) {
+  fixup_patterns_for_board_size(patterns) {
     const board_size = this.board.board_size
 
-    for (; pattern.patn; ++pattern)
-      if (pattern.edge_constraints !== 0) {
+    for (let i =0; i < patterns.length; i++){
+      let pattern = patterns[i]
+        if (pattern.edge_constraints !== 0) {
 
-        /* If the patterns have been fixed up for a different board size
-         * earlier, we need to undo the modifications that were done
-         * below before we do them anew. The first time this function is
-         * called, this step is effectively a no-op.
-         */
-        if (pattern.edge_constraints & NORTH_EDGE)
-          pattern.maxi = pattern.mini + pattern.height;
+          /* If the patterns have been fixed up for a different board size
+           * earlier, we need to undo the modifications that were done
+           * below before we do them anew. The first time this function is
+           * called, this step is effectively a no-op.
+           */
+          if (pattern.edge_constraints & NORTH_EDGE)
+            pattern.maxi = pattern.mini + pattern.height;
 
-        if (pattern.edge_constraints & SOUTH_EDGE)
-          pattern.mini = pattern.maxi - pattern.height;
+          if (pattern.edge_constraints & SOUTH_EDGE)
+            pattern.mini = pattern.maxi - pattern.height;
 
-        if (pattern.edge_constraints & WEST_EDGE)
-          pattern.maxj = pattern.minj + pattern.width;
+          if (pattern.edge_constraints & WEST_EDGE)
+            pattern.maxj = pattern.minj + pattern.width;
 
-        if (pattern.edge_constraints & EAST_EDGE)
-          pattern.minj = pattern.maxj - pattern.width;
+          if (pattern.edge_constraints & EAST_EDGE)
+            pattern.minj = pattern.maxj - pattern.width;
 
-        /* we extend the pattern in the direction opposite the constraint,
-         * such that maxi (+ve) - mini (-ve) = board_size-1
-         * Note : the pattern may be wider than the board, so
-         * we need to be a bit careful !
-         */
+          /* we extend the pattern in the direction opposite the constraint,
+           * such that maxi (+ve) - mini (-ve) = board_size-1
+           * Note : the pattern may be wider than the board, so
+           * we need to be a bit careful !
+           */
 
-        if (pattern.edge_constraints & NORTH_EDGE)
-          if (pattern.maxi < (board_size-1) + pattern.mini)
-            pattern.maxi = (board_size-1) + pattern.mini;
+          if (pattern.edge_constraints & NORTH_EDGE)
+            if (pattern.maxi < (board_size-1) + pattern.mini)
+              pattern.maxi = (board_size-1) + pattern.mini;
 
-        if (pattern.edge_constraints & SOUTH_EDGE)
-          if (pattern.mini > pattern.maxi - (board_size-1))
-            pattern.mini = pattern.maxi - (board_size-1);
+          if (pattern.edge_constraints & SOUTH_EDGE)
+            if (pattern.mini > pattern.maxi - (board_size-1))
+              pattern.mini = pattern.maxi - (board_size-1);
 
-        if (pattern.edge_constraints & WEST_EDGE)
-          if (pattern.maxj <  (board_size-1) + pattern.minj)
-            pattern.maxj = (board_size-1) + pattern.minj;
+          if (pattern.edge_constraints & WEST_EDGE)
+            if (pattern.maxj <  (board_size-1) + pattern.minj)
+              pattern.maxj = (board_size-1) + pattern.minj;
 
-        if (pattern.edge_constraints & EAST_EDGE)
-          if (pattern.minj > pattern.maxj - (board_size-1))
-            pattern.minj = pattern.maxj - (board_size-1);
+          if (pattern.edge_constraints & EAST_EDGE)
+            if (pattern.minj > pattern.maxj - (board_size-1))
+              pattern.minj = pattern.maxj - (board_size-1);
       }
+    }
   },
 
   prepare_for_match(color) {
@@ -240,18 +242,18 @@ export const Matchpat = {
           b.ASSERT_ON_BOARD1(pos);
 
           /* ...and check that board[pos] matches (see above). */
-          if ((b.board[pos] & and_mask[color-1][att]) != val_mask[color-1][att]){
+          if ((b.board[pos] & pattern.and_mask[color-1][att]) !== pattern.val_mask[color-1][att]){
             console.log('match_failed')
             break;
           }
 
-          if (goal != null && b.board[pos] != colors.EMPTY && goal[pos])
+          if (goal != null && b.board[pos] !== colors.EMPTY && goal[pos])
             found_goal = 1;
 
           /* Check out the class_X, class_O, class_x, class_o
            * attributes - see patterns.db and above.
            */
-          if ((pattern.class & class_mask[dragon[pos].status][board[pos]]) !== 0){
+          if (this.dragon[pos] && (pattern.class & class_mask[this.dragon[pos].status][b.board[pos]]) !== 0){
             console.log('match_failed')
             break;
           }
@@ -321,7 +323,7 @@ export const Matchpat = {
 
     /* check board size */
     if (pdb.fixed_for_size !== b.board_size) {
-      fixup_patterns_for_board_size(pdb.patterns);
+      this.fixup_patterns_for_board_size(pdb.patterns);
       pdb.fixed_for_size = b.board_size;
     }
 
@@ -335,24 +337,24 @@ export const Matchpat = {
     switch (color) {
       /* match pattern for the color of their anchor */
       case matchpat.ANCHOR_COLOR:
-        prepare(WHITE);
-        loop(callback, WHITE, WHITE, pdb, callback_data, goal, anchor_in_goal);
-        prepare(BLACK);
-        loop(callback, BLACK, BLACK, pdb, callback_data, goal, anchor_in_goal);
+        prepare.call(this, colors.WHITE);
+        loop.call(this, callback, colors.WHITE, colors.WHITE, pdb, callback_data, goal, anchor_in_goal);
+        prepare.call(this, colors.BLACK);
+        loop.call(this, callback, colors.BLACK, colors.BLACK, pdb, callback_data, goal, anchor_in_goal);
         break;
       /* match pattern for the opposite color of their anchor */
       case matchpat.ANCHOR_OTHER:
-        prepare(WHITE);
-        loop(callback, WHITE, BLACK, pdb, callback_data, goal, anchor_in_goal);
-        prepare(BLACK);
-        loop(callback, BLACK, WHITE, pdb, callback_data, goal, anchor_in_goal);
+        prepare.call(this, colors.WHITE);
+        loop.call(this, callback, colors.WHITE, colors.BLACK, pdb, callback_data, goal, anchor_in_goal);
+        prepare.call(this, colors.BLACK);
+        loop.call(this, callback, colors.BLACK, colors.WHITE, pdb, callback_data, goal, anchor_in_goal);
 
         break;
       default:
        /* match all patterns for color */
-        prepare(color);
-        loop(callback, color, WHITE, pdb, callback_data, goal, anchor_in_goal);
-        loop(callback, color, BLACK, pdb, callback_data, goal, anchor_in_goal);
+        prepare.call(this, color);
+        loop.call(this, callback, color, colors.WHITE, pdb, callback_data, goal, anchor_in_goal);
+        loop.call(this, callback, color, colors.BLACK, pdb, callback_data, goal, anchor_in_goal);
     }
   },
   fullboard_transform() {},

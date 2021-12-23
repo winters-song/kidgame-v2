@@ -11,6 +11,9 @@ import {MoveList} from "./MoveList";
 import {Persistent} from "./Persistent";
 import {Cache} from "./Cache"
 import {dragon_status} from "./Liberty";
+import {Matchpat} from "./Matchpat";
+
+import {attpat_db} from "./patterns/apatterns"
 
 // const EXAMINE_WORMS =               1
 // const EXAMINE_INITIAL_INFLUENCE =   2
@@ -25,7 +28,10 @@ const EXAMINE_ALL =                 99
 export default class Genmove {
   constructor(board) {
     this.board = board
-    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache)
+    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
+      Matchpat)
+
+    Object.assign(this, {attpat_db})
 
     this.initData()
 
