@@ -1,7 +1,7 @@
 import {
  codes
 } from './Constants'
-import {transformation2} from "./patterns/transform";
+import {transformation, transformation2} from "./patterns/transform";
 
 /* Routine names used by persistent and non-persistent caching schemes. */
 export const routine_id ={
@@ -51,8 +51,21 @@ export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
 
+export function OFFSET(dx, dy, MAX_BOARD) {
+  return ((dy + MAX_BOARD - 1) * (2*MAX_BOARD - 1) + (dx + MAX_BOARD - 1))
+}
+
 export function REVERSE_RESULT(result){ return codes.WIN - result}
 
+export function AFFINE_TRANSFORM(offset, trans, delta) {
+  return transformation[offset][trans] + delta
+}
+
+/*
+* | 1 0 ||x| = |x'|
+* | 0 1 ||y| = |y'|
+* 坐标变换运算
+* */
 export function TRANSFORM2(x, y, tx, ty, trans) {
   tx[0] = transformation2[trans][0][0] * (x) + transformation2[trans][0][1] * (y);
   ty[0] = transformation2[trans][1][0] * (x) + transformation2[trans][1][1] * (y);

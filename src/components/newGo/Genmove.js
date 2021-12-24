@@ -14,6 +14,7 @@ import {dragon_status} from "./Liberty";
 import {Matchpat} from "./Matchpat";
 
 import {attpat_db} from "./patterns/apatterns"
+import {transformation, transformation_init} from "./patterns/transform";
 
 // const EXAMINE_WORMS =               1
 // const EXAMINE_INITIAL_INFLUENCE =   2
@@ -38,6 +39,10 @@ export default class Genmove {
 
     this.reading_cache_init()
     this.persistent_cache_init()
+
+    transformation_init(board)
+
+    console.log(transformation)
   }
 
   initData() {

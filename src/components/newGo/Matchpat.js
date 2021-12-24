@@ -124,13 +124,11 @@ export const Matchpat = {
    * are rejected which do not involve this dragon. If goal is a null
    * pointer, this parameter is ignored.
    */
-  do_matchpat( anchor, callback,  color, pattern, callback_data, goal) {
+  do_matchpat( anchor, callback,  color, patterns, callback_data, goal) {
     const b = this.board
     const anchor_test = b.board[anchor] ^ color;  /* see below */
     let m = b.I(anchor);
     let n = b.J(anchor);
-    let merged_val;
-
     /* Basic sanity checks. */
     b.ASSERT_ON_BOARD1(anchor);
 
@@ -138,27 +136,30 @@ export const Matchpat = {
     /* FIXME: Convert this to 2D (using delta[]) but be aware that you'll
      *	      also need to make corresponding changes in mkpat.c!
      */
-    let i, j;
     let shift = 30;
 
-    merged_val = 0;
-    for (i = m-1; i <= m+2; ++i){
-      for (j = n-1; j <= n+2; shift -= 2, ++j) {
+    let merged_val = 0;
+    for (let i = m-1; i <= m+2; ++i){
+      for (let j = n-1; j <= n+2; shift -= 2, ++j) {
         let _this;
-        if (!b.ON_BOARD2(i, j))
+        if (!b.ON_BOARD2(i, j)){
           _this = 3;
-        else if ((_this = b.BOARD(i, j)) === 0)
+        }
+        else if ((_this = b.BOARD(i, j)) === 0){
           continue;
-        else if (color === 2)
+        }
+        else if (color === 2){
           _this = b.OTHER_COLOR(_this);
+        }
         merged_val |= (_this << shift);
       }
     }
 
-    /* Try each pattern - NULL pattern marks end of list. Assume at least 1 */
-    // gg_assert(pattern->patn);
-
-    do {
+    for(let i= 0; i< patterns.length; i++){
+      let pattern = patterns[i]
+      if(!pattern.patn){
+        break;
+      }
       /*
        * These days we always match all patterns.
        */
@@ -180,8 +181,9 @@ export const Matchpat = {
        */
       let ll = 0;   /* Iterate over transformations (rotations or reflections)  */
 
-      if (anchor_test !== pattern.anchored_at_X)
+      if (anchor_test !== pattern.anchored_at_X) {
         continue;  /* does not match the anchor */
+      }
 
       let end_transformation = pattern.trfno;
 
@@ -247,8 +249,9 @@ export const Matchpat = {
             break;
           }
 
-          if (goal != null && b.board[pos] !== colors.EMPTY && goal[pos])
+          if (goal && b.board[pos] !== colors.EMPTY && goal[pos]){
             found_goal = 1;
+          }
 
           /* Check out the class_X, class_O, class_x, class_o
            * attributes - see patterns.db and above.
@@ -277,7 +280,7 @@ export const Matchpat = {
         //     pattern->name, ll, anchor);
 
       } while (++ll < end_transformation); /* ll loop over symmetries */
-    } while ((++pattern).patn);  /* loop over patterns */
+    }
   },
 
 
@@ -286,12 +289,14 @@ export const Matchpat = {
    * point of view.
    * the board must be prepared by dfa_prepare_for_match(color) !
    */
+  // anchor: 锚点颜色
   matchpat_loop(callback, color, anchor, pdb, callback_data, goal, anchor_in_goal) {
     const b = this.board
 
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
-      if (b.board[pos] === anchor && (!anchor_in_goal || goal[pos] !== 0))
+      if (b.board[pos] === anchor && (!anchor_in_goal || (goal && goal[pos] !== 0))){
         this.do_matchpat(pos, callback, color, pdb.patterns, callback_data, goal);
+      }
     }
   },
 
