@@ -1,7 +1,35 @@
 import {colors, matchpat} from "./Constants";
 import {CLASS_o, CLASS_O, CLASS_x, CLASS_X, EAST_EDGE, NORTH_EDGE, SOUTH_EDGE, WEST_EDGE} from "./patterns/Patterns";
-import {dragon_status} from "./Liberty";
+import {AFFINE_TRANSFORM, dragon_status, TRANSFORM2} from "./Liberty";
 
+
+/* Precomputed tables to allow rapid checks on the piece at
+ * the board. This table relies on the fact that color is
+ * 1 or 2.
+ *
+ * For pattern element i,  require  (board[pos] & andmask[i]) == valmask[i]
+ *
+ * .XO) For i=0,1,2, board[pos] & 3 is a no-op(无操作), so we check board[pos]
+ *	== valmask
+ * x)   For i=3, we are checking that board[pos] is not color, so AND
+ *	color and we get 0 for either empty or OTHER_COLOR, but color
+ *	if it contains color
+ * o)   Works the other way round for checking it is not X.
+ *
+ *
+ *  gcc allows the entries to be computed at run-time, but that is not ANSI.
+ */
+
+const and_mask = [
+/* .   O   X  o             x             ,   a   !      color */
+  [3,  3,  3, colors.BLACK, colors.WHITE,  3,  3,  3], /* BLACK */
+  [3,  3,  3, colors.WHITE, colors.BLACK,  3,  3,  3]  /* WHITE */
+];
+
+const val_mask = [
+  [ colors.EMPTY, colors.WHITE, colors.BLACK,  0, 0,  colors.EMPTY, colors.EMPTY, colors.EMPTY],  /* BLACK */
+  [ colors.EMPTY, colors.BLACK, colors.WHITE,  0, 0,  colors.EMPTY, colors.EMPTY, colors.EMPTY]   /* WHITE */
+];
 
 /* and a table for checking classes quickly
  * class_mask[status][color] contains the mask to look for in class.
@@ -25,7 +53,6 @@ import {dragon_status} from "./Liberty";
  * initially set to 0, and we overwrite the ones
  * we care about each time.
  */
-
 const class_mask = []
 
 export const Matchpat = {
@@ -53,17 +80,21 @@ export const Matchpat = {
            * below before we do them anew. The first time this function is
            * called, this step is effectively a no-op.
            */
-          if (pattern.edge_constraints & NORTH_EDGE)
+          if (pattern.edge_constraints & NORTH_EDGE){
             pattern.maxi = pattern.mini + pattern.height;
+          }
 
-          if (pattern.edge_constraints & SOUTH_EDGE)
+          if (pattern.edge_constraints & SOUTH_EDGE){
             pattern.mini = pattern.maxi - pattern.height;
+          }
 
-          if (pattern.edge_constraints & WEST_EDGE)
+          if (pattern.edge_constraints & WEST_EDGE){
             pattern.maxj = pattern.minj + pattern.width;
+          }
 
-          if (pattern.edge_constraints & EAST_EDGE)
+          if (pattern.edge_constraints & EAST_EDGE){
             pattern.minj = pattern.maxj - pattern.width;
+          }
 
           /* we extend the pattern in the direction opposite the constraint,
            * such that maxi (+ve) - mini (-ve) = board_size-1
@@ -72,20 +103,24 @@ export const Matchpat = {
            */
 
           if (pattern.edge_constraints & NORTH_EDGE)
-            if (pattern.maxi < (board_size-1) + pattern.mini)
+            if (pattern.maxi < (board_size-1) + pattern.mini){
               pattern.maxi = (board_size-1) + pattern.mini;
+            }
 
           if (pattern.edge_constraints & SOUTH_EDGE)
-            if (pattern.mini > pattern.maxi - (board_size-1))
+            if (pattern.mini > pattern.maxi - (board_size-1)){
               pattern.mini = pattern.maxi - (board_size-1);
+            }
 
           if (pattern.edge_constraints & WEST_EDGE)
-            if (pattern.maxj <  (board_size-1) + pattern.minj)
+            if (pattern.maxj <  (board_size-1) + pattern.minj){
               pattern.maxj = (board_size-1) + pattern.minj;
+            }
 
           if (pattern.edge_constraints & EAST_EDGE)
-            if (pattern.minj > pattern.maxj - (board_size-1))
+            if (pattern.minj > pattern.maxj - (board_size-1)){
               pattern.minj = pattern.maxj - (board_size-1);
+            }
       }
     }
   },
@@ -139,12 +174,14 @@ export const Matchpat = {
     let shift = 30;
 
     let merged_val = 0;
+    // 从ancher左上[-1,-1]点到[2,2]计算特征码
     for (let i = m-1; i <= m+2; ++i){
       for (let j = n-1; j <= n+2; shift -= 2, ++j) {
         let _this;
         if (!b.ON_BOARD2(i, j)){
           _this = 3;
         }
+        // _this赋值
         else if ((_this = b.BOARD(i, j)) === 0){
           continue;
         }
@@ -181,6 +218,7 @@ export const Matchpat = {
        */
       let ll = 0;   /* Iterate over transformations (rotations or reflections)  */
 
+      // 颜色校验
       if (anchor_test !== pattern.anchored_at_X) {
         continue;  /* does not match the anchor */
       }
@@ -188,6 +226,7 @@ export const Matchpat = {
       let end_transformation = pattern.trfno;
 
       /* Ugly trick for dealing with 'O' symmetry. */
+      // 对称
       if (pattern.trfno === 5) {
         ll = 2;
         end_transformation = 6;
@@ -206,16 +245,17 @@ export const Matchpat = {
          * up so that stones which are 'O' in the pattern are
          * bit-pattern %01.
          */
-        if ((merged_val & pattern.and_mask[ll]) !== pattern.val_mask[ll])
+        if ((merged_val & pattern.and_mask[ll]) !== pattern.val_mask[ll]){
           continue;  /* large-scale match failed */
+        }
 
         /* Next, we do the range check. This applies the edge
          * constraints implicitly.
          */
         let mi = [], mj = [], xi = [], xj = [];
-
-        this.TRANSFORM2(pattern.mini, pattern.minj, mi, mj, ll);
-        this.TRANSFORM2(pattern.maxi, pattern.maxj, xi, xj, ll);
+        // 获得模式串最小最大范围（变换后）
+        TRANSFORM2(pattern.mini, pattern.minj, mi, mj, ll);
+        TRANSFORM2(pattern.maxi, pattern.maxj, xi, xj, ll);
 
         /* {min,max}{i,j} are the appropriate corners of the original
          * pattern, Once we transform, {m,x}{i,j} are still corners,
@@ -231,20 +271,22 @@ export const Matchpat = {
         /* Now iterate over the elements of the pattern. */
         let found_goal = 0;
         /* Iterate over elements of pattern */
+        // 循环 patn列表每个元素是否符合条件
         for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
 
-          let att = pattern.patn[k].att;  /* what we are looking for */
+          let att = pattern.patn[k][1];  /* what we are looking for */
 
           /* Work out the position on the board of this pattern element. */
 
           /* pos: absolute coords of (transformed) pattern element */
           /* transform pattern real coordinate... */
-          let pos = this.AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+          // 当前元素位置
+          let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
           b.ASSERT_ON_BOARD1(pos);
 
           /* ...and check that board[pos] matches (see above). */
-          if ((b.board[pos] & pattern.and_mask[color-1][att]) !== pattern.val_mask[color-1][att]){
+          if ((b.board[pos] & and_mask[color-1][att]) !== val_mask[color-1][att]){
             console.log('match_failed')
             break;
           }
@@ -271,7 +313,7 @@ export const Matchpat = {
 
 
         /* A match!  - Call back to the invoker to let it know. */
-        callback(anchor, color, pattern, ll, callback_data);
+        callback.call(this, anchor, color, pattern, ll, callback_data);
 
         /* We jump to here as soon as we discover a pattern has failed. */
         // match_failed:

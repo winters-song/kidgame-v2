@@ -16,21 +16,23 @@ export const transformation2 = [
 ];
 
 export const transformation_init = (board) => {
+  const MAX_BOARD = 19
   for (let k = 0; k < 8; k++) {
-    for (let dy = -board.MAX_BOARD+1; dy <= board.MAX_BOARD-1; dy++) {
-      for (let dx = -board.MAX_BOARD+1; dx <= board.MAX_BOARD-1; dx++) {
+    for (let dy = -MAX_BOARD+1; dy <= MAX_BOARD-1; dy++) {
+      for (let dx = -MAX_BOARD+1; dx <= MAX_BOARD-1; dx++) {
         let tx = [];
         let ty = [];
 
+        // 获得变换后x,y
         TRANSFORM2(dx, dy, tx, ty, k);
         // 9路：0 - 288
-        let offset = OFFSET(dx, dy, board.MAX_BOARD)
+        let offset = OFFSET(dx, dy, MAX_BOARD)
         if(!transformation[offset]){
           transformation[offset] = []
           // console.log(tx[0],ty[0])
         }
         // tx,ty: -8,-8 to 8,8
-        transformation[offset][k] = board.DELTA(tx[0], ty[0]);
+        transformation[offset][k] = board.DELTA(tx[0], ty[0], MAX_BOARD);
       }
     }
   }

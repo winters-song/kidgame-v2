@@ -51,14 +51,18 @@ export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
 
+// [0 - 1368]
+// (19+18)*2 = 1369 绝对位置
 export function OFFSET(dx, dy, MAX_BOARD) {
-  return ((dy + MAX_BOARD - 1) * (2*MAX_BOARD - 1) + (dx + MAX_BOARD - 1))
+  return (dy + MAX_BOARD - 1) * (2*MAX_BOARD - 1) + (dx + MAX_BOARD - 1)
 }
 
 export function REVERSE_RESULT(result){ return codes.WIN - result}
 
 export function AFFINE_TRANSFORM(offset, trans, delta) {
-  return transformation[offset][trans] + delta
+  if(transformation[offset]){
+    return transformation[offset][trans] + delta
+  }
 }
 
 /*

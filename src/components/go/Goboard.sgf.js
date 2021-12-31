@@ -458,6 +458,7 @@ export default class GoboardPlayer extends EventEmitter{
 	genmove() {
 		const generator = new Genmove(this.go)
 		generator.genmove(1)
+		window.gen = generator
 	}
 
 }

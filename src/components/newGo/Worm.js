@@ -2,7 +2,8 @@ import {
   codes,
   colors, matchpat, NO_MOVE
 } from './Constants'
-import {dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
+import {AFFINE_TRANSFORM, dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
+import {ATT_X, HAVE_CONSTRAINT} from "./patterns/Patterns";
 
 class WormData{
   constructor(cfg) {
@@ -111,6 +112,9 @@ export const Worm = {
      *
      * For the time being we use both concepts in parallel. It's
      * possible we also need the old concept for correct handling of lunches.
+     *
+     * cutstone：切断状态
+     * cutstone2: 在收集大龙信息时设置，
      */
     
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
@@ -185,9 +189,9 @@ export const Worm = {
      * defended.
      */
     // {
-    //   int color;
-    //   int str;
-    //   int moves_to_try[BOARDMAX];
+    let color;
+    let str;
+    let moves_to_try = [];
     //   memset(moves_to_try, 0, sizeof(moves_to_try));
     //
     //   /* Find which colors to try at what points. */
@@ -856,7 +860,11 @@ export const Worm = {
   change_attack_threat() {},
   change_defense_threat() {},
 
-  attack_move_known() {},
+  attack_move_known(move, str) {
+    return this.movelist_move_known(move, MAX_TACTICAL_POINTS,
+      this.worm[str].attack_points,
+      this.worm[str].attack_codes);
+  },
   defense_move_known() {},
   attack_threat_move_known() {},
   defense_threat_move_known() {},
@@ -939,6 +947,9 @@ export const Worm = {
  *          X.
  *          .O
  *          --
+ *
+ *
+ * 计算气序（气序一到四），判断被包围的状态
  */
   ping_cave(str, lib1, lib2, lib3, lib4) {
     const b = this.board
@@ -1019,8 +1030,73 @@ export const Worm = {
   /* Try to attack every X string in the pattern, whether there is an attack
    * before or not. Only exclude already known attacking moves.
    */
-  attack_callback(anchor, color, pattern, ll, data) {
+  attack_callback(anchor, color, pattern, ll) {
+    const b = this.board
+    // anchor对应找到target move着手位置
+    let move = AFFINE_TRANSFORM(pattern.move_offset, ll, anchor);
 
+    /* If the pattern has a constraint, call the autohelper to see
+     * if the pattern must be rejected.
+     */
+    if (pattern.autohelper_flag & HAVE_CONSTRAINT) {
+      if (!pattern.autohelper(ll, move, color, 0)){
+        return;
+      }
+    }
+
+    /* If the pattern has a helper, call it to see if the pattern must
+   * be rejected.
+   */
+    if (pattern.helper) {
+      if (!pattern.helper(pattern, ll, move, color)) {
+        // DEBUG(DEBUG_WORMS,  "Attack pattern %s+%d rejected by helper at %1m\n", pattern.name, ll, move);
+        return;
+      }
+    }
+
+    /* Loop through pattern elements in search of X strings to attack. */
+    for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
+      if (pattern.patn[k][1] === ATT_X) {
+        /* transform pattern real coordinate */
+        let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
+        let str = this.worm[pos].origin;
+
+        /* A string with 5 liberties or more is considered tactically alive. */
+        if (b.countlib(str) > 4)
+          continue;
+
+        if (this.attack_move_known(move, str))
+          continue;
+
+        /* FIXME: Don't attack the same string more than once.
+         * Play (move) and see if there is a defense.
+         */
+        if (b.trymove(move, color, "attack_callback", str)) {
+          let dcode;
+          if (!b.board[str]){
+            dcode = 0;
+          }
+          else if (!this.attack(str, null)){
+            dcode = codes.WIN;
+          }
+          else{
+            dcode = this.find_defense(str, null);
+          }
+
+          b.popgo();
+
+          /* Do not pick up suboptimal attacks at this time. Since we
+                 * don't know whether the string can be defended it's quite
+                 * possible that it only has a ko defense and then we would
+                 * risk to find an irrelevant move to attack with ko.
+           */
+          if (dcode !== codes.WIN && REVERSE_RESULT(dcode) >= this.worm[str].attack_codes[0]) {
+            this.change_attack(str, move, REVERSE_RESULT(dcode));
+            // DEBUG(DEBUG_WORMS, "Attack pattern %s+%d found attack on %1m at %1m with code %d\n", pattern.name, ll, str, move, REVERSE_RESULT(dcode));
+          }
+        }
+      }
+    }
   },
 
   find_defense_patterns() {},

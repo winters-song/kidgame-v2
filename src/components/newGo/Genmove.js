@@ -15,6 +15,7 @@ import {Matchpat} from "./Matchpat";
 
 import {attpat_db} from "./patterns/apatterns"
 import {transformation, transformation_init} from "./patterns/transform";
+import {Test} from "./Test";
 
 // const EXAMINE_WORMS =               1
 // const EXAMINE_INITIAL_INFLUENCE =   2
@@ -30,7 +31,7 @@ export default class Genmove {
   constructor(board) {
     this.board = board
     Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat)
+      Matchpat, Test)
 
     Object.assign(this, {attpat_db})
 
@@ -42,7 +43,7 @@ export default class Genmove {
 
     transformation_init(board)
 
-    console.log(transformation)
+    // console.log(transformation)
   }
 
   initData() {

@@ -939,7 +939,7 @@ export const Reading = {
 
     /* Only order and test the new set of moves. */
     this.order_moves(str, moves, color, 'read_function_name', move[0]);
-    result = this.DEFEND_TRY_MOVES(1, suggest_move);
+    result = this.DEFEND_TRY_MOVES(1, suggest_move, str, move, color, moves, savemove, savecode);
     if(result !== undefined){
       return result
     }
@@ -3171,11 +3171,10 @@ export const Reading = {
            * we require that the opponent string is well restrained.
            * Otherwise it could just run away while we backfill.
            */
-          if (b.approxlib(libs[0], other, 3, null) <= 2
-            && b.approxlib(libs[1], other, 3, null) <= 2) {
-            if (b.approxlib(libs[0], color, 1, lib) === 1
-            && b.approxlib(lib, color, 3, null) >= 3)
-            this.ADD_CANDIDATE_MOVE(lib, 0, moves, "break_chain2-C");
+          if (b.approxlib(libs[0], other, 3, null) <= 2 && b.approxlib(libs[1], other, 3, null) <= 2) {
+            if (b.approxlib(libs[0], color, 1, lib) === 1 && b.approxlib(lib, color, 3, null) >= 3){
+              this.ADD_CANDIDATE_MOVE(lib[0], 0, moves, "break_chain2-C");
+            }
 
             if (b.approxlib(libs[1], color, 1, lib) === 1 && b.approxlib(lib[0], color, 3, null) >= 3){
               this.ADD_CANDIDATE_MOVE(lib[0], 0, moves, "break_chain2-C");
@@ -3745,6 +3744,11 @@ export const Reading = {
    * 3) Moves on the edge are less interesting.
    *
    * Moves below first_move are ignored and assumed to be sorted already.
+   *
+   * 着手排序：
+   * 1. 能够拯救棋子
+   * 2. 获得更多气
+   * 3. 边角着手不感兴趣
    */
   order_moves(str, moves, color, funcname, killer) {
     const b = this.board

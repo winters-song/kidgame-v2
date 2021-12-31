@@ -1,5 +1,17 @@
 export const MoveList = {
-  movelist_move_known() {},
+  /* Return the code for the move if it is known.
+  */
+  movelist_move_known(move, max_points, points, codes) {
+    for (let k = 0; k < max_points; k++) {
+      if (codes[k] === 0){
+        return 0;
+      }
+      if (points[k] === move){
+        return codes[k];
+      }
+    }
+    return 0;
+  },
 
   /*
  * This function does the real work for change_attack(),

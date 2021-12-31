@@ -1,13 +1,13 @@
 
 
-const ATT_dot   = 0
-const ATT_X     = 1
-const ATT_O     = 2
-const ATT_x     = 3
-const ATT_o     = 4
-const ATT_comma = 5
-const ATT_a     = 6
-const ATT_not   = 7
+export const ATT_dot   = 0
+export const ATT_X     = 1
+export const ATT_O     = 2
+export const ATT_x     = 3
+export const ATT_o     = 4
+export const ATT_comma = 5
+export const ATT_a     = 6
+export const ATT_not   = 7
 
 
 /* Pattern classes. The semantics of these varies between different
@@ -47,6 +47,8 @@ export const SOUTH_EDGE = 2
 export const EAST_EDGE  = 4
 export const WEST_EDGE  = 8
 
+export const HAVE_CONSTRAINT = 1
+export const HAVE_ACTION     = 2
 
 class Patval {
   constructor() {
