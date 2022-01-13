@@ -1032,6 +1032,8 @@ export const Worm = {
    */
   attack_callback(anchor, color, pattern, ll) {
     const b = this.board
+
+    console.log('match pattern', anchor, color, pattern, ll)
     // anchor对应找到target move着手位置
     let move = AFFINE_TRANSFORM(pattern.move_offset, ll, anchor);
 

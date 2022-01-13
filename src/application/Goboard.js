@@ -7,7 +7,9 @@ import {SgfTree} from "../components/go/SgfTree"
 import './index.less'
 
 //matchpat
-const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-29]AB[dd][ee]AW[ed][de])'
+// const sgf = '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[7.5]SZ[9]DT[2021-12-29]AB[dd][ee]AW[ed][de])'
+// const sgf= '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-01-08]AB[dd][ee]AW[de][df][ed][fd])'
+const sgf= '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-01-12]AW[dh][eg][fg]AB[dg][eh])'
 
 function Puzzle (props){
   const goboardRef = useRef()

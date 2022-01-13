@@ -273,14 +273,14 @@ export const Matchpat = {
         /* Iterate over elements of pattern */
         // 循环 patn列表每个元素是否符合条件
         for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
-
+          // 特征中k元素的value(黑、白、空)
           let att = pattern.patn[k][1];  /* what we are looking for */
 
           /* Work out the position on the board of this pattern element. */
 
           /* pos: absolute coords of (transformed) pattern element */
           /* transform pattern real coordinate... */
-          // 当前元素位置
+          // 元素pattern.patn[k][0]以anchor为基准点，变换ll下的绝对位置
           let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
           b.ASSERT_ON_BOARD1(pos);
