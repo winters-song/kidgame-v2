@@ -34,6 +34,8 @@ export const codes = {
 }
 
 
+export const SURROUNDED = 1
+export const WEAKLY_SURROUNDED = 2
 
 export const PASS_MOVE = 0
 export const NO_MOVE = PASS_MOVE

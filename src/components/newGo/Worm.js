@@ -188,6 +188,7 @@ export const Worm = {
      * defense. We don't add attacking point for strings that can't be
      * defended.
      */
+    // 攻防兼备
     // {
     let color;
     let str;
@@ -390,25 +391,25 @@ export const Worm = {
     //
     // gg_assert(stackp == 0);
     //
-    // /* Find adjacent worms that can be easily captured, aka lunches. */
-    //
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   int lunch;
-    //
-    //   if (!IS_STONE(board[pos]) || !is_worm_origin(pos, pos))
-    //     continue;
-    //
-    //   if (find_lunch(pos, &lunch)
-    //     && (worm[lunch].attack_codes[0] == WIN
-    //     || worm[lunch].attack_codes[0] == KO_A)) {
-    //     DEBUG(DEBUG_WORMS, "lunch found for %1m at %1m\n", pos, lunch);
-    //     worm[pos].lunch = lunch;
-    //   }
-    // else
-    //   worm[pos].lunch = NO_MOVE;
-    //
-    //   propagate_worm(pos);
-    // }
+    /* Find adjacent worms that can be easily captured, aka lunches. */
+    // 一定能提子成功的叫lunch
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      let lunch = [];
+
+      if (!b.IS_STONE(b.board[pos]) || !this.is_worm_origin(pos, pos))
+        continue;
+
+      if (this.find_lunch(pos, lunch)
+        && (this.worm[lunch[0]].attack_codes[0] === codes.WIN
+        || this.worm[lunch[0]].attack_codes[0] === codes.KO_A)) {
+        // DEBUG(DEBUG_WORMS, "lunch found for %1m at %1m\n", pos, lunch);
+        this.worm[pos].lunch = lunch[0];
+      }
+    else
+      this.worm[pos].lunch = NO_MOVE;
+
+      this.propagate_worm(pos);
+    }
     //
     if (!this.disable_threat_computation){
       this.find_worm_threats();
@@ -436,7 +437,7 @@ export const Worm = {
      * An inessential string can be thought of as residing inside the
      * opponent's eye space.
      */
-    
+    // 无关紧要的棋串： 驻留在对手眼位中
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.IS_STONE(b.board[pos])
         && this.worm[pos].origin === pos
@@ -832,7 +833,129 @@ export const Worm = {
 
   },
 
-  find_worm_threats() {},
+  /*
+   * Find moves threatening to attack or save all worms.
+   */
+  find_worm_threats() {
+    const b = this.board
+    const libs = []
+
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      let color = b.board[str];
+      if (!b.IS_STONE(color) || !this.is_worm_origin(str, str))
+        continue;
+
+      /* 1. Start with finding attack threats. */
+      /* Only try those worms that have no attack. */
+      if (this.worm[str].attack_codes[0] === 0) {
+        this.attack_threats(str, MAX_TACTICAL_POINTS,
+          this.worm[str].attack_threat_points,
+          this.worm[str].attack_threat_codes);
+
+        /* FIXME: Try other moves also (patterns?). */
+      }
+
+      /* 2. Continue with finding defense threats. */
+      /* Only try those worms that have an attack. */
+      if (this.worm[str].attack_codes[0] !== 0
+        && this.worm[str].defense_codes[0] === 0) {
+
+        let liberties = b.findlib(str, b.MAXLIBS, libs);
+
+        for (let k = 0; k < liberties; k++) {
+          let aa = libs[k];
+
+          /* Try to threaten on the liberty. */
+          if (b.trymove(aa, color, "threaten defense", NO_MOVE)) {
+            if (this.attack(str, null) === codes.WIN) {
+              let dcode = b.find_defense(str, null);
+              if (dcode !== 0){
+                this.change_defense_threat(str, aa, dcode);
+              }
+            }
+            b.popgo();
+          }
+
+          /* Try to threaten on second order liberties. */
+          for (let l = 0; l < 4; l++) {
+            let bb = libs[k] + b.delta[l];
+
+            if (!b.ON_BOARD(bb)
+              || b.IS_STONE(b.board[bb])
+              || b.liberty_of_string(bb, str))
+              continue;
+
+            if (b.trymove(bb, color, "threaten defense", str)) {
+              if (this.attack(str, null) === codes.WIN) {
+                const dcode = this.find_defense(str, null);
+                if (dcode !== 0){
+                  this.change_defense_threat(str, bb, dcode);
+                }
+              }
+              b.popgo();
+            }
+          }
+        }
+
+        /* It might be interesting to look for defense threats by
+         * attacking weak neighbors, similar to threatening attack by
+         * defending a weak neighbor. However, in this case it seems
+         * probable that if there is such an attack, it's a real
+         * defense, not only a threat.
+         */
+
+        /* FIXME: Try other moves also (patterns?). */
+      }
+    }
+  },
+
+
+  /* find_lunch(str, &worm) looks for a worm adjoining the
+   * string at (str) which can be easily captured. Whether or not it can
+   * be defended doesn't matter.
+   *
+   * Returns the location of the string in (*lunch).
+   */
+  // 寻找str棋串相邻的可被简单提子的棋串，找到最香的那个
+  find_lunch(str, lunch) {
+    const b = this.board
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    b.ASSERT1(b.stackp === 0, str);
+
+    lunch[0] = NO_MOVE;
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.board[pos] !== b.OTHER_COLOR(b.board[str]))
+        continue;
+      for (let k = 0; k < 8; k++) {
+        let apos = pos + b.delta[k];
+        if (b.ON_BOARD(apos) && this.is_same_worm(apos, str)) {
+          if (this.worm[pos].attack_codes[0] !== 0 && !b.is_ko_point(pos)) {
+            /*
+             * If several adjacent lunches are found, we pick the
+             * juiciest. First maximize cutstone, then minimize liberties.
+             * We can only do this if the worm data is available,
+             * i.e. if stackp==0.
+             */
+            if (lunch[0] === NO_MOVE
+            || this.worm[pos].cutstone > this.worm[lunch[0]].cutstone
+            || (this.worm[pos].cutstone === this.worm[lunch[0]].cutstone
+            && this.worm[pos].liberties < this.worm[lunch[0]].liberties)) {
+              lunch[0] = this.worm[pos].origin;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    if (lunch[0] !== NO_MOVE){
+      return 1;
+    }
+
+    return 0;
+  },
+
 
   is_same_worm(w1, w2) {
     return this.worm[w1].origin === this.worm[w2].origin;
@@ -915,42 +1038,78 @@ export const Worm = {
     }
   },
 
-  worm_reasons() {},
+
+  /* Report all known attack, defense, attack threat, and defense threat
+   * moves. But limit this to the moves which can be made by (color).
+   */
+  // 只报告AI的着手: 敌方棋串添加进攻理由，我方棋串添加防守理由
+  worm_reasons(color) {
+    const b = this.board
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos) || b.board[pos] === colors.EMPTY)
+        continue;
+
+      if (!this.is_worm_origin(pos, pos))
+        continue;
+
+      if (b.board[pos] === b.OTHER_COLOR(color)) {
+        for (let k = 0; k < MAX_TACTICAL_POINTS; k++) {
+          if (this.worm[pos].attack_codes[k] !== 0)
+            this.add_attack_move(this.worm[pos].attack_points[k], pos, this.worm[pos].attack_codes[k]);
+          if (this.worm[pos].attack_threat_codes[k] !== 0)
+            this.add_attack_threat_move(this.worm[pos].attack_threat_points[k], pos, this.worm[pos].attack_threat_codes[k]);
+        }
+      }
+
+      if (b.board[pos] === color) {
+        for (let k = 0; k < MAX_TACTICAL_POINTS; k++) {
+          if (this.worm[pos].defense_codes[k] != 0)
+            this.add_defense_move(this.worm[pos].defense_points[k], pos,
+              this.worm[pos].defense_codes[k]);
+
+          if (this.worm[pos].defense_threat_codes[k] != 0)
+            this.add_defense_threat_move(this.worm[pos].defense_threat_points[k], pos,
+              this.worm[pos].defense_threat_codes[k]);
+        }
+      }
+    }
+  },
 
 
-/* ping_cave(str, *lib1, ...) is applied when (str) points to a string.
- * It computes the vector (*lib1, *lib2, *lib3, *lib4), 
- * where *lib1 is the number of liberties of the string, 
- * *lib2 is the number of second order liberties (empty vertices
- * at distance two) and so forth.
- *
- * The definition of liberties of order >1 is adapted to the problem
- * of detecting the shape of the surrounding cavity. In particular
- * we want to be able to see if a group is loosely surrounded.
- *
- * A liberty of order n is an empty space which may be connected
- * to the string by placing n stones of the same color on the board, 
- * but no fewer. The path of connection may pass through an intervening group
- * of the same color. The stones placed at distance >1 may not touch a
- * group of the opposite color. At the edge, also diagonal neighbors
- * count as touching. The path may also not pass through a liberty at distance
- * 1 if that liberty is flanked by two stones of the opposing color. This
- * reflects the fact that the O stone is blocked from expansion to the
- * left by the two X stones in the following situation:
- * 
- *          X.
- *          .O
- *          X.
- *
- * On the edge, one stone is sufficient to block expansion:
- *
- *          X.
- *          .O
- *          --
- *
- *
- * 计算气序（气序一到四），判断被包围的状态
- */
+  /* ping_cave(str, *lib1, ...) is applied when (str) points to a string.
+   * It computes the vector (*lib1, *lib2, *lib3, *lib4),
+   * where *lib1 is the number of liberties of the string,
+   * *lib2 is the number of second order liberties (empty vertices
+   * at distance two) and so forth.
+   *
+   * The definition of liberties of order >1 is adapted to the problem
+   * of detecting the shape of the surrounding cavity. In particular
+   * we want to be able to see if a group is loosely surrounded.
+   *
+   * A liberty of order n is an empty space which may be connected
+   * to the string by placing n stones of the same color on the board,
+   * but no fewer. The path of connection may pass through an intervening group
+   * of the same color. The stones placed at distance >1 may not touch a
+   * group of the opposite color. At the edge, also diagonal neighbors
+   * count as touching. The path may also not pass through a liberty at distance
+   * 1 if that liberty is flanked by two stones of the opposing color. This
+   * reflects the fact that the O stone is blocked from expansion to the
+   * left by the two X stones in the following situation:
+   *
+   *          X.
+   *          .O
+   *          X.
+   *
+   * On the edge, one stone is sufficient to block expansion:
+   *
+   *          X.
+   *          .O
+   *          --
+   *
+   *
+   * 计算气序（气序一到四），判断被包围的状态
+   */
   ping_cave(str, lib1, lib2, lib3, lib4) {
     const b = this.board
     const color = b.board[str];
@@ -1017,8 +1176,41 @@ export const Worm = {
     }
   },
   touching() {},
-  genus() {},
-  markcomponent() {},
+
+
+  /* The GENUS of a string is the number of connected components of
+   * its complement, minus one. It is an approximation to the number of
+   * eyes of the string.
+   */
+  // str是棋串id
+  genus(str) {
+    const b = this.board
+    let gen = -1;
+    const mg = []
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      // pos为空，或者不在棋串str内的棋子
+      if (b.ON_BOARD(pos) && !mg[pos] && (b.board[pos] === colors.EMPTY || !this.is_same_worm(pos, str))) {
+        this.markcomponent(str, pos, mg);
+        gen++;
+      }
+    }
+
+    return gen;
+  },
+
+  /* This recursive function marks the component at (pos) of
+   * the complement of the string with origin (str)
+   */
+  markcomponent(str, pos, mg) {
+    const b = this.board
+    mg[pos] = 1;
+    for (let k = 0; k < 4; k++) {
+      const apos = pos + b.delta[k];
+      if (b.ON_BOARD(apos) && mg[apos] === 0 && (b.board[apos] === colors.EMPTY || !this.is_same_worm(apos, str))){
+        this.markcomponent(str, apos, mg);
+      }
+    }
+  },
   examine_cavity() {},
   cavity_recurse() {},
 
@@ -1101,8 +1293,24 @@ export const Worm = {
 
   find_defense_patterns() {},
   defense_callback() {},
-  get_lively_stones() {},
-  compute_worm_influence() {},
+
+  // 标记活棋串
+  get_lively_stones(color, safe_stones) {
+    const b = this.board
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+      if (b.IS_STONE(b.board[pos]) && b.find_origin(pos) === pos) {
+        // 进攻失败或者防守不失败
+        if ((b.stackp === 0 && this.worm[pos].attack_codes[0] === 0) || !this.attack(pos, null)
+          || (b.board[pos] === color
+            && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0)
+              || this.find_defense(pos, null))))
+          this.mark_string(pos, safe_stones, 1);
+      }
+
+  },
+  compute_worm_influence() {
+
+  },
 
   ascii_report_worm() {},
   report_worm() {},

@@ -347,6 +347,24 @@ export const Reading = {
 
   break_through() {},
   break_through_helper() {},
+
+
+  /* ---------------------------------------------------------------- */
+  /*                              Threats                             */
+  /* ---------------------------------------------------------------- */
+
+  /* Return up to max_threats threats to capture the string at str.
+   * If the string is directly attackable the number of threats
+   * is reported to be 0.
+   *
+   * NOTE:  You can call attack_threats with moves[] and codes[]
+   *        already partly filled in. So if you want to get the
+   *        threats from scratch, you have to set them to 0
+   *        yourself.
+   *
+   * FIXME: Shall we report upgrades, like we can capture in ko but
+   *        have a threat to capture unconditionally?
+   */
   attack_threats() {},
 
   /* ================================================================ */
