@@ -391,6 +391,8 @@ export const Worm = {
     //
     // gg_assert(stackp == 0);
     //
+
+
     /* Find adjacent worms that can be easily captured, aka lunches. */
     // 一定能提子成功的叫lunch
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
@@ -405,11 +407,13 @@ export const Worm = {
         // DEBUG(DEBUG_WORMS, "lunch found for %1m at %1m\n", pos, lunch);
         this.worm[pos].lunch = lunch[0];
       }
-    else
-      this.worm[pos].lunch = NO_MOVE;
+      else {
+        this.worm[pos].lunch = NO_MOVE;
+      }
 
       this.propagate_worm(pos);
     }
+
     //
     if (!this.disable_threat_computation){
       this.find_worm_threats();
@@ -868,7 +872,7 @@ export const Worm = {
           /* Try to threaten on the liberty. */
           if (b.trymove(aa, color, "threaten defense", NO_MOVE)) {
             if (this.attack(str, null) === codes.WIN) {
-              let dcode = b.find_defense(str, null);
+              let dcode = this.find_defense(str, null);
               if (dcode !== 0){
                 this.change_defense_threat(str, aa, dcode);
               }
@@ -1127,14 +1131,11 @@ export const Worm = {
     /* Reset mse at liberties which are flanked by two stones of the
     * opposite color, or one stone and the edge.
     */
-
+    // 左右或上下被对方棋子夹住，或边线上被夹到
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
-      if (b.ON_BOARD(pos)
-        && mse[pos]
-        && ((( !b.ON_BOARD(b.SOUTH(pos)) || b.board[b.SOUTH(pos)] === other)
-        && (   !b.ON_BOARD(b.NORTH(pos)) || b.board[b.NORTH(pos)] === other))
-        || ((  !b.ON_BOARD(b.WEST(pos))  || b.board[b.WEST(pos)]  === other)
-      && (!b.ON_BOARD(b.EAST(pos))  || b.board[b.EAST(pos)]  === other)))) {
+      if (b.ON_BOARD(pos) && mse[pos]
+        && ((( !b.ON_BOARD(b.SOUTH(pos)) || b.board[b.SOUTH(pos)] === other) && (!b.ON_BOARD(b.NORTH(pos)) || b.board[b.NORTH(pos)] === other))
+        || ((  !b.ON_BOARD(b.WEST(pos))  || b.board[b.WEST(pos)]  === other) && (!b.ON_BOARD(b.EAST(pos))  || b.board[b.EAST(pos)]  === other)))) {
         mse[pos] = 0;
       }
     
@@ -1157,10 +1158,8 @@ export const Worm = {
   
     for (let k = 0; k < 4; k++) {
       let apos = pos + b.delta[k];
-      if (b.board[apos] === colors.EMPTY
-        && mx[apos] === 0
-        && mr[apos] === 0
-        && !this.touching(apos, b.OTHER_COLOR(color))) {
+      // 为空，未标记
+      if (b.board[apos] === colors.EMPTY && mx[apos] === 0 && mr[apos] === 0 && !this.touching(apos, b.OTHER_COLOR(color))) {
         counter[0]++;
         mr[apos] = 1;
         mx[apos] = 1;
@@ -1170,12 +1169,23 @@ export const Worm = {
     if (!b.is_ko_point(pos)) {
       for (let k = 0; k < 4; k++) {
         let apos = pos + b.delta[k];
+        // 下一个棋子或下一个已标记的气
         if (b.ON_BOARD(apos) && mr[apos] === 0 && (mx[apos] === 1 || b.board[apos] === color))
           this.ping_recurse(apos, counter, mx, mr, color);
       }
     }
   },
-  touching() {},
+
+  /* touching(pos, color) returns true if the vertex at (pos) is
+   * touching any stone of (color).
+   */
+  touching(pos, color) {
+    const b = this.board
+    return b.board[b.SOUTH(pos)] === color
+      || b.board[b.WEST(pos)] === color
+      || b.board[b.NORTH(pos)] === color
+      || b.board[b.EAST(pos)] === color
+  },
 
 
   /* The GENUS of a string is the number of connected components of
@@ -1211,6 +1221,7 @@ export const Worm = {
       }
     }
   },
+
   examine_cavity() {},
   cavity_recurse() {},
 
