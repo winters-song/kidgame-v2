@@ -36,4 +36,5 @@ export const transformation_init = (board) => {
       }
     }
   }
+  // console.log(transformation)
 }

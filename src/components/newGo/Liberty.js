@@ -53,6 +53,9 @@ export const MAX_TACTICAL_POINTS = 10
 
 // [0 - 1368]
 // (19+18)*2 = 1369 绝对位置
+
+// [0,0] => 684
+// [0,1] =>
 export function OFFSET(dx, dy, MAX_BOARD) {
   return (dy + MAX_BOARD - 1) * (2*MAX_BOARD - 1) + (dx + MAX_BOARD - 1)
 }
@@ -61,6 +64,7 @@ export function REVERSE_RESULT(result){ return codes.WIN - result}
 
 export function AFFINE_TRANSFORM(offset, trans, delta) {
   if(transformation[offset]){
+    console.log(transformation)
     return transformation[offset][trans] + delta
   }
 }

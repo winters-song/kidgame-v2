@@ -167,6 +167,9 @@ export const Matchpat = {
     /* Basic sanity checks. */
     b.ASSERT_ON_BOARD1(anchor);
 
+    debugger;
+    let pos = AFFINE_TRANSFORM(649, 2, 44)
+
     /* calculate the merged value around [m][n] for the grid opt */
     /* FIXME: Convert this to 2D (using delta[]) but be aware that you'll
      *	      also need to make corresponding changes in mkpat.c!
@@ -268,6 +271,7 @@ export const Matchpat = {
         if (!b.ON_BOARD2(m + mi[0], n + mj[0]) || !b.ON_BOARD2(m + xi[0], n + xj[0]))
           continue;  /* out of range */
 
+        console.log(m + mi[0], n + mj[0], m + xi[0], n + xj[0])
         /* Now iterate over the elements of the pattern. */
         let found_goal = 0;
         /* Iterate over elements of pattern */
