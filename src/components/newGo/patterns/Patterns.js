@@ -50,12 +50,6 @@ export const WEST_EDGE  = 8
 export const HAVE_CONSTRAINT = 1
 export const HAVE_ACTION     = 2
 
-class Patval {
-  constructor() {
-    this.offset = 0
-    this.att = ''
-  }
-}
 
 const pattern_attrs = [
   'patn', 'patlen', 'trfno', 'name',

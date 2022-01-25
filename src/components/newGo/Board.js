@@ -25,12 +25,10 @@ const boardParams = [
 const directions = ['SOUTH', 'WEST', 'NORTH', 'EAST']
 
 class BoardCacheEntry {
-  constructor() {
-    this.threshold = 0
-    this.liberties = 0
-    this.position_hash = {
-      hashval: 0
-    }
+  threshold = 0
+  liberties = 0
+  position_hash = {
+    hashval: 0
   }
 }
 

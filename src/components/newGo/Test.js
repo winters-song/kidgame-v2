@@ -27,8 +27,6 @@ export const Test = {
   },
 
   printPatn(list){
-    let origin = 684
-
     let size = 7
     let arr = new Array(size*size).fill(' ')
     for (let i = 0; i < list.length; ++i) {

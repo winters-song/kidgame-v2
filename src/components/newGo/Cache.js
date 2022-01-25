@@ -28,28 +28,22 @@ import {ROUTINE_COSTS, routine_id} from "./Liberty";
 
 //entity
 class HashNode {
-  constructor() {
-    // 32 bits
-    this.data = 0
-    this.key = {
-      hashval: 0
-    }
+  // 32 bits
+  data = 0
+  key = {
+    hashval: 0
   }
 }
 
 class HashEntry {
-  constructor() {
-    this.deepest = new HashNode()
-    this.newest = new HashNode()
-  }
+  deepest = new HashNode()
+  newest = new HashNode()
 }
 
 class TranspositionTable{
-  constructor() {
-    this.num_entries = 0
-    this.is_clean = 0
-    this.entries = []
-  }
+  num_entries = 0
+  is_clean = 0
+  entries = []
 }
 
 const HN_MAX_REMAINING_DEPTH = 31

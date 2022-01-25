@@ -112,7 +112,7 @@ export default class GoboardPlayer extends EventEmitter{
 	move (node, silent) {
 		const eated = this.go.play(node.col, node.row, node.color);
 
-		this.go.print_board()
+		// this.go.print_board()
 
 		this.cb.clientColor = this.cb.oppositeColor(this.cb.clientColor);
 		this.cb.currentColor = this.cb.clientColor
@@ -323,7 +323,7 @@ export default class GoboardPlayer extends EventEmitter{
 				this.go.add(i.col, i.row, i.color);
 			}
 		});
-		this.go.print_board()
+		// this.go.print_board()
 
 		//后渲染字母，保证不被棋子盖住
 		stones.forEach( i => {

@@ -64,7 +64,7 @@ export function REVERSE_RESULT(result){ return codes.WIN - result}
 
 export function AFFINE_TRANSFORM(offset, trans, delta) {
   if(transformation[offset]){
-    console.log(transformation)
+    // console.log(transformation)
     return transformation[offset][trans] + delta
   }
 }

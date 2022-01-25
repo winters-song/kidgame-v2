@@ -167,8 +167,8 @@ export const Matchpat = {
     /* Basic sanity checks. */
     b.ASSERT_ON_BOARD1(anchor);
 
-    debugger;
-    let pos = AFFINE_TRANSFORM(649, 2, 44)
+    // debugger;
+    // let pos = AFFINE_TRANSFORM(649, 2, 44)
 
     /* calculate the merged value around [m][n] for the grid opt */
     /* FIXME: Convert this to 2D (using delta[]) but be aware that you'll
@@ -271,9 +271,11 @@ export const Matchpat = {
         if (!b.ON_BOARD2(m + mi[0], n + mj[0]) || !b.ON_BOARD2(m + xi[0], n + xj[0]))
           continue;  /* out of range */
 
-        console.log(m + mi[0], n + mj[0], m + xi[0], n + xj[0])
+        // console.log(m + mi[0], n + mj[0], m + xi[0], n + xj[0])
         /* Now iterate over the elements of the pattern. */
         let found_goal = 0;
+        // goto mark
+        let matchFailed = 0
         /* Iterate over elements of pattern */
         // 循环 patn列表每个元素是否符合条件
         for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
@@ -291,7 +293,8 @@ export const Matchpat = {
 
           /* ...and check that board[pos] matches (see above). */
           if ((b.board[pos] & and_mask[color-1][att]) !== val_mask[color-1][att]){
-            console.log('match_failed')
+            // console.log('match_failed')
+            matchFailed = 1
             break;
           }
 
@@ -303,15 +306,20 @@ export const Matchpat = {
            * attributes - see patterns.db and above.
            */
           if (this.dragon[pos] && (pattern.class & class_mask[this.dragon[pos].status][b.board[pos]]) !== 0){
-            console.log('match_failed')
+            // console.log('match_failed')
+            matchFailed = 1
             break;
           }
 
         } /* loop over elements */
 
+        if(matchFailed){
+          break;
+        }
+
         /* Make it here ==> We have matched all the elements to the board. */
         if ((goal !== null) && !found_goal){
-          console.log('match_failed')
+          // console.log('match_failed')
           break;
         }
 

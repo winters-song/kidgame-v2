@@ -3,24 +3,21 @@ import {colors} from "./Constants";
 /* Incremental string data. */
 // string_data
 export class StringData {
+  color = null
+  size = 0
+  origin = null
+  liberties = 0
+  neighbors = 0
+  mark = null
+
   constructor(cfg) {
-    this.color = null
-    this.size = 0
-    this.origin = null
-
-    this.liberties = 0
-    this.neighbors = 0
-    this.mark = null
-
     Object.assign(this, cfg)
   }
 };
 
 // string_liberties_data + string_neighbors_data
 export class StringPosData {
-  constructor() {
-    this.list = []
-  }
+  list = []
 }
 
 export const Utils = {

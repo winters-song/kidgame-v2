@@ -190,9 +190,9 @@ export const Worm = {
      */
     // 攻防兼备
     // {
-    let color;
-    let str;
-    let moves_to_try = [];
+    // let color;
+    // let str;
+    // let moves_to_try = [];
     //   memset(moves_to_try, 0, sizeof(moves_to_try));
     //
     //   /* Find which colors to try at what points. */
@@ -415,9 +415,9 @@ export const Worm = {
     }
 
     //
-    if (!this.disable_threat_computation){
-      this.find_worm_threats();
-    }
+    // if (!this.disable_threat_computation){
+    //   this.find_worm_threats();
+    // }
     
     /* Identify INESSENTIAL strings.
      *
@@ -941,6 +941,7 @@ export const Worm = {
              * We can only do this if the worm data is available,
              * i.e. if stackp==0.
              */
+            // 断点越多越好，气越少越好
             if (lunch[0] === NO_MOVE
             || this.worm[pos].cutstone > this.worm[lunch[0]].cutstone
             || (this.worm[pos].cutstone === this.worm[lunch[0]].cutstone
@@ -1068,11 +1069,11 @@ export const Worm = {
 
       if (b.board[pos] === color) {
         for (let k = 0; k < MAX_TACTICAL_POINTS; k++) {
-          if (this.worm[pos].defense_codes[k] != 0)
+          if (this.worm[pos].defense_codes[k] !== 0)
             this.add_defense_move(this.worm[pos].defense_points[k], pos,
               this.worm[pos].defense_codes[k]);
 
-          if (this.worm[pos].defense_threat_codes[k] != 0)
+          if (this.worm[pos].defense_threat_codes[k] !== 0)
             this.add_defense_threat_move(this.worm[pos].defense_threat_points[k], pos,
               this.worm[pos].defense_threat_codes[k]);
         }
@@ -1132,13 +1133,14 @@ export const Worm = {
     * opposite color, or one stone and the edge.
     */
     // 左右或上下被对方棋子夹住，或边线上被夹到
-    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
       if (b.ON_BOARD(pos) && mse[pos]
         && ((( !b.ON_BOARD(b.SOUTH(pos)) || b.board[b.SOUTH(pos)] === other) && (!b.ON_BOARD(b.NORTH(pos)) || b.board[b.NORTH(pos)] === other))
         || ((  !b.ON_BOARD(b.WEST(pos))  || b.board[b.WEST(pos)]  === other) && (!b.ON_BOARD(b.EAST(pos))  || b.board[b.EAST(pos)]  === other)))) {
         mse[pos] = 0;
       }
-    
+    }
+
     lib2[0] = 0;
     mrc = []
     this.ping_recurse(str, lib2, mse, mrc, color);
@@ -1236,15 +1238,15 @@ export const Worm = {
   attack_callback(anchor, color, pattern, ll) {
     const b = this.board
 
-    console.log('match pattern', anchor, color, pattern, ll)
     // anchor对应找到target move着手位置
     let move = AFFINE_TRANSFORM(pattern.move_offset, ll, anchor);
 
+    console.log('match pattern', {anchor, color, pattern, ll, move})
     /* If the pattern has a constraint, call the autohelper to see
      * if the pattern must be rejected.
      */
     if (pattern.autohelper_flag & HAVE_CONSTRAINT) {
-      if (!pattern.autohelper(ll, move, color, 0)){
+      if (!pattern.autohelper.call(this, ll, move, color, 0)){
         return;
       }
     }
@@ -1307,22 +1309,29 @@ export const Worm = {
   find_defense_patterns() {},
   defense_callback() {},
 
-  // 标记活棋串
+  // 标记所有活棋串
   get_lively_stones(color, safe_stones) {
     const b = this.board
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+      // pos是棋串id
       if (b.IS_STONE(b.board[pos]) && b.find_origin(pos) === pos) {
         // 进攻失败或者防守不失败
         if ((b.stackp === 0 && this.worm[pos].attack_codes[0] === 0) || !this.attack(pos, null)
           || (b.board[pos] === color
             && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0)
               || this.find_defense(pos, null))))
-          this.mark_string(pos, safe_stones, 1);
+          b.mark_string(pos, safe_stones, 1);
       }
 
   },
-  compute_worm_influence() {
 
+  compute_worm_influence() {
+    const safe_stones = [];
+
+    // this.get_lively_stones(colors.BLACK, safe_stones);
+    // this.compute_influence(colors.BLACK, safe_stones, null, this.initial_black_influence, NO_MOVE, "initial black influence");
+    // this.get_lively_stones(colors.WHITE, safe_stones);
+    // this.compute_influence(colors.WHITE, safe_stones, null, this.initial_white_influence, NO_MOVE, "initial white influence");
   },
 
   ascii_report_worm() {},
