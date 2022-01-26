@@ -1328,9 +1328,9 @@ export const Worm = {
   compute_worm_influence() {
     const safe_stones = [];
 
-    // this.get_lively_stones(colors.BLACK, safe_stones);
+    this.get_lively_stones(colors.BLACK, safe_stones);
     // this.compute_influence(colors.BLACK, safe_stones, null, this.initial_black_influence, NO_MOVE, "initial black influence");
-    // this.get_lively_stones(colors.WHITE, safe_stones);
+    this.get_lively_stones(colors.WHITE, safe_stones);
     // this.compute_influence(colors.WHITE, safe_stones, null, this.initial_white_influence, NO_MOVE, "initial white influence");
   },
 

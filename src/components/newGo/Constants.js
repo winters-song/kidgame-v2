@@ -52,3 +52,17 @@ export const ko_rules = {
   PSK : 2,
   SSK : 3
 };
+
+export class InterpolationData {
+  sections = 0
+  range_lowerbound = 0
+  range_upperbound = 0
+  values= null
+
+  constructor(a,b,c,d) {
+    this.sections = a
+    this.range_lowerbound = b
+    this.range_upperbound = c
+    this.values = d
+  }
+};

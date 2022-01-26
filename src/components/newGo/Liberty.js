@@ -47,6 +47,9 @@ export const dragon_status  = {
   NUM_DRAGON_STATUS: 16
 };
 
+
+export const DEFAULT_STRENGTH  = 100.0
+
 export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
