@@ -19,7 +19,7 @@ import {AFFINE_TRANSFORM, dragon_status, TRANSFORM2} from "./Liberty";
  *
  *  gcc allows the entries to be computed at run-time, but that is not ANSI.
  */
-
+// i=3: 掩码为黑，结果为白或空， i=4: 掩码为白，结果为黑或空
 const and_mask = [
 /* .   O   X  o             x             ,   a   !      color */
   [3,  3,  3, colors.BLACK, colors.WHITE,  3,  3,  3], /* BLACK */

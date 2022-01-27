@@ -51,6 +51,9 @@ export const HAVE_CONSTRAINT = 1
 export const HAVE_ACTION     = 2
 
 
+export const INFLUENCE_CALLBACK =1
+export const FOLLOWUP_INFLUENCE_CALLBACK =2
+
 const pattern_attrs = [
   'patn', 'patlen', 'trfno', 'name',
   'mini', 'minj', 'maxi', 'maxj', 'width', 'height', 'edge_constraints', 'move_offset',

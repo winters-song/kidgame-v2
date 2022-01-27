@@ -225,6 +225,30 @@ export const Utils = {
     }
   },
 
+
+  /*
+   * Modify the various tactical reading depth parameters. This is
+   * typically used to avoid horizon effects. By temporarily increasing
+   * the depth values when trying some move, one can avoid that an
+   * irrelevant move seems effective just because the reading hits a
+   * depth limit earlier than it did when reading only on relevant
+   * moves.
+   */
+
+  modify_depth_values(n) {
+    this.depth              += n;
+    this.backfill_depth     += n;
+    this.backfill2_depth    += n;
+    this.break_chain_depth  += n;
+    this.superstring_depth  += n;
+    this.branch_depth       += n;
+    this.fourlib_depth      += n;
+    this.ko_depth           += n;
+    this.breakin_depth	     += n;
+    this.depth_offset       += n;
+    this.depth_modification += n;
+  },
+
   start_timer(n) {
     if(n >= 0 && n < NUMBER_OF_TIMERS){
       if (!this.showtime)

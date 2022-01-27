@@ -12,8 +12,8 @@ import {Persistent} from "./Persistent";
 import {Cache} from "./Cache"
 import {dragon_status} from "./Liberty";
 import {Matchpat} from "./Matchpat";
+import {Influence} from "./Influence";
 
-import {attpat_db} from "./patterns/apatterns"
 import {transformation_init} from "./patterns/transform";
 import {Test} from "./Test";
 
@@ -31,12 +31,9 @@ export default class Genmove {
   constructor(board) {
     this.board = board
     Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat, Test)
-
-    Object.assign(this, {attpat_db})
+      Matchpat, Influence, Test)
 
     this.initData()
-
 
     this.reading_cache_init()
     this.persistent_cache_init()
@@ -107,7 +104,7 @@ export default class Genmove {
     }
 
   //
-  if (this.board.stones_on_board(colors.BLACK | colors.WHITE) != 0) {
+  if (this.board.stones_on_board(colors.BLACK | colors.WHITE) !== 0) {
     if (this.NEEDS_UPDATE(this.initial_influence_examined)){
       this.compute_worm_influence();
     }

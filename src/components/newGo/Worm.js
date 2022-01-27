@@ -4,6 +4,8 @@ import {
 } from './Constants'
 import {AFFINE_TRANSFORM, dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
 import {ATT_X, HAVE_CONSTRAINT} from "./patterns/Patterns";
+import {attpat_db} from "./patterns/apatterns"
+import {initial_black_influence, initial_white_influence} from "./Influence";
 
 class WormData{
   constructor(cfg) {
@@ -702,11 +704,6 @@ export const Worm = {
 
     /* 1. Start with finding attack points. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
-
-      // if(str !== 55){
-      //   continue;
-      // }
-
       if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str)){
         continue;
       }
@@ -1229,7 +1226,7 @@ export const Worm = {
 
   /* Find attacking moves by pattern matching, for both colors. */
   find_attack_patterns() {
-    this.matchpat(this.attack_callback, matchpat.ANCHOR_OTHER, this.attpat_db, null, null);
+    this.matchpat(this.attack_callback, matchpat.ANCHOR_OTHER, attpat_db, null, null);
   },
 
   /* Try to attack every X string in the pattern, whether there is an attack
@@ -1318,8 +1315,7 @@ export const Worm = {
         // 进攻失败或者防守不失败
         if ((b.stackp === 0 && this.worm[pos].attack_codes[0] === 0) || !this.attack(pos, null)
           || (b.board[pos] === color
-            && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0)
-              || this.find_defense(pos, null))))
+            && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0) || this.find_defense(pos, null))))
           b.mark_string(pos, safe_stones, 1);
       }
 
@@ -1329,9 +1325,10 @@ export const Worm = {
     const safe_stones = [];
 
     this.get_lively_stones(colors.BLACK, safe_stones);
-    // this.compute_influence(colors.BLACK, safe_stones, null, this.initial_black_influence, NO_MOVE, "initial black influence");
+    this.compute_influence(colors.BLACK, safe_stones, null, initial_black_influence, NO_MOVE, "initial black influence");
     this.get_lively_stones(colors.WHITE, safe_stones);
-    // this.compute_influence(colors.WHITE, safe_stones, null, this.initial_white_influence, NO_MOVE, "initial white influence");
+    this.compute_influence(colors.WHITE, safe_stones, null, initial_white_influence, NO_MOVE, "initial white influence");
+    console.log(safe_stones)
   },
 
   ascii_report_worm() {},

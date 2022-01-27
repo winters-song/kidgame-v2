@@ -3,7 +3,8 @@ const map = {
   0: '.',
   1: 'X',
   2: 'O',
-  3: '#',
+  3: 'x',
+  4: 'o',
 }
 export const Test = {
   // 模式特征码打印
@@ -34,8 +35,11 @@ export const Test = {
       const index = list[i][0]
       const col = Math.floor(index/ 37) - 18 + 3
       const row = index%37 - 18 + 3
-      
-      arr[row*7+col] = map[val]
+
+      if(col>=0 && col < 7 && row >=0 && row < 7){
+        arr[row*7+col] = map[val]
+      }
+
     }
 
     let res = [];
