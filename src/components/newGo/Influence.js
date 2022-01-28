@@ -17,6 +17,18 @@ import {influencepat_db} from "./patterns/influence"
 import {barrierspat_db} from "./patterns/barriers"
 
 import {Globals} from './Globals'
+import {gg_interpolate} from "./GgUtils";
+
+
+const DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.7  + (1.0 - cosmic_importance) * 3.0)
+const TERR_DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.15 + (1.0 - cosmic_importance) * 2.4)
+
+/* Extra damping coefficient for spreading influence diagonally. */
+const DIAGONAL_DAMPING = cosmic_importance => (cosmic_importance * 2.5 + (1.0 - cosmic_importance) * 2.0)
+const TERR_DIAGONAL_DAMPING = cosmic_importance => (cosmic_importance * 2.5 + (1.0 - cosmic_importance) * 1.7)
+
+/* Smallest amount of influence that we care about distributing. */
+const INFLUENCE_CUTOFF = 0.02
 
 
 class IntrusionData {
@@ -60,21 +72,21 @@ class MoyoDeterminationData {
   opp_influence_maximum = 0
 }
 
-export const initial_black_influence = new InfluenceData
-export const initial_white_influence = new InfluenceData
+export const initial_black_influence = new InfluenceData()
+export const initial_white_influence = new InfluenceData()
 
-const move_influence = new InfluenceData
-const followup_influence = new InfluenceData
+const move_influence = new InfluenceData()
+const followup_influence = new InfluenceData()
 
 /* Influence used for estimation of escape potential. */
-const escape_influence = new InfluenceData
+const escape_influence = new InfluenceData()
 
 /* Pointer to influence data used during pattern matching. */
 let current_influence = null
 
 /* Thresholds values used in the whose_moyo() functions */
-const moyo_data = new MoyoDeterminationData
-const moyo_restricted_data = new MoyoDeterminationData
+const moyo_data = new MoyoDeterminationData()
+const moyo_restricted_data = new MoyoDeterminationData()
 
 /* Thresholds value used in the whose_territory() function */
 let territory_determination_value = 0
@@ -92,18 +104,161 @@ let influence_id = 0;
 let cosmic_importance
 
 
-
-const DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.7  + (1.0 - cosmic_importance) * 3.0)
-const TERR_DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.15 + (1.0 - cosmic_importance) * 2.4)
-
-/* Extra damping coefficient for spreading influence diagonally. */
-const DIAGONAL_DAMPING = cosmic_importance => (cosmic_importance * 2.5 + (1.0 - cosmic_importance) * 2.0)
-const TERR_DIAGONAL_DAMPING = cosmic_importance => (cosmic_importance * 2.5 + (1.0 - cosmic_importance) * 1.7)
-
+const code1 = function (arg_di, arg_dj, arg, arg_d , {ii, q, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}) {
+  if (!q.safe[arg] && (arg_di * delta_i + arg_dj * delta_j > 0 || queue_start === 1)) {
+    let contribution;
+    let permeability = permeability_array[ii];
+    if (arg_d) {
+      permeability *= Math.max(permeability_array[ii + b.DELTA(arg_di, 0)], permeability_array[ii + b.DELTA(0, arg_dj)]);
+      if (permeability === 0.0) {
+        return
+      }
+    }
+    contribution = current_strength * permeability;
+    if (queue_start !== 1) {
+      let a = arg_di * delta_i + arg_dj * delta_j;
+      contribution *= (a * a) * b;
+    }
+    if (contribution <= INFLUENCE_CUTOFF) {
+      return
+    }
+    if (working[arg] === 0.0) {
+      q.queue[queue_end] = (arg);
+      queue_end++;
+    }
+    working[arg] += contribution;
+  }
+}
 
 export const Influence = {
 
-  accumulate_influence(){},
+  accumulate_influence(q, pos, color) {
+    const b = this.board
+    let ii;
+    let m = b.I(pos);
+    let n = b.J(pos);
+    let k;
+    let bb;
+    let inv_attenuation;
+    let inv_diagonal_damping;
+    let permeability_array;
+
+    /* Clear the queue. Entry 0 is implicitly (m, n). */
+    let queue_start = 0;
+    let queue_end = 1;
+
+    let working = [];
+    let working_area_initialized = 0;
+
+    if (!working_area_initialized) {
+      for (ii = 0; ii < b.BOARDMAX; ii++){
+        working[ii] = 0.0;
+      }
+      working_area_initialized = 1;
+    }
+
+    /* Attenuation only depends on the influence origin. */
+    if (color === colors.WHITE){
+      inv_attenuation = 1.0 / q.white_attenuation[pos];
+    }
+    else {
+      inv_attenuation = 1.0 / q.black_attenuation[pos];
+    }
+
+    if (q.is_territorial_influence){
+      inv_diagonal_damping = 1.0 / TERR_DIAGONAL_DAMPING;
+    }
+    else {
+      inv_diagonal_damping = 1.0 / DIAGONAL_DAMPING;
+    }
+
+    if (color === colors.WHITE) {
+      permeability_array = q.white_permeability;
+    }
+    else {
+      permeability_array = q.black_permeability;
+    }
+
+    /* We put the original source into slot 0.  */
+    q.queue[0] = pos;
+
+    if (color === colors.WHITE) {
+      working[pos] = q.white_strength[pos];
+    }
+    else {
+      working[pos] = q.black_strength[pos];
+    }
+
+
+    /* Spread influence until the stack is empty. */
+    while (queue_start < queue_end) {
+      let current_strength;
+      let delta_i, delta_j;
+
+      ii = q.queue[queue_start];
+      delta_i = b.I(ii) - m;
+      delta_j = b.J(ii) - n;
+      queue_start++;
+      if (permeability_array[ii] === 0.0){
+        continue;
+      }
+
+      if (queue_start === 1){
+        bb = 1.0;
+      }
+      else {
+        bb = 1.0 / ((delta_i) * (delta_i) + (delta_j) * (delta_j));
+      }
+
+      current_strength = working[ii] * inv_attenuation;
+
+      const params = {q, ii, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}
+
+      if (b.ON_BOARD(ii + b.delta[0]))
+        code1(b.deltai[0], b.deltaj[0], ii + b.delta[0], 0, params);
+      if (b.ON_BOARD(ii + b.delta[1]))
+        code1(b.deltai[1], b.deltaj[1], ii + b.delta[1], 0, params);
+      if (b.ON_BOARD(ii + b.delta[2]))
+        code1(b.deltai[2], b.deltaj[2], ii + b.delta[2], 0, params);
+      if (b.ON_BOARD(ii + b.delta[3]))
+        code1(b.deltai[3], b.deltaj[3], ii + b.delta[3], 0, params);
+
+      /* Update factors for diagonal movement. */
+      bb *= 0.5;
+      current_strength *= inv_diagonal_damping;
+
+      if (b.ON_BOARD(ii + b.delta[4]))
+        code1(b.deltai[4], b.deltaj[4], ii + b.delta[4], 1, params);
+      if (b.ON_BOARD(ii + b.delta[5]))
+        code1(b.deltai[5], b.deltaj[5], ii + b.delta[5], 1, params);
+      if (b.ON_BOARD(ii + b.delta[6]))
+        code1(b.deltai[6], b.deltaj[6], ii + b.delta[6], 1, params);
+      if (b.ON_BOARD(ii + b.delta[7]))
+        code1(b.deltai[7], b.deltaj[7], ii + b.delta[7], 1, params);
+    }
+
+    /* Add the values in the working area to the accumulated influence
+     * and simultaneously reset the working area. We know that all
+     * influenced points were stored in the queue, so we just traverse
+     * it.
+     */
+    for (k = 0; k < queue_end; k++) {
+      ii = q.queue[k];
+
+      if (color === colors.WHITE) {
+        if (working[ii] > 1.01 * INFLUENCE_CUTOFF || q.white_influence[ii] === 0.0){
+          q.white_influence[ii] += working[ii];
+        }
+      }
+      else {
+        if (working[ii] > 1.01 * INFLUENCE_CUTOFF || q.black_influence[ii] === 0.0){
+          q.black_influence[ii] += working[ii];
+        }
+      }
+
+      working[ii] = 0.0;
+    }
+  },
 
   init_influence(q, safe_stones, strength) {
     const b = this.board
@@ -510,6 +665,7 @@ export const Influence = {
       }
     }
   },
+
   followup_influence_callback(){},
   influence_mark_non_territory(){},
   influence_erase_territory(){},
@@ -575,13 +731,23 @@ export const Influence = {
   },
   check_double_block(){},
 
-  remove_double_blocks() {},
+  /* This function checks for the situation where an influence source for
+   * the color to move is direclty neighbored by 2 or more influence blocks.
+   * It then removes the least valuable of these blocks, and re-runs the
+   * influence accumulation for this position.
+   *
+   * See endgame:840 for an example where this is essential.
+   */
+  remove_double_blocks() {
+
+  },
 
   /* Do the real work of influence computation. This is called from
    * compute_influence and compute_escape_influence.
    *
    * q->is_territorial_influence and q->color_to_move must be set by the caller.
    */
+  // 需要指定： 是否是实地影响、下一步颜色
   do_compute_influence(safe_stones, inhibited_sources, strength, q,  move, trace_message) {
     const b = this.board
     this.init_influence(q, safe_stones, strength);
@@ -590,7 +756,7 @@ export const Influence = {
     this.find_influence_patterns(q);
     this.modify_depth_values(1 - b.stackp);
 
-    for (let i = b.BOARDMIN; i < b.BOARDMAX; i++)
+    for (let i = b.BOARDMIN; i < b.BOARDMAX; i++) {
       if (b.ON_BOARD(i) && !(inhibited_sources && inhibited_sources[i])) {
         if (q.white_strength[i] > 0.0){
           this.accumulate_influence(q, i, colors.WHITE);
@@ -599,6 +765,7 @@ export const Influence = {
           this.accumulate_influence(q, i, colors.BLACK);
         }
       }
+    }
 
     this.value_territory(q);
     this.remove_double_blocks(q, inhibited_sources);
@@ -638,7 +805,7 @@ export const Influence = {
     // memset(first_guess, 0, BOARDMAX*sizeof(float));
     // memset(q->territory_value, 0, BOARDMAX*sizeof(float));
     /* First loop: guess territory directly from influence. */
-    for (ii = BOARDMIN; ii < BOARDMAX; ii++) {
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
       if (b.ON_BOARD(ii) && !q.safe[ii]) {
         let diff = 0.0;
         if (q.white_influence[ii] + q.black_influence[ii] > 0) {
@@ -664,8 +831,8 @@ export const Influence = {
          *  5  8  9 10 10 10 10 10  9  8  5
          *  4  5  6  7  7  7  7  7  6  5  4
          */
-        dist_i = Math.min(b.I(ii), board_size - b.I(ii) - 1);
-        dist_j = Math.min(b.J(ii), board_size - b.J(ii) - 1);
+        dist_i = Math.min(b.I(ii), b.board_size - b.I(ii) - 1);
+        dist_j = Math.min(b.J(ii), b.board_size - b.J(ii) - 1);
         if (dist_i > dist_j){
           dist_i = Math.min(4, dist_i);
         }
@@ -690,10 +857,10 @@ export const Influence = {
          * moyo or area. Also notice that the non-territory
          * degradation below may over-rule this decision.
          */
-        if (board[ii] === colors.BLACK) {
+        if (b.board[ii] === colors.BLACK) {
           first_guess[ii] = 1.0;
         }
-        else if (board[ii] === colors.WHITE) {
+        else if (b.board[ii] === colors.WHITE) {
           first_guess[ii] = -1.0;
         }
         q.territory_value[ii] = first_guess[ii];
@@ -704,7 +871,7 @@ export const Influence = {
      * value is degraded to the minimum value of its neighbors (unless this
      * neighbor has reduced permeability for the opponent's influence).
      */
-    for (ii = BOARDMIN; ii < BOARDMAX; ii++)
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++)
       /* Do not overrule dead stone territory above.
         * FIXME: This does not do what it claims to do. Correcting it
         * seems to break some tests, though.
@@ -717,7 +884,7 @@ export const Influence = {
         if (q.territory_value[ii] > 0.0) {
           /* White territory. */
           if (!q.safe[ii + b.delta[k]]) {
-            let neighbor_val = q.black_permeability[ii + b.delta[k]] * first_guess[ii + delta[k]]
+            let neighbor_val = q.black_permeability[ii + b.delta[k]] * first_guess[ii + b.delta[k]]
                 + (1.0 - q.black_permeability[ii + b.delta[k]]) * first_guess[ii];
             q.territory_value[ii] = Math.max(0, Math.min(q.territory_value[ii], neighbor_val));
           }
@@ -725,8 +892,8 @@ export const Influence = {
         else {
           /* Black territory. */
           if (!q.safe[ii + b.delta[k]]) {
-            let neighbor_val = q.white_permeability[ii + b.delta[k]] * first_guess[ii + delta[k]]
-                + (1 - q.white_permeability[ii + delta[k]]) * first_guess[ii];
+            let neighbor_val = q.white_permeability[ii + b.delta[k]] * first_guess[ii + b.delta[k]]
+                + (1 - q.white_permeability[ii + b.delta[k]]) * first_guess[ii];
             q.territory_value[ii] = Math.min(0, Math.max(q.territory_value[ii], neighbor_val));
           }
         }
@@ -734,7 +901,7 @@ export const Influence = {
     }
 
     /* Third loop: Nonterritory patterns, points for prisoners. */
-    for (ii = BOARDMIN; ii < BOARDMAX; ii++) {
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
       if (b.ON_BOARD(ii) && !q.safe[ii]) {
         /* If marked as non-territory for the color currently owning
          * it, reset the territory value.
@@ -748,9 +915,9 @@ export const Influence = {
         }
 
         /* Dead stone, add one to the territory value. */
-        if (board[ii] === colors.BLACK) {
+        if (b.board[ii] === colors.BLACK) {
           q.territory_value[ii] += 1.0;
-        } else if (board[ii] === colors.WHITE) {
+        } else if (b.board[ii] === colors.WHITE) {
           q.territory_value[ii] -= 1.0;
         }
       }

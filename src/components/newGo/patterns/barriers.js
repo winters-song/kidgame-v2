@@ -4,11 +4,6 @@ import {AFFINE_TRANSFORM} from "../Liberty";
 /*
 
 * */
-const influencepat0 = [
-  [685,2],	[684,2],	[686,4],	[758,0],
-  [795,0],	[757,0],	[759,0],	[796,0],
-  [723,0]
-];
 
 const barrierspat0 = [
 [721, 5],	[684, 2],	[758, 2]
