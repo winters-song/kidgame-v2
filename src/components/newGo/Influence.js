@@ -316,6 +316,7 @@ export const Influence = {
         q.non_territory[i] = colors.EMPTY;
 
         if (b.IS_STONE(b.board[i])) {
+          // 有棋子，不是活棋, 我方穿透为0
           if (!safe_stones[i]) {
             if (b.board[i] === colors.WHITE){
               q.white_permeability[i] = 0.0;
@@ -324,20 +325,13 @@ export const Influence = {
             }
           }
           else {
+            // 活棋,strength = 100，对方穿透为0
             if (b.board[i] === colors.WHITE) {
-              if (strength){
-                q.white_strength[i] = strength[i];
-              } else {
-                q.white_strength[i] = DEFAULT_STRENGTH;
-              }
+              q.white_strength[i] = strength ? strength[i] : DEFAULT_STRENGTH;
               q.black_permeability[i] = 0.0;
             }
             else {
-              if (strength){
-                q.black_strength[i] = strength[i];
-              } else{
-                q.black_strength[i] = DEFAULT_STRENGTH;
-              }
+              q.black_strength[i] = strength ? strength[i] : DEFAULT_STRENGTH;
               q.white_permeability[i] = 0.0;
             }
           }
@@ -349,6 +343,7 @@ export const Influence = {
            * when an inessential worm gets captured. So we revise this
            * in our private copy here.
            */
+          // 空的safe_stones值为0
           q.safe[i] = 0;
         }
       }
@@ -489,11 +484,13 @@ export const Influence = {
     let q = data;
 
     /* We also ignore enhancement patterns in territorial influence. */
+    // CLASS_E： 想要扩张模样
     if ((pattern.class & CLASS_E) && q.is_territorial_influence) {
       return;
     }
 
     /* Don't use invasion (I) patterns when scoring. */
+    // 点目时不考虑入侵
     if (Globals.doing_scoring && (pattern.class & CLASS_I)) {
       return;
     }
@@ -502,6 +499,7 @@ export const Influence = {
      * can possibly have any effect. If not we can skip evaluating
      * constraint and/or helper.
      */
+    // Attack,Defense模式
     if (pattern.class & (CLASS_A | CLASS_D)) {
       let something_to_do = 0;
       // gg_assert(q.is_territorial_influence);
@@ -692,6 +690,7 @@ export const Influence = {
     /* Additionally, we introduce a weaker kind of barriers around living
      * stones.
      */
+    // 计算穿透permeability
     for (let i = b.BOARDMIN; i < b.BOARDMAX; i++){
 
       if (b.ON_BOARD(i) && !q.safe[i]) {
@@ -779,6 +778,7 @@ export const Influence = {
   },
 
   compute_influence (color, safe_stones, strength, q, move, trace_message) {
+    // 类型不同，衰减度不同
     q.is_territorial_influence = 1;
     q.color_to_move = color;
 

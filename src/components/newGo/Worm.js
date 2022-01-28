@@ -1306,19 +1306,19 @@ export const Worm = {
   find_defense_patterns() {},
   defense_callback() {},
 
-  // 标记所有活棋串
+  // 标记所有活棋串, color判断守方是否能防守成功
   get_lively_stones(color, safe_stones) {
     const b = this.board
-    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
       // pos是棋串id
       if (b.IS_STONE(b.board[pos]) && b.find_origin(pos) === pos) {
         // 进攻失败或者防守不失败
         if ((b.stackp === 0 && this.worm[pos].attack_codes[0] === 0) || !this.attack(pos, null)
-          || (b.board[pos] === color
-            && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0) || this.find_defense(pos, null))))
+          || (b.board[pos] === color && ((b.stackp === 0 && this.worm[pos].defense_codes[0] !== 0) || this.find_defense(pos, null)))) {
           b.mark_string(pos, safe_stones, 1);
+        }
       }
-
+    }
   },
 
   compute_worm_influence() {
