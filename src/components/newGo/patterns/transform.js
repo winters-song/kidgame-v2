@@ -4,6 +4,9 @@ import {OFFSET, TRANSFORM2} from "../Liberty";
 // MAX_OFFSET	:	(2*MAX_BOARD - 1) * (2*MAX_BOARD - 1)
 export const transformation = []
   /* Matrix array for use by TRANSFORM2() macro. */
+// 变换方向：
+// 0-原图, 1-90度，2-180度，3-270度，
+// 4-90度+x轴对称（/翻转），5-x轴对称（-翻转）， 6-270度+x轴对称（\翻转），7-y轴对称（|翻转）
 export const transformation2 = [
 [[ 1,  0], [ 0,  1]], /* a - identity transformation matrix */
 [[ 0,  1], [-1,  0]], /* g - rotate 90 clockwise */

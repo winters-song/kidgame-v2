@@ -1,3 +1,11 @@
+import {AFFINE_TRANSFORM} from "./Liberty";
+
+const maskMap = {
+  0: '.',
+  1: 'X',
+  2: 'O',
+  3: '?',
+}
 
 const map = {
   0: '.',
@@ -21,7 +29,7 @@ export const Test = {
     let res = [];
 
     for (let i = 0; i < 4; i++) {
-      let temp = arr.slice(i* 4, (i+1) * 4 ).map(i => map[i]).join(' ')
+      let temp = arr.slice(i* 4, (i+1) * 4 ).map(i => maskMap[i]).join(' ')
       res.push(temp);
     }
     console.log(res.join('\n'))
@@ -46,6 +54,36 @@ export const Test = {
 
     for (let i = 0; i < size; i++) {
       let temp = arr.slice(i* size, (i+1) * size ).join(' ')
+      res.push(temp);
+    }
+    console.log(res.join('\n'))
+  },
+
+  printPatnBoard(pattern, ll, anchor){
+    const b = this.board
+    const board = b.board.slice()
+
+    for(let i in board){
+      if(board[i] === 3){
+        board[i] = '#'
+      }else{
+        board[i] = ' '
+      }
+    }
+    for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
+      let att = pattern.patn[k][1];  /* what we are looking for */
+
+      let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
+
+      board[pos] = maskMap[att]
+    }
+
+    // print
+    let lineNum = Math.floor( b.board.length / b.NS + 1 );
+    let res = [];
+
+    for (let i = 0; i < lineNum; i++) {
+      let temp = board.slice(i* b.NS, (i+1) * b.NS ).join(' ')
       res.push(temp);
     }
     console.log(res.join('\n'))

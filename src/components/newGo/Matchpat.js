@@ -20,6 +20,7 @@ import {AFFINE_TRANSFORM, dragon_status, TRANSFORM2} from "./Liberty";
  *  gcc allows the entries to be computed at run-time, but that is not ANSI.
  */
 // i=3: 掩码为黑，结果为白或空， i=4: 掩码为白，结果为黑或空
+//  O - 白棋， X - 黑棋
 const and_mask = [
 /* .   O   X  o             x             ,   a   !      color */
   [3,  3,  3, colors.BLACK, colors.WHITE,  3,  3,  3], /* BLACK */
@@ -53,7 +54,7 @@ const val_mask = [
  * initially set to 0, and we overwrite the ones
  * we care about each time.
  */
-const class_mask = []
+let class_mask = []
 
 export const Matchpat = {
   /* In the current implementation, the edge constraints depend on
@@ -67,6 +68,9 @@ export const Matchpat = {
    * size.
    *
    * This should be called once for each pattern database.
+   *
+   * 角部：
+   * 9 = 1+8 (north+west)代表棋盘左上角
    */
   fixup_patterns_for_board_size(patterns) {
     const board_size = this.board.board_size
@@ -130,6 +134,8 @@ export const Matchpat = {
 
     /* Basic sanity checks. */
     this.board.ASSERT1(color !== colors.EMPTY);
+
+    class_mask = new Array(17).fill({0:0, 1: 0, 2: 0})
 
     /* If we set one of class_mask[XXX][color] and
      * class_mask[XXX][other], we have to explicitly set or reset the
@@ -305,7 +311,7 @@ export const Matchpat = {
           /* Check out the class_X, class_O, class_x, class_o
            * attributes - see patterns.db and above.
            */
-          if (this.dragon[pos] && (pattern.class & class_mask[this.dragon[pos].status][b.board[pos]]) !== 0){
+          if (this.dragon.length && this.dragon[pos] && (pattern.class & class_mask[this.dragon[pos].status][b.board[pos]]) !== 0){
             // console.log('match_failed')
             matchFailed = 1
             break;

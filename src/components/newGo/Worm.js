@@ -7,20 +7,38 @@ import {ATT_X, HAVE_CONSTRAINT} from "./patterns/Patterns";
 import {attpat_db} from "./patterns/apatterns"
 import {initial_black_influence, initial_white_influence} from "./Influence";
 
+
 class WormData{
+  color;         /* its color */
+  size;          /* its cardinality */
+  effective_size; /* stones and surrounding spaces */
+  origin;        /* the origin of the string. Two vertices are in the same worm iff they have same origin. */
+  liberties;     /* number of liberties */
+  liberties2;    /* number of second order liberties */
+  liberties3;    /* third order liberties (empty vertices at distance 3) */
+  liberties4;    /* fourth order liberties */
+  lunch;         /* if lunch != 0 then lunch points to a boundary worm which can be captured easily. */
+  cutstone;      /* 1=potential cutting stone; 2=cutting stone */
+  cutstone2;     /* Number of potential cuts involving the worm. */
+  genus;         /* number of connected components of the complement, less one */
+  inessential;   /* 1=inessential worm */
+  invincible;    /* 1=strongly unconditionally non-capturable */
+  unconditional_status; /* ALIVE, DEAD, WHITE_TERRITORY */
+  attack_points = []
+  attack_codes = []
+  defense_points = []
+  defense_codes = []
+  attack_threat_points = []
+  attack_threat_codes = []
+  defense_threat_points = []
+  defense_threat_codes = []
+  
   constructor(cfg) {
     Object.assign(this, cfg)
-
-    this.attack_points = []
-    this.attack_codes = []
-    this.defense_points = []
-    this.defense_codes = []
-    this.attack_threat_points = []
-    this.attack_threat_codes = []
-    this.defense_threat_points = []
-    this.defense_threat_codes = []
   }
 }
+
+
 export const Worm = {
   make_worms() {
     const b = this.board
@@ -1328,7 +1346,8 @@ export const Worm = {
     this.compute_influence(colors.BLACK, safe_stones, null, initial_black_influence, NO_MOVE, "initial black influence");
     this.get_lively_stones(colors.WHITE, safe_stones);
     this.compute_influence(colors.WHITE, safe_stones, null, initial_white_influence, NO_MOVE, "initial white influence");
-    console.log(safe_stones)
+    // console.log(safe_stones)
+    // this.print_influence(initial_black_influence)
   },
 
   ascii_report_worm() {},

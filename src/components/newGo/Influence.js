@@ -19,8 +19,9 @@ import {barrierspat_db} from "./patterns/barriers"
 import {Globals} from './Globals'
 import {gg_interpolate} from "./GgUtils";
 
-
+// 3 - 0.3x
 const DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.7  + (1.0 - cosmic_importance) * 3.0)
+// 2.4 - 0.25x
 const TERR_DEFAULT_ATTENUATION = cosmic_importance => (cosmic_importance * 2.15 + (1.0 - cosmic_importance) * 2.4)
 
 /* Extra damping coefficient for spreading influence diagonally. */
@@ -101,8 +102,27 @@ const territory_correction = new InterpolationData(5, 0.0, 1.0, [ 0.0, 0.25, 0.4
 
 
 let influence_id = 0;
+
+// 貌似是中心化落子的权重
 let cosmic_importance
 
+const printmoyo = 255
+
+const MAX_INTRUSIONS = (2 * 19 * 19)
+
+
+/* Printmoyo values, specified by -m flag. */
+// const PRINTMOYO_TERRITORY         = 0x01
+// const PRINTMOYO_MOYO              = 0x02
+// const PRINTMOYO_AREA              = 0x04
+// /* The following have been borrowed by the influence functions below. */
+// const PRINTMOYO_INITIAL_INFLUENCE = 0x08
+// const PRINTMOYO_PRINT_INFLUENCE   = 0x10
+const PRINTMOYO_NUMERIC_INFLUENCE = 0x20
+const PRINTMOYO_PERMEABILITY      = 0x40
+const PRINTMOYO_STRENGTH          = 0x80
+const PRINTMOYO_ATTENUATION       = 0x100
+// const PRINTMOYO_VALUE_TERRITORY   = 0x200
 
 const code1 = function (arg_di, arg_dj, arg, arg_d , {ii, q, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}) {
   if (!q.safe[arg] && (arg_di * delta_i + arg_dj * delta_j > 0 || queue_start === 1)) {
@@ -267,18 +287,19 @@ export const Influence = {
     /* Initialisation of some global positional values, based on
      * game stage.
      */
-
+    
     /* non-cosmic values */
     cosmic_importance = 0.0;
 
+    //用于 whose_moyo() functions 极小极大值
     moyo_data.influence_balance     = 7.0;
     moyo_data.my_influence_minimum  = 5.0;
     moyo_data.opp_influence_maximum = 10.0;
-
     moyo_restricted_data.influence_balance     = 10.0;
     moyo_restricted_data.my_influence_minimum  = 10.0;
     moyo_restricted_data.opp_influence_maximum = 10.0;
 
+    //用于 whose_territory function()
     territory_determination_value = 0.95;
 
     min_infl_for_territory.values[0] = 6.0;
@@ -309,6 +330,7 @@ export const Influence = {
         q.black_influence[i] = 0.0;
         q.white_attenuation[i] = attenuation;
         q.black_attenuation[i] = attenuation;
+        // 默认穿透 1.0
         q.white_permeability[i] = 1.0;
         q.black_permeability[i] = 1.0;
         q.white_strength[i] = 0.0;
@@ -348,6 +370,7 @@ export const Influence = {
         }
       }
     }
+
   },
 
   /* Adds an influence source at position pos with prescribed strength
@@ -367,8 +390,30 @@ export const Influence = {
     }
   },
 
-  enter_intrusion_source(){},
-  compare_intrusions(){},
+  /* Adds an intrusion as an entry in the list q->intrusions.  */
+
+  enter_intrusion_source(source_pos, strength_pos, strength, attenuation, q){
+    if (q.intrusion_counter >= MAX_INTRUSIONS) {
+      // DEBUG(DEBUG_INFLUENCE, "intrusion list exhausted\n");
+      return;
+    }
+    q.intrusions[q.intrusion_counter].source_pos = source_pos;
+    q.intrusions[q.intrusion_counter].strength_pos = strength_pos;
+    q.intrusions[q.intrusion_counter].strength = strength;
+    q.intrusions[q.intrusion_counter].attenuation = attenuation;
+    q.intrusion_counter++;
+  },
+  compare_intrusions(p1, p2){
+    if (p1.source_pos - p2.source_pos !== 0) {
+      return (p1.source_pos - p2.source_pos);
+    } else if (p1.strength_pos - p2.strength_pos !== 0) {
+      return (p1.strength_pos - p2.strength_pos);
+    } else if (p1.strength > p2.strength) {
+      return 1;
+    }else {
+      return -1;
+    }
+  },
 
   /* It may happen that we have a low intensity influence source at a
    * blocked intersection (due to an intrusion). This function resets the
@@ -403,7 +448,7 @@ export const Influence = {
     let allowed_strength;
     let color = q.color_to_move;
 
-    // gg_sort(q.intrusions, q.intrusion_counter, sizeof(q.intrusions[0]), compare_intrusions);
+    q.intrusions.sort(this.compare_intrusions)
 
     /* Go through all intrusion sources. */
     for (let i = 0; i < q.intrusion_counter; i = j) {
@@ -554,7 +599,7 @@ export const Influence = {
     /* If the pattern has a constraint, call the autohelper to see
      * if the pattern must be rejected.
      */
-    if ((pattern.autohelper_flag & HAVE_CONSTRAINT) && !pattern.autohelper(ll, pos, color, 0)) {
+    if ((pattern.autohelper_flag & HAVE_CONSTRAINT) && !pattern.autohelper.call(this, ll, pos, color, 0)) {
       return;
     }
 
@@ -562,7 +607,7 @@ export const Influence = {
 
     /* For t patterns, everything happens in the action. */
     if ((pattern.class & CLASS_t) && (pattern.autohelper_flag & HAVE_ACTION)) {
-      pattern.autohelper(ll, pos, color, INFLUENCE_CALLBACK);
+      pattern.autohelper.call(this, ll, pos, color, INFLUENCE_CALLBACK);
       return;
     }
 
@@ -726,6 +771,8 @@ export const Influence = {
       }
     }
 
+    // this.print_influence(q)
+
     this.reset_unblocked_blocks(q);
   },
   check_double_block(){},
@@ -771,6 +818,8 @@ export const Influence = {
 
     this.value_territory(q);
 
+    // this.print_influence(q)
+
     // if ((move == NO_MOVE
     //   && (printmoyo & PRINTMOYO_INITIAL_INFLUENCE))
     //   || (debug_influence && move == debug_influence))
@@ -802,8 +851,6 @@ export const Influence = {
     let ratio;
     let k;
 
-    // memset(first_guess, 0, BOARDMAX*sizeof(float));
-    // memset(q->territory_value, 0, BOARDMAX*sizeof(float));
     /* First loop: guess territory directly from influence. */
     for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
       if (b.ON_BOARD(ii) && !q.safe[ii]) {
@@ -938,7 +985,91 @@ export const Influence = {
   game_status () {},
   debug_influence_move () {},
   get_influence () {},
-  print_influence () {},
-  print_numeric_influence () {},
+
+  print_influence (q, info_string) {
+    if (printmoyo & PRINTMOYO_ATTENUATION) {
+      /* Print the attenuation values. */
+      console.log(`white attenuation ${info_string|''}:`);
+      this.print_numeric_influence(q, q.white_attenuation, [3,2], 3, 0, 0);
+      console.log(`black attenuation ${info_string|''}:`);
+      this.print_numeric_influence(q, q.black_attenuation, [3,2], 3, 0, 0);
+    }
+  
+    if (printmoyo & PRINTMOYO_PERMEABILITY) {
+      /* Print the white permeability values. */
+      console.log("white permeability:\n");
+      this.print_numeric_influence(q, q.white_permeability, [3,1], 3, 0, 0);
+      
+      /* Print the black permeability values. */
+      console.log("black permeability:\n");
+      this.print_numeric_influence(q, q.black_permeability, [3,1], 3, 0, 0);
+    }
+  
+    if (printmoyo & PRINTMOYO_STRENGTH) {
+      /* Print the strength values. */
+      console.log("white strength:\n");
+      if (q.is_territorial_influence)
+        this.print_numeric_influence(q, q.white_strength, [5,1], 5, 0, 0);
+      else
+        this.print_numeric_influence(q, q.white_strength, [3,0], 3, 0, 1);
+      console.log("black strength:\n");
+      if (q.is_territorial_influence)
+        this.print_numeric_influence(q, q.black_strength, [5,1], 5, 0, 0);
+      else
+        this.print_numeric_influence(q, q.black_strength, [3,0], 3, 0, 1);
+    }
+  
+    if (printmoyo & PRINTMOYO_NUMERIC_INFLUENCE) {
+      /* Print the white influence values. */
+      console.log(`white influence ${info_string|''}:`);
+      this.print_numeric_influence(q, q.white_influence, [5,1], 5, 1, 0);
+      /* Print the black influence values. */
+      console.log(`black influence ${info_string|''}:`);
+      this.print_numeric_influence(q, q.black_influence, [5,1], 5, 1, 0);
+    }
+  
+    // if (printmoyo & PRINTMOYO_PRINT_INFLUENCE) {
+    //   console.log(`influence regions ${info_string|''}:`);
+    //   print_influence_areas(q);
+    // }
+    // if (printmoyo & PRINTMOYO_VALUE_TERRITORY) {
+    //   console.log(`territory ${info_string|''}:`);
+    //   this.print_numeric_influence(q, q.territory_value, "%5.2f", 5, 1, 0);
+    // }
+  },
+  print_numeric_influence (q, arr, f) {
+    const b = this.board
+    const board = b.board.slice()
+
+    for(let i in board){
+      if(board[i] === 3){
+        board[i] = '#'
+      }else{
+        board[i] = this.format(arr[i], f)
+      }
+    }
+  
+    // print
+    let lineNum = Math.floor( b.board.length / b.NS + 1 );
+    let res = [];
+
+    for (let i = 0; i < lineNum; i++) {
+      let temp = board.slice(i* b.NS, (i+1) * b.NS ).join(' ')
+      res.push(temp);
+    }
+    console.log(res.join('\n'))
+
+  },
+
+  format(value, arr){
+    const total = arr[0]
+    const fd = arr[1]
+    const space = '     '
+    let v = value.toFixed(fd)
+    if(v.length < total){
+      v = space.slice(0, total- v.length).concat(v)
+    }
+    return v
+  },
   print_influence_areas () {},
 }

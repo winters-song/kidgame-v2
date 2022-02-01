@@ -81,3 +81,29 @@ export function TRANSFORM2(x, y, tx, ty, trans) {
   tx[0] = transformation2[trans][0][0] * (x) + transformation2[trans][0][1] * (y);
   ty[0] = transformation2[trans][1][0] * (x) + transformation2[trans][1][1] * (y);
 }
+
+
+export class EyeValue {
+  a; /* number of eyes if attacker plays first twice */
+  b; /* number of eyes if attacker plays first */
+  c; /* number of eyes if defender plays first */
+  d; /* number of eyes if defender plays first twice */
+};
+
+
+export class HalfEyeData {
+  value;          /* Topological eye value. */
+  type;   /* HALF_EYE or FALSE_EYE; */
+  num_attacks;      /* number of attacking points */
+  attack_point = [];  /* the moves to attack a topological halfeye */
+  num_defenses;     /* number of defending points */
+  defense_point = []; /* the moves to defend a topological halfeye */
+  constructor(cfg) {
+    Object.assign(this, cfg)
+  }
+}
+
+export class VitalEyePoints {
+  attack_points =[]
+  defense_points =[]
+};

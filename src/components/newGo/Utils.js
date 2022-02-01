@@ -2,6 +2,9 @@ import {
   colors,
   NO_MOVE, OWL_NODE_LIMIT, PASS_MOVE, SEMEAI_NODE_LIMIT
 } from './Constants'
+import {dragon_status} from "./Liberty";
+
+
 
 const NUMBER_OF_TIMERS = 4
 const timers = [];
@@ -40,8 +43,68 @@ export const Utils = {
   defend_against(){},
   cut_possible() {},
   does_attack() {},
-  does_defend() {},
-  somewhere() {},
+
+  /*
+  * does_defend(move, str) returns true if the move at (move)
+  * defends (str). This means that it defends the string, and that
+  * (str) can be captured if no defense is made.
+  *
+  * FIXME: Make does_defend() ko aware like does_attack().
+  */
+  does_defend(move, str) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let result = 0;
+    const spos = [NO_MOVE];
+
+    if (!this.attack(str, spos)){
+      return 0;
+    }
+
+    // gg_assert(spos != NO_MOVE);
+    
+    if (b.trymove(move, color, "does_defend-A", str)) {
+      if (!this.attack(str, null)) {
+        result = 1;
+        this.increase_depth_values();
+        if (b.trymove(spos, other, "does_defend-B", str)) {
+          if (!b.board[str] || !this.find_defense(str, null)){
+            result = 0;
+          }
+          b.popgo();
+        }
+        this.decrease_depth_values();
+      }
+      b.popgo();
+    }
+
+    return result;
+  },
+
+  /* 
+  * Example: somewhere(WHITE, 2, apos, bpos, cpos).
+  * 
+  * Returns true if one of the vertices listed
+  * satisfies board[pos]==color. Here num_moves is the
+  * number of moves. If check_alive is true, the dragon is not allowed
+  * to be dead. This check is only valid if stackp==0.
+  */
+  //  va_list 可变参数， 这里用单个数组代替
+  somewhere(color, check_alive, num_moves, list) {
+    // gg_assert(stackp == 0 || !check_alive);
+    for (let k = 0; k < num_moves; k++) {
+      const pos = list[k]
+
+      if (this.board.board[pos] === color && 
+        (!check_alive || this.dragon[pos].status !== dragon_status.DEAD)) {
+        return 1;
+      }
+    }
+
+    return 0;
+  },
+
   visible_along_edge() {},
 
   /* Is the board symmetric (or rather antisymmetric) with respect to
@@ -84,6 +147,72 @@ export const Utils = {
   },
 
 
+  /* The function play_break_through_n() plays a sequence of moves,
+  * alternating between the players and starting with color. After
+  * having played through the sequence, the three last coordinate pairs
+  * gives a position to be analyzed by break_through(), to see whether
+  * either color has managed to enclose some stones and/or connected
+  * his own stones. If any of the three last positions is empty, it's
+  * assumed that the enclosure has failed, as well as the attempt to
+  * connect.
+  *
+  * If one or more of the moves to play turns out to be illegal for
+  * some reason, the rest of the sequence is played anyway, and
+  * break_through() is called as if nothing special happened.
+  *
+  * Like break_through(), this function returns 1 if the attempt to
+  * break through was succesful and 2 if it only managed to cut
+  * through.
+  */
+    
+  play_break_through_n(color, num_moves, list) {
+    let mcolor = color;
+    let success = 0;
+    let i;
+    let played_moves = 0;
+    let apos;
+    let xpos = list[num_moves];
+    let ypos = list[num_moves+1];
+    let zpos = list[num_moves+2];
+    const b = this.board
+    
+
+    /* Do all the moves with alternating colors. */
+    for (i = 0; i < num_moves; i++) {
+      apos = list[i]
+
+      if (apos !== NO_MOVE
+        && (b.trymove(apos, mcolor, "play_break_through_n", NO_MOVE) || b.tryko(apos, mcolor, "play_break_through_n"))) {
+        played_moves++;
+      }
+      mcolor = b.OTHER_COLOR(mcolor);
+    }
+      
+    // /* Temporarily increase the depth values with the number of explicitly
+    // * placed stones.
+    // */
+    
+    if (b.board[xpos] === colors.EMPTY || b.board[ypos] === colors.EMPTY || b.board[zpos] === colors.EMPTY) {
+      success = 1;
+    }
+    else {
+      success = this.break_through(xpos, ypos, zpos);
+    }
+
+    
+    /* Pop all the moves we could successfully play. */
+    for (i = 0; i < played_moves; i++){
+      b.popgo();
+    }
+
+    return success;
+  },
+
+  play_attack_defend_n(){}, 
+
+  play_attack_defend2_n() {},
+  play_connect_n() {},
+  play_lib_n() {},
   /* Set the various reading depth parameters. If mandated_depth_value
    * is not -1 that value is used; otherwise the depth values are
    * set as a function of level. The parameter mandated_depth_value

@@ -48,6 +48,7 @@ let safeMoveInitialized = 0;
 let safe_move_cache = {}
 let safe_move_cache_when = {}
 
+const CUT = 2
 
 export const Reading = {
 
@@ -343,10 +344,380 @@ export const Reading = {
 
   attack_and_defend() {},
   attack_either() {},
-  defend_both() {},
 
-  break_through() {},
-  break_through_helper() {},
+
+  /*
+  * defend_both(astr, bstr) returns true if both the strings (astr)
+  * and (bstr) can be defended simultaneously or if there is no attack.
+  * A typical application for this is in connection patterns, where
+  * after a cut it's necessary to defend both cutting stones.
+  *
+  * FIXME: The current implementation only makes halfhearted
+  * attempts to find coordinated defense moves. A proper implementation
+  * would require some serious reading.
+  */
+  defend_both(astr, bstr) {
+    let a_threatened = 0;
+    let b_threatened = 0;
+    let a_savepos = [];
+    let b_savepos = [];
+    let acode = [0];
+    let dcode = [0];
+    
+    const b = this.board
+    const color = b.board[astr];
+    b.ASSERT1(b.IS_STONE(color) , astr);
+    b.ASSERT1(color === b.board[bstr], bstr);
+  
+    /* This probably helps here too...
+     * (see attack_either)
+     */
+    if (b.countlib(astr) > b.countlib(bstr)) {
+      let t = astr;
+      astr = bstr;
+      bstr = t;
+    }
+  
+    this.attack_and_defend(astr, acode, null, dcode, a_savepos);
+    if (acode[0] !== 0) {
+      a_threatened = 1;
+      if (dcode[0] !== codes.WIN){
+        return 0; /* (astr) already lost */
+      }
+    }
+    
+    this.attack_and_defend(bstr, acode, null, dcode, b_savepos);
+    if (acode[0] !== 0) {
+      b_threatened = 1;
+      if (dcode[0] !== codes.WIN){
+        return 0; /* (bstr) already lost */
+      }
+    }
+  
+    /* Neither string can be attacked or only one of them, in which case
+     * we have time to save it.
+     */
+    if (!a_threatened || !b_threatened) {
+      return codes.WIN;
+    }
+    
+    /* If both strings are threatened we assume that one will become lost,
+     * unless find_defense() happened to return the same defense point for
+     * both (which e.g. may happen if they are in fact the same string).
+     * This is still a bit too pessimistic, as there may be one move which
+     * saves both strings. To do this right we should try each move which
+     * defends either string and see if it also defends the other string.
+     */
+  
+    if (a_savepos[0] === b_savepos) {
+      return codes.WIN; /* Both strings can be attacked but also defended by one move. */
+    }
+                   
+  
+    /* We also try each of the returned defense points and see whether
+     * the other string can still be attacked. This still gives a
+     * somewhat pessimistic estimation.
+     */
+  
+    if (b.trymove(a_savepos[0], color, "defend_both-A", astr)) {
+      if (b.board[bstr] && !this.attack(bstr, null)) {
+        b.popgo();
+        return codes.WIN;
+      }
+      b.popgo();
+    }
+    
+    if (b.trymove(b_savepos[0], color, "defend_both-B", bstr)) {
+      if (b.board[astr] && !this.attack(astr, null)) {
+        b.popgo();
+        return codes.WIN;
+      }
+      b.popgo();
+    }
+  
+    /* The next improvement is to try to attack a common adjacent string. */
+    let adjs1 = []
+    let adjs2 = []
+    let s;
+    let fpos = [];
+    
+    let neighbors1 = b.chainlinks(astr, adjs1);
+    let neighbors2 = b.chainlinks(bstr, adjs2);
+    
+    for (let r = 0; r < neighbors1; r++) {
+      let epos = adjs1[r];
+      if (b.countlib(epos) <= 4  && epos !== a_savepos[0] && epos !== b_savepos[0]) {
+        /* Is (epos) also adjacent to (bstr)? */
+        for (s = 0; s < neighbors2; s++) {
+          if (adjs2[s] === adjs1[r]) {
+            break;
+          }
+        }
+        if (s === neighbors2){
+          continue;   /* No, it wasn't. */
+        }
+
+        if (this.attack(epos, fpos)) {
+          if (b.trymove(fpos[0], color, "defend_both-C", astr)) {
+            if (b.board[astr] && b.board[bstr] && !this.attack(astr, null) && !this.attack(bstr, null)) {
+              b.popgo();
+              return codes.WIN;
+            }
+            b.popgo();
+          }
+        }
+      }
+    }  
+    
+    /* Both strings can be attacked but we have only time to defend one. */
+    return 0;
+  },
+
+
+  /*
+  * break_through(apos, bpos, cpos) returns WIN if a position can
+  * succesfully be broken through and CUT if it can be cut. The position
+  * is assumed to have the shape (the colors may be reversed)
+  *
+  * .O.       dbe
+  * OXO       aFc
+  *
+  * It is X to move and try to capture at least one of a, b, and c. If
+  * this succeeds, X is said to have broken through the position.
+  * Otherwise X may try to cut through the position, which means
+  * keeping F safe and getting a tactically safe string at either d or
+  * e.
+  *
+  * Important notice: a, b, and c must be given in the correct order.
+  *
+  * FIXME: The reading involved here can most likely be improved.
+  *
+  * FIXME: We need to take ko results properly into account.
+  */
+  break_through(apos, bpos, cpos) {
+    const b = this.board
+    const color = b.board[apos];
+    const other = b.OTHER_COLOR(color);
+
+    let dpos;
+    let epos;
+    let Fpos;
+    let gpos = [];
+    
+    let success = 0;
+    let success2 = 0;
+  
+    /* Basic sanity checking. */
+    b.ASSERT1(b.IS_STONE(color) , apos);
+    b.ASSERT1(color === b.board[bpos], bpos);
+    b.ASSERT1(color === b.board[cpos], cpos);
+
+    /* Construct the rest of the points in the pattern. */
+    Fpos = (apos + cpos) / 2;      /* F midpoint between a and c. */
+    dpos = apos + bpos - Fpos;     /* Use diagonal relation a+b = d+F. */
+    epos = bpos + cpos - Fpos;     /* Use diagonal relation b+c = e+F. */
+
+    /* More sanity checking. */
+    b.ASSERT1(b.board[dpos] === colors.EMPTY , dpos);
+    b.ASSERT1(b.board[epos] === colors.EMPTY , epos);
+
+    /* F might already have been captured. (play_break_through_n() can't
+    * detect this.
+    */
+    if (b.board[Fpos] === colors.EMPTY){
+      return 0;
+    }
+  
+    b.ASSERT1(b.board[Fpos] === other, Fpos);
+
+    /* First X tries to play at d. */
+    success = this.break_through_helper(apos, bpos, cpos, dpos, epos, Fpos, color, other);
+    if (success === codes.WIN){
+      return codes.WIN;
+    }
+    
+    success2 = this.break_through_helper(cpos, bpos, apos, epos, dpos, Fpos, color, other);
+
+    if (success2 === codes.WIN)
+      return codes.WIN;
+
+    if (success2 === CUT){
+      success = CUT;
+    }
+
+    /* If we haven't been lucky yet, we might need to start by
+    * defending F.
+    *
+    * FIXME: The function would probably be considerably faster if we
+    * start by checking whether F needs defense. Beware of ko potential
+    * though.
+    */
+    success2 = 0;
+
+    if (this.attack_and_defend(Fpos, null, null, null, gpos)) {
+      if (b.trymove(gpos[0], other, "break_through-A", Fpos)) {
+        /* Now we let O defend his position by playing either d or e.
+        * FIXME: There may be other plausible moves too.
+        */
+        if (b.trymove(dpos, color, "break_through-B", Fpos)) {
+          /* O connects at d, so X cuts at e. */
+          if (this.safe_move(epos, other)) {
+            success2 = CUT;
+            if (!b.board[cpos] || this.attack(cpos, null)){
+              success2 = codes.WIN;
+            }
+          }
+          b.popgo();
+        }
+
+        if (success2 > 0 && b.trymove(epos, color, "break_through-C", Fpos)) {
+          /* O connects at e, so X cuts at d. */
+          if (this.safe_move(dpos, other)) {
+            /* success2 is already WIN or CUT. */
+            if (b.board[apos] && !this.attack(apos, null)){
+              success2 = CUT;
+            }
+          }
+          else{
+            success2 = 0;
+          }
+          b.popgo();
+        }
+        b.popgo();
+      }
+    }
+      
+    if (success2 > 0){
+      return success2;
+    }
+
+    return success;
+  },
+
+
+  /* Helper function for break_through(). Since we can symmetrically
+  * start by cutting at d or e, we use the same code for both attacks,
+  * simply switching positions between the two calls.
+  */
+  break_through_helper(apos, bpos, cpos,dpos, epos, Fpos, color, other) {
+    const b = this.board
+    let success = 0;
+    let gpos = [];
+  
+    if (b.trymove(dpos, other, "break_through_helper-A", Fpos)) {
+      /* If F can be attacked we can't start in this way. */
+      if (!this.attack(Fpos, null)) {
+        /* If d is safe too, we have at least managed to break through. */
+        if (!this.attack(dpos, gpos)) {
+          success = CUT;
+        }
+        
+        /* Too bad, d could be attacked. We let O play the attack and
+         * then try to make a second cut at e. But first we must test if
+         * O at e is sufficient to capture d.
+         */
+        else {
+          if (b.trymove(epos, color, "break_through_helper-E", Fpos)) {
+            if (!b.board[dpos] || !this.find_defense(dpos, null)) {
+              b.popgo();
+              b.popgo();
+              return 0;
+            }
+            b.popgo();
+          }
+          
+          if (gpos[0] === epos) {
+            b.popgo();
+            return 0;
+          }
+          
+          if (b.trymove(gpos[0], color, "break_through_helper-F", Fpos)) {
+            if (b.trymove(epos, other, "break_through_helper-G", Fpos)) {
+              if (!this.attack(epos, null)) {
+                success = CUT;
+                /* Make sure b and c are safe.  If not, back up & let O try 
+                * to defend in a different way. */
+                if (b.board[bpos] && b.board[cpos] && this.defend_both(bpos, cpos)) {
+                  /* Can't do better than CUT. */
+                  b.popgo();  
+                  b.popgo();
+                  b.popgo();
+                  return CUT;
+                }
+              }
+              else {
+                /* Lost everything. (Note we ignore ko at the moment.) */
+                b.popgo();
+                b.popgo();
+                b.popgo();
+                return 0;
+              }
+              b.popgo();
+            }
+            else {
+              /* Failed to cut at all. */
+              b.popgo();
+              b.popgo();
+              return 0;
+            }
+            b.popgo();
+          }
+        }
+        
+        /* By now, we're sure a cut works, so now we can try 
+         * to capture something.
+         */
+        if (!b.board[apos] || !b.board[bpos] || !this.defend_both(apos, bpos)){
+          success = codes.WIN;
+        }
+        else {
+          /* Both a and b could be defended, or didn't need to be.
+          * Let's see if a move at e is sufficient for O.
+          */
+          let attack_on_b = 0;
+          let attack_on_a = 0;
+          
+          if (b.trymove(epos, color, "break_through_helper-B", Fpos)) {
+            if (this.attack(bpos, null)){
+              attack_on_b = 1;
+            }
+            else if (this.attack(apos, null)){
+              attack_on_a = 1;
+            }
+            b.popgo();
+          }
+          
+          /* Let O find a defense and play it. */
+          if (attack_on_a || attack_on_b) {
+            let hpos = [NO_MOVE];
+            
+            if (((attack_on_a && this.find_defense(apos, hpos))
+                || (attack_on_b && this.find_defense(bpos, hpos)))
+                && hpos[0] !== NO_MOVE
+                && b.trymove(hpos, color, "break_through_helper-C", Fpos)) {
+              /* Now we make a second cut at e, trying to capture
+              * either b or c.
+              */
+              if (b.trymove(epos, other, "break_through_helper-D", Fpos)) {
+                if (!b.board[bpos] || !b.board[cpos] || !this.defend_both(bpos, cpos)){
+                  success = codes.WIN;
+                }
+                b.popgo();
+              }
+              b.popgo();
+            }
+            else{
+              success = codes.WIN; /* This should have been covered by
+              * defend_both(), so probably unnecessary. */
+            }
+          }
+        }
+      }
+      b.popgo();
+    }
+  
+    return success;
+  },
 
 
   /* ---------------------------------------------------------------- */

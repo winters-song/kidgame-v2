@@ -54,6 +54,15 @@ export const HAVE_ACTION     = 2
 export const INFLUENCE_CALLBACK =1
 export const FOLLOWUP_INFLUENCE_CALLBACK =2
 
+/**
+ * patn: 额外限定条件数组
+ * patlen: 数组元素个数
+ * trfno: 变换方向index, 
+ * value: 用于influence估值
+ *
+ * edge_constraints： 边角限定条件
+ * move_offset: 目标结论位置
+ */
 const pattern_attrs = [
   'patn', 'patlen', 'trfno', 'name',
   'mini', 'minj', 'maxi', 'maxj', 'width', 'height', 'edge_constraints', 'move_offset',

@@ -1,5 +1,6 @@
 import {PatternDB, Pattern} from "./Patterns";
 import {AFFINE_TRANSFORM} from "../Liberty";
+import { codes } from "../Constants";
 
 /*
 
@@ -1135,7 +1136,15 @@ const barrierspat217 = [
 ]
 
 
-const autohelperbarrierspat3 = function (trans, move, color, action){}
+const autohelperbarrierspat3 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(720, trans, move);
+  const b = AFFINE_TRANSFORM(719, trans, move);
+  const c = AFFINE_TRANSFORM(683, trans, move);
+  const d = AFFINE_TRANSFORM(757, trans, move);
+
+  return !(this.play_break_through_n(color, 2, a, b, c, b, d)=== codes.WIN);
+
+}
 const autohelperbarrierspat4 = function (trans, move, color, action){}
 const autohelperbarrierspat5 = function (trans, move, color, action){}
 const autohelperbarrierspat7 = function (trans, move, color, action){}

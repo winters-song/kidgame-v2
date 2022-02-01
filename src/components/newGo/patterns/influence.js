@@ -566,12 +566,46 @@ const influencepat49 = [
 [765,0]
 ]
 
-const autohelperinfluencepat14 = function (trans, move, color, action){}
-const autohelperinfluencepat19 = function (trans, move, color, action){}
-const autohelperinfluencepat20 = function (trans, move, color, action){}
-const autohelperinfluencepat21 = function (trans, move, color, action){}
-const autohelperinfluencepat22 = function (trans, move, color, action){}
+const autohelperinfluencepat14 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(460, trans, move);
+  const b = AFFINE_TRANSFORM(461, trans, move);
+  const c = AFFINE_TRANSFORM(497, trans, move);
+  const d = AFFINE_TRANSFORM(498, trans, move);
 
+  return this.somewhere(color, 0, 4, [a, b, c, d]);
+}
+const autohelperinfluencepat19 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(761, trans, move);
+  const b = AFFINE_TRANSFORM(762, trans, move);
+  const c = AFFINE_TRANSFORM(798, trans, move);
+  const d = AFFINE_TRANSFORM(799, trans, move);
+
+  return this.somewhere(color, 0, 4, [a, b, c, d]);
+}
+const autohelperinfluencepat20 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(572, trans, move);
+  const b = AFFINE_TRANSFORM(573, trans, move);
+  const c = AFFINE_TRANSFORM(609, trans, move);
+  const d = AFFINE_TRANSFORM(610, trans, move);
+
+  return this.somewhere(color, 0, 4, [a, b, c, d]);
+}
+const autohelperinfluencepat21 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(761, trans, move);
+  const b = AFFINE_TRANSFORM(762, trans, move);
+  const c = AFFINE_TRANSFORM(798, trans, move);
+  const d = AFFINE_TRANSFORM(799, trans, move);
+
+  return this.somewhere(color, 0, 4, [a, b, c, d]);
+}
+const autohelperinfluencepat22 = function (trans, move, color, action){
+  const a = AFFINE_TRANSFORM(572, trans, move);
+  const b = AFFINE_TRANSFORM(573, trans, move);
+  const c = AFFINE_TRANSFORM(609, trans, move);
+  const d = AFFINE_TRANSFORM(610, trans, move);
+
+  return this.somewhere(color, 0, 4, [a, b, c, d]);
+}
 
 
 const data = [

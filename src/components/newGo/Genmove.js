@@ -13,6 +13,8 @@ import {Cache} from "./Cache"
 import {dragon_status} from "./Liberty";
 import {Matchpat} from "./Matchpat";
 import {Influence} from "./Influence";
+import {Connections} from "./Connections";
+import {Dragon} from "./Dragon";
 
 import {transformation_init} from "./patterns/transform";
 import {Test} from "./Test";
@@ -31,7 +33,7 @@ export default class Genmove {
   constructor(board) {
     this.board = board
     Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat, Influence, Test)
+      Matchpat, Influence, Connections, Dragon, Test)
 
     this.initData()
 
@@ -52,6 +54,13 @@ export default class Genmove {
       dragons_examined : -1,
       initial_influence2_examined : -1,
       dragons_refinedly_examined : -1,
+
+      // globals
+      dragon: [],
+      half_eye: [],
+      black_vital_points: [],
+      white_vital_points: [],
+      cutting_points: []
     })
   }
 
@@ -108,12 +117,12 @@ export default class Genmove {
     if (this.NEEDS_UPDATE(this.initial_influence_examined)){
       this.compute_worm_influence();
     }
-    //   if (NEEDS_UPDATE(dragons_examined)) {
-    //     make_dragons(0);
-    //     compute_scores(chinese_rules || aftermath_play);
-    //     /* We have automatically done a partial dragon analysis as well. */
-    //     dragons_examined_without_owl = position_number;
-    //   }
+      if (this.NEEDS_UPDATE(this.dragons_examined)) {
+        this.make_dragons(0);
+        // compute_scores(chinese_rules || aftermath_play);
+        /* We have automatically done a partial dragon analysis as well. */
+        // dragons_examined_without_owl = position_number;
+      }
 
   }
   // else if (how_much == EXAMINE_INITIAL_INFLUENCE
