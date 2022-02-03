@@ -107,3 +107,4 @@ export class VitalEyePoints {
   attack_points =[]
   defense_points =[]
 };
+

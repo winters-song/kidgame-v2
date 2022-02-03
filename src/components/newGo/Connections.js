@@ -83,7 +83,7 @@ export const Connections = {
     * if the pattern must be rejected.
     */
     if (pattern.autohelper_flag & HAVE_CONSTRAINT) {
-      if (!pattern.autohelper(ll, move, color, 0)) {
+      if (!pattern.autohelper.call(this, ll, move, color, 0)) {
         return;
       }
     }
@@ -92,7 +92,7 @@ export const Connections = {
     * be rejected.
     */
     if (pattern.helper) {
-      if (!pattern.helper(pattern, ll, move, color)) {
+      if (!pattern.helper.call(this, pattern, ll, move, color)) {
         return;
       }
     }
@@ -181,14 +181,14 @@ export const Connections = {
   /* Only consider B patterns. */
   cut_callback( anchor, color, pattern, ll, data){
     if (pattern.class & CLASS_B){
-      this.cut_connect_callback(anchor, color, pattern, ll, data);
+      this.cut_connect_callback.call(this, anchor, color, pattern, ll, data);
     }
   },
 
   /* Consider C patterns and those without classification. */
   conn_callback(anchor, color, pattern, ll, data) {
     if (!(pattern.class & CLASS_B)) {
-      this.cut_connect_callback(anchor, color, pattern, ll, data);
+      this.cut_connect_callback.call(this, anchor, color, pattern, ll, data);
     }
   },
     

@@ -1,5 +1,6 @@
-import {PatternDB, Pattern} from "./Patterns";
-
+import {PatternDB, Pattern, ATTACK_MACRO } from "./Patterns";
+import {AFFINE_TRANSFORM} from "../Liberty";
+import { codes, NO_MOVE } from "../Constants";
 
 const conn0 = [
   [648,1],	[686,2],	[723,0]
@@ -202,379 +203,316 @@ const conn34 = [
 
 const autohelperconn0 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(683, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(683, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn1 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(682, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(682, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn2 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(720, trans, move);
+  const b = AFFINE_TRANSFORM(685, trans, move);
 
-  // a = AFFINE_TRANSFORM(720, trans, move);
-  // b = AFFINE_TRANSFORM(685, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn3 = function(trans, move, color, action)
 {
-  // int a, b, c;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(720, trans, move);
+  const b = AFFINE_TRANSFORM(685, trans, move);
+  const c = AFFINE_TRANSFORM(646, trans, move);
 
-  // a = AFFINE_TRANSFORM(720, trans, move);
-  // b = AFFINE_TRANSFORM(685, trans, move);
-  // c = AFFINE_TRANSFORM(646, trans, move);
-
-  // return !play_connect_n(color, 0, 0, a, c)&& !play_connect_n(color, 0, 0, c, b)&& !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(color, 0, 0, a, c)
+  && !this.play_connect_n(color, 0, 0, c, b)
+  && !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn4 = function(trans, move, color, action)
 {
-  // int A;
-  // UNUSED(color);
-  // UNUSED(action);
-
-  // A = AFFINE_TRANSFORM(646, trans, move);
-
-  // return ATTACK_MACRO(A);
+  const  A = AFFINE_TRANSFORM(646, trans, move);
+  return ATTACK_MACRO(A);
 }
 
 const autohelperconn5 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(758, trans, move);
+  const b = AFFINE_TRANSFORM(682, trans, move);
 
-  // a = AFFINE_TRANSFORM(758, trans, move);
-  // b = AFFINE_TRANSFORM(682, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn6 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  
+  const a = AFFINE_TRANSFORM(648, trans, move);
+  const b = AFFINE_TRANSFORM(722, trans, move);
 
-  // a = AFFINE_TRANSFORM(648, trans, move);
-  // b = AFFINE_TRANSFORM(722, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn7 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+ 
+  const a = AFFINE_TRANSFORM(683, trans, move);
+  const b = AFFINE_TRANSFORM(649, trans, move);
 
-  // a = AFFINE_TRANSFORM(683, trans, move);
-  // b = AFFINE_TRANSFORM(649, trans, move);
-
-  // return play_connect_n(OTHER_COLOR(color), 1, 0, a, b) && !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return this.play_connect_n(this.board.OTHER_COLOR(color), 1, 0, a, b)
+   && !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn8 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  
+  const a = AFFINE_TRANSFORM(720, trans, move);
+  const b = AFFINE_TRANSFORM(648, trans, move);
 
-  // a = AFFINE_TRANSFORM(720, trans, move);
-  // b = AFFINE_TRANSFORM(648, trans, move);
-
-  // return !play_connect_n(OTHER_COLOR(color), 1, 1, move, a, b);
+  return !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, move, a, b);
 }
 
 const autohelperconn9 = function(trans, move, color, action)
 {
-  // int b, c, d, A;
-  // UNUSED(color);
-  // UNUSED(action);
+  const b = AFFINE_TRANSFORM(645, trans, move);
+  const c = AFFINE_TRANSFORM(647, trans, move);
+  const d = AFFINE_TRANSFORM(683, trans, move);
+  const A = AFFINE_TRANSFORM(646, trans, move);
 
-  // b = AFFINE_TRANSFORM(645, trans, move);
-  // c = AFFINE_TRANSFORM(647, trans, move);
-  // d = AFFINE_TRANSFORM(683, trans, move);
-  // A = AFFINE_TRANSFORM(646, trans, move);
-
-  // return play_attack_defend_n(OTHER_COLOR(color), 1, 1, move, A)<WIN && !play_connect_n(OTHER_COLOR(color), 1, 3, move, NO_MOVE, b, c, d);
+  return this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, move, A)< codes.WIN 
+  && !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 3, move, NO_MOVE, b, c, d);
 }
 
 const autohelperconn12 = function(trans, move, color, action)
 {
-  // int a;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(648, trans, move);
 
-  // a = AFFINE_TRANSFORM(648, trans, move);
-
-  // return (whose_moyo(OPPOSITE_INFLUENCE(color), a) == color);
+  return this.whose_moyo(this.OPPOSITE_INFLUENCE(color), a) === color
 }
 
 const autohelperconn13 = function(trans, move, color, action)
 {
-  // int a, b;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(610, trans, move);
+  const b = AFFINE_TRANSFORM(648, trans, move);
 
-  // a = AFFINE_TRANSFORM(610, trans, move);
-  // b = AFFINE_TRANSFORM(648, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !cut_possible(b, OTHER_COLOR(color));
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) && !this.cut_possible(b, this.board.OTHER_COLOR(color));
 }
 
 const autohelperconn19 = function(trans, move, color, action)
 {
-  // int a, b, c, d, e, f, g;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(721, trans, move);
+  const b = AFFINE_TRANSFORM(685, trans, move);
+  const c = AFFINE_TRANSFORM(722, trans, move);
+  const d = AFFINE_TRANSFORM(759, trans, move);
+  const e = AFFINE_TRANSFORM(686, trans, move);
+  const f = AFFINE_TRANSFORM(723, trans, move);
+  const g = AFFINE_TRANSFORM(760, trans, move);
 
-  // a = AFFINE_TRANSFORM(721, trans, move);
-  // b = AFFINE_TRANSFORM(685, trans, move);
-  // c = AFFINE_TRANSFORM(722, trans, move);
-  // d = AFFINE_TRANSFORM(759, trans, move);
-  // e = AFFINE_TRANSFORM(686, trans, move);
-  // f = AFFINE_TRANSFORM(723, trans, move);
-  // g = AFFINE_TRANSFORM(760, trans, move);
-
-  // return (whose_moyo(OPPOSITE_INFLUENCE(color), a) == color) && (whose_area(OPPOSITE_INFLUENCE(color), c) == color) && (whose_area(OPPOSITE_INFLUENCE(color), f) == color)&& (((whose_moyo(OPPOSITE_INFLUENCE(color), b) == color) + (whose_moyo(OPPOSITE_INFLUENCE(color), c) == color) + (whose_moyo(OPPOSITE_INFLUENCE(color), d) == color) + (whose_moyo(OPPOSITE_INFLUENCE(color), e) == color) + (whose_moyo(OPPOSITE_INFLUENCE(color), f) == color) +(whose_moyo(OPPOSITE_INFLUENCE(color), g) == color)) >= 3);
+  return (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), a) === color) 
+  && (this.whose_area(this.OPPOSITE_INFLUENCE(color), c) === color) 
+  && (this.whose_area(this.OPPOSITE_INFLUENCE(color), f) === color)
+  && (((this.whose_moyo(this.OPPOSITE_INFLUENCE(color), b) === color)
+   + (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), c) === color)
+    + (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), d) === color)
+     + (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), e) === color)
+      + (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), f) === color)
+       +(this.whose_moyo(this.OPPOSITE_INFLUENCE(color), g) === color)) >= 3);
 }
 
 const autohelperconn20 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(722, trans, move);
+  const b = AFFINE_TRANSFORM(723, trans, move);
+  const c = AFFINE_TRANSFORM(684, trans, move);
+  const d = AFFINE_TRANSFORM(724, trans, move);
 
-  // a = AFFINE_TRANSFORM(722, trans, move);
-  // b = AFFINE_TRANSFORM(723, trans, move);
-  // c = AFFINE_TRANSFORM(684, trans, move);
-  // d = AFFINE_TRANSFORM(724, trans, move);
-
-  // return (whose_moyo(OPPOSITE_INFLUENCE(color), a) == color) && (whose_moyo(OPPOSITE_INFLUENCE(color), b) == color) && countlib(c)>=4 && countlib(d)>=4;
+  return (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), a) === color) 
+  && (this.whose_moyo(this.OPPOSITE_INFLUENCE(color), b) === color) 
+  && this.board.countlib(c)>=4 && this.board.countlib(d)>=4;
 }
 
 const autohelperconn21 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
+  const a = AFFINE_TRANSFORM(648, trans, move);
+  const b = AFFINE_TRANSFORM(649, trans, move);
+  const c = AFFINE_TRANSFORM(685, trans, move);
+  const d = AFFINE_TRANSFORM(647, trans, move);
 
-  // a = AFFINE_TRANSFORM(648, trans, move);
-  // b = AFFINE_TRANSFORM(649, trans, move);
-  // c = AFFINE_TRANSFORM(685, trans, move);
-  // d = AFFINE_TRANSFORM(647, trans, move);
+  if (!action){
+    return this.cut_possible(a, this.board.OTHER_COLOR(color));
+  }
+  this.amalgamate_most_valuable_helper(b, c, d);;
 
-  // if (!action)
-  //   return cut_possible(a, OTHER_COLOR(color));
-  // amalgamate_most_valuable_helper(b, c, d);;
-
-  // return 0;
+  return 0;
 }
 
 const autohelperconn22 = function(trans, move, color, action)
 {
-  // int a, b, c, d, e, f, g;
-  // UNUSED(color);
+  const a = AFFINE_TRANSFORM(649, trans, move);
+  const b = AFFINE_TRANSFORM(648, trans, move);
+  const c = AFFINE_TRANSFORM(685, trans, move);
+  const d = AFFINE_TRANSFORM(684, trans, move);
+  const e = AFFINE_TRANSFORM(650, trans, move);
+  const f = AFFINE_TRANSFORM(686, trans, move);
+  const g = AFFINE_TRANSFORM(647, trans, move);
 
-  // a = AFFINE_TRANSFORM(649, trans, move);
-  // b = AFFINE_TRANSFORM(648, trans, move);
-  // c = AFFINE_TRANSFORM(685, trans, move);
-  // d = AFFINE_TRANSFORM(684, trans, move);
-  // e = AFFINE_TRANSFORM(650, trans, move);
-  // f = AFFINE_TRANSFORM(686, trans, move);
-  // g = AFFINE_TRANSFORM(647, trans, move);
+  if (!action){
+    return this.cut_possible(a, this.board.OTHER_COLOR(color));
+  }
+  if (!this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 3, [b, c, d, b, d]) 
+  || !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 3, [c, b, a, c, a])) {
+    this.join_dragons(e, f);
+  }
+  else {
+    this.amalgamate_most_valuable_helper(e, f, g);;
+  }
 
-  // if (!action)
-  //   return cut_possible(a, OTHER_COLOR(color));
-  // if (!play_attack_defend2_n(OTHER_COLOR(color), 1, 3, b, c, d, b, d) || !play_attack_defend2_n(OTHER_COLOR(color), 1, 3, c, b, a, c, a))  join_dragons(e, f);else  amalgamate_most_valuable_helper(e, f, g);;
-
-  // return 0;
+  return 0;
 }
 
 const autohelperconn23 = function(trans, move, color, action)
 {
-  // int c;
-  // UNUSED(color);
-  // UNUSED(action);
+  const c = AFFINE_TRANSFORM(648, trans, move);
 
-  // c = AFFINE_TRANSFORM(648, trans, move);
-
-  // return is_suicide(c, OTHER_COLOR(color));
+  return this.board.is_suicide(c, this.board.OTHER_COLOR(color));
 }
 
 const autohelperconn24 = function(trans, move, color, action)
 {
-  // int a, b, c;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(611, trans, move);
+  const b = AFFINE_TRANSFORM(647, trans, move);
+  const c = AFFINE_TRANSFORM(648, trans, move);
+  const bd = this.board
 
-  // a = AFFINE_TRANSFORM(611, trans, move);
-  // b = AFFINE_TRANSFORM(647, trans, move);
-  // c = AFFINE_TRANSFORM(648, trans, move);
-
-  // return countlib(a)>1 && countlib(b)>1 && !cut_possible(c, OTHER_COLOR(color)) && accuratelib(c, OTHER_COLOR(color), MAX_LIBERTIES, null)==1 && play_attack_defend_n(OTHER_COLOR(color), 1, 1, c, c)==WIN;
+  return bd.countlib(a)>1 && bd.countlib(b)>1 
+  && !this.cut_possible(c, bd.OTHER_COLOR(color)) 
+  && bd.accuratelib(c, bd.OTHER_COLOR(color), bd.MAX_LIBERTIES, null)===1 
+  && this.play_attack_defend_n(bd.OTHER_COLOR(color), 1, 1, [c, c])=== codes.WIN;
 }
 
 const autohelperconn25 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(611, trans, move);
+  const b = AFFINE_TRANSFORM(647, trans, move);
+  const c = AFFINE_TRANSFORM(648, trans, move);
+  const d = AFFINE_TRANSFORM(610, trans, move);
+  const bd = this.board
 
-  // a = AFFINE_TRANSFORM(611, trans, move);
-  // b = AFFINE_TRANSFORM(647, trans, move);
-  // c = AFFINE_TRANSFORM(648, trans, move);
-  // d = AFFINE_TRANSFORM(610, trans, move);
-
-  // return countlib(a)>1 && countlib(b)>1 && !cut_possible(c, OTHER_COLOR(color)) && !cut_possible(d, OTHER_COLOR(color))&& accuratelib(c, OTHER_COLOR(color), MAX_LIBERTIES, null)==1 && play_attack_defend_n(OTHER_COLOR(color), 1, 1, c, c);
+  return bd.countlib(a)>1 && bd.countlib(b)>1 && 
+  !this.cut_possible(c, bd.OTHER_COLOR(color)) 
+  && !this.cut_possible(d, bd.OTHER_COLOR(color))
+  && bd.accuratelib(c, bd.OTHER_COLOR(color), bd.MAX_LIBERTIES, null)=== 1 
+  && this.play_attack_defend_n(bd.OTHER_COLOR(color), 1, 1, [c, c]);
 }
 
 const autohelperconn26 = function(trans, move, color, action)
 {
-  // int a, b, c;
-  // UNUSED(color);
-  // UNUSED(action);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(686, trans, move);
-  // c = AFFINE_TRANSFORM(684, trans, move);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(686, trans, move);
+  const c = AFFINE_TRANSFORM(684, trans, move);
 
-  // return !cut_possible(a, OTHER_COLOR(color)) && !disconnect_helper(b,c);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) && !this.disconnect_helper(b,c);
 }
 
 const autohelperconn27 = function(trans, move, color, action)
 {
-  // int a, b, c;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(648, trans, move);
+  const b = AFFINE_TRANSFORM(647, trans, move);
+  const c = AFFINE_TRANSFORM(611, trans, move);
 
-  // a = AFFINE_TRANSFORM(648, trans, move);
-  // b = AFFINE_TRANSFORM(647, trans, move);
-  // c = AFFINE_TRANSFORM(611, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !disconnect_helper(b,c);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) && !this.disconnect_helper(b,c);
 }
 
 const autohelperconn28 = function(trans, move, color, action)
 {
-  // int c, d, A, B;
-  // UNUSED(color);
-  // UNUSED(action);
+  const c = AFFINE_TRANSFORM(647, trans, move);
+  const d = AFFINE_TRANSFORM(611, trans, move);
+  const A = AFFINE_TRANSFORM(648, trans, move);
+  const B = AFFINE_TRANSFORM(610, trans, move);
 
-  // c = AFFINE_TRANSFORM(647, trans, move);
-  // d = AFFINE_TRANSFORM(611, trans, move);
-  // A = AFFINE_TRANSFORM(648, trans, move);
-  // B = AFFINE_TRANSFORM(610, trans, move);
-
-  // return ((ATTACK_MACRO(A) && !distrust_tactics_helper(A)) || (ATTACK_MACRO(B) && !distrust_tactics_helper(B)))&& !disconnect_helper(c,d);
+  return ((ATTACK_MACRO(A) && !this.distrust_tactics_helper(A)) 
+  || (ATTACK_MACRO(B) && !this.distrust_tactics_helper(B))) && !this.disconnect_helper(c,d);
 }
 
 const autohelperconn29 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(686, trans, move);
+  const c = AFFINE_TRANSFORM(684, trans, move);
+  const d = AFFINE_TRANSFORM(687, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(686, trans, move);
-  // c = AFFINE_TRANSFORM(684, trans, move);
-  // d = AFFINE_TRANSFORM(687, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !cut_possible(b, OTHER_COLOR(color)) && !disconnect_helper(c,d);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(b, this.board.OTHER_COLOR(color)) 
+  && !this.disconnect_helper(c,d);
 }
 
 const autohelperconn30 = function(trans, move, color, action)
 {
-  // int a, b, c, d, E;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(686, trans, move);
+  const b = AFFINE_TRANSFORM(723, trans, move);
+  const c = AFFINE_TRANSFORM(684, trans, move);
+  const d = AFFINE_TRANSFORM(687, trans, move);
+  const E = AFFINE_TRANSFORM(685, trans, move);
 
-  // a = AFFINE_TRANSFORM(686, trans, move);
-  // b = AFFINE_TRANSFORM(723, trans, move);
-  // c = AFFINE_TRANSFORM(684, trans, move);
-  // d = AFFINE_TRANSFORM(687, trans, move);
-  // E = AFFINE_TRANSFORM(685, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !cut_possible(b, OTHER_COLOR(color)) && countlib(E)<=2 && !disconnect_helper(c,d);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(b, this.board.OTHER_COLOR(color)) 
+  && this.board.countlib(E)<=2 && !this.disconnect_helper(c,d);
 }
 
 const autohelperconn31 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(722, trans, move);
+  const c = AFFINE_TRANSFORM(684, trans, move);
+  const d = AFFINE_TRANSFORM(723, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(722, trans, move);
-  // c = AFFINE_TRANSFORM(684, trans, move);
-  // d = AFFINE_TRANSFORM(723, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !cut_possible(b, OTHER_COLOR(color)) && !disconnect_helper(c,d);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(b, this.board.OTHER_COLOR(color)) 
+  && !this.disconnect_helper(c,d);
 }
 
 const autohelperconn32 = function(trans, move, color, action)
 {
-  // int a, b, c;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(684, trans, move);
+  const c = AFFINE_TRANSFORM(723, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(684, trans, move);
-  // c = AFFINE_TRANSFORM(723, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !disconnect_helper(b,c);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) && !this.disconnect_helper(b,c);
 }
 
 const autohelperconn33 = function(trans, move, color, action)
 {
-  // int a, b, c, d, e, f;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(685, trans, move);
+  const b = AFFINE_TRANSFORM(722, trans, move);
+  const c = AFFINE_TRANSFORM(686, trans, move);
+  const d = AFFINE_TRANSFORM(723, trans, move);
+  const e = AFFINE_TRANSFORM(684, trans, move);
+  const f = AFFINE_TRANSFORM(724, trans, move);
 
-  // a = AFFINE_TRANSFORM(685, trans, move);
-  // b = AFFINE_TRANSFORM(722, trans, move);
-  // c = AFFINE_TRANSFORM(686, trans, move);
-  // d = AFFINE_TRANSFORM(723, trans, move);
-  // e = AFFINE_TRANSFORM(684, trans, move);
-  // f = AFFINE_TRANSFORM(724, trans, move);
-
-  // return !cut_possible(a, OTHER_COLOR(color)) && !cut_possible(b, OTHER_COLOR(color)) && !cut_possible(c, OTHER_COLOR(color)) && !cut_possible(d, OTHER_COLOR(color)) && !disconnect_helper(e,f);
+  return !this.cut_possible(a, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(b, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(c, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(d, this.board.OTHER_COLOR(color)) 
+  && !this.disconnect_helper(e,f);
 }
 
 const autohelperconn34 = function(trans, move, color, action)
 {
-  // int a, b, c, d;
-  // UNUSED(color);
-  // UNUSED(action);
+  const a = AFFINE_TRANSFORM(611, trans, move);
+  const b = AFFINE_TRANSFORM(647, trans, move);
+  const c = AFFINE_TRANSFORM(648, trans, move);
+  const d = AFFINE_TRANSFORM(610, trans, move);
 
-  // a = AFFINE_TRANSFORM(611, trans, move);
-  // b = AFFINE_TRANSFORM(647, trans, move);
-  // c = AFFINE_TRANSFORM(648, trans, move);
-  // d = AFFINE_TRANSFORM(610, trans, move);
-
-  // return ATTACK_MACRO(a) && ATTACK_MACRO(b) && !cut_possible(c, OTHER_COLOR(color)) && !cut_possible(d, OTHER_COLOR(color));
+  return ATTACK_MACRO(a) && ATTACK_MACRO(b) 
+  && !this.cut_possible(c, this.board.OTHER_COLOR(color)) 
+  && !this.cut_possible(d, this.board.OTHER_COLOR(color));
 }
 
 

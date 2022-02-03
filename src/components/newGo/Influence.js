@@ -76,6 +76,7 @@ class MoyoDeterminationData {
 export const initial_black_influence = new InfluenceData()
 export const initial_white_influence = new InfluenceData()
 
+
 const move_influence = new InfluenceData()
 const followup_influence = new InfluenceData()
 
@@ -151,6 +152,13 @@ const code1 = function (arg_di, arg_dj, arg, arg_d , {ii, q, delta_i, delta_j, q
 }
 
 export const Influence = {
+
+  INITIAL_INFLUENCE(color) {
+    return color === colors.WHITE ? initial_white_influence :initial_black_influence
+  },
+  OPPOSITE_INFLUENCE(color) {
+    return this.INITIAL_INFLUENCE(this.board.OTHER_COLOR(color))
+  },
 
   accumulate_influence(q, pos, color) {
     const b = this.board
@@ -397,12 +405,15 @@ export const Influence = {
       // DEBUG(DEBUG_INFLUENCE, "intrusion list exhausted\n");
       return;
     }
-    q.intrusions[q.intrusion_counter].source_pos = source_pos;
-    q.intrusions[q.intrusion_counter].strength_pos = strength_pos;
-    q.intrusions[q.intrusion_counter].strength = strength;
-    q.intrusions[q.intrusion_counter].attenuation = attenuation;
+    if(!q.intrusions[q.intrusion_counter]){
+      q.intrusions[q.intrusion_counter] = new IntrusionData()
+    }
+    Object.assign(q.intrusions[q.intrusion_counter], {
+      source_pos, strength_pos, strength, attenuation
+    })
     q.intrusion_counter++;
   },
+  
   compare_intrusions(p1, p2){
     if (p1.source_pos - p2.source_pos !== 0) {
       return (p1.source_pos - p2.source_pos);

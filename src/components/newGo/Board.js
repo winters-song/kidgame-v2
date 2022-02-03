@@ -512,7 +512,7 @@ class Board {
     }
 
     /* 3. The location must not be the ko point. */
-    if (pos === board_ko_pos) {
+    if (pos === this.board_ko_pos) {
       /*    The ko position is guaranteed to have all neighbors of the
       *    same color, or off board. If that color is the same as the
       *    move the ko is being filled, which is always allowed. This

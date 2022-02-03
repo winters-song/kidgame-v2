@@ -14,54 +14,37 @@ import {dragon_status} from "./Liberty";
 import {Matchpat} from "./Matchpat";
 import {Influence} from "./Influence";
 import {Connections} from "./Connections";
+import {ReadConnect} from "./ReadConnect";
 import {Dragon} from "./Dragon";
 
 import {transformation_init} from "./patterns/transform";
 import {Test} from "./Test";
 
-// const EXAMINE_WORMS =               1
-// const EXAMINE_INITIAL_INFLUENCE =   2
-// const EXAMINE_DRAGONS_WITHOUT_OWL = 3
-// const EXAMINE_DRAGONS =             4
-// const EXAMINE_OWL_REASONS =         5
-// const EXAMINE_INITIAL_INFLUENCE2 =  6
-// const FULL_EXAMINE_DRAGONS =        7
-const EXAMINE_ALL =                 99
+// private
+// let limit_search = 0;
+// let search_mask = [];
+
+let worms_examined = -1;
+let initial_influence_examined = -1;
+let dragons_examined_without_owl = -1;
+let dragons_examined = -1;
+let initial_influence2_examined = -1;
+let dragons_refinedly_examined = -1;
+
+const EXAMINE_ALL = 99
 
 
 export default class Genmove {
   constructor(board) {
     this.board = board
-    Object.assign(this, Globals, Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat, Influence, Connections, Dragon, Test)
-
-    this.initData()
+    Object.assign(this, Globals, 
+      Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
+      Matchpat, Influence, Connections, ReadConnect, Dragon, Test)
 
     this.reading_cache_init()
     this.persistent_cache_init()
 
     transformation_init(board)
-  }
-
-  initData() {
-    Object.assign(this, {
-      limit_search : 0,
-      search_mask : [],
-      /* Position numbers for which various examinations were last made. */
-      worms_examined : -1,
-      initial_influence_examined : -1,
-      dragons_examined_without_owl : -1,
-      dragons_examined : -1,
-      initial_influence2_examined : -1,
-      dragons_refinedly_examined : -1,
-
-      // globals
-      dragon: [],
-      half_eye: [],
-      black_vital_points: [],
-      white_vital_points: [],
-      cutting_points: []
-    })
   }
 
   NEEDS_UPDATE(x){
@@ -79,12 +62,12 @@ export default class Genmove {
 
     // hashdata_recalc(&board_hash, board, board_ko_pos);
 
-    this.worms_examined = -1;
-    this.initial_influence_examined = -1;
-    this.dragons_examined_without_owl = -1;
-    this.dragons_examined = -1;
-    this.initial_influence2_examined = -1;
-    this.dragons_refinedly_examined = -1;
+    worms_examined = -1;
+    initial_influence_examined = -1;
+    dragons_examined_without_owl = -1;
+    dragons_examined = -1;
+    initial_influence2_examined = -1;
+    dragons_refinedly_examined = -1;
 
     /* Prepare our table of move reasons. */
     // clear_move_reasons();
@@ -100,13 +83,13 @@ export default class Genmove {
   }
 
   examine_position(how_much, aftermath_play) {
-    // let save_verbose = this.verbose;
+    let save_verbose = this.verbose;
 
     // 清除缓存
     // purge_persistent_caches();
 
-    if (this.NEEDS_UPDATE(this.worms_examined)) {
-      this.worms_examined = this.position_number
+    if (this.NEEDS_UPDATE(worms_examined)) {
+      worms_examined = this.position_number
       this.start_timer(0);
       this.make_worms();
       this.time_report(0, "  make worms", NO_MOVE, 1.0);
@@ -114,16 +97,15 @@ export default class Genmove {
 
   //
   if (this.board.stones_on_board(colors.BLACK | colors.WHITE) !== 0) {
-    if (this.NEEDS_UPDATE(this.initial_influence_examined)){
+    if (this.NEEDS_UPDATE(initial_influence_examined)){
       this.compute_worm_influence();
     }
-      if (this.NEEDS_UPDATE(this.dragons_examined)) {
-        this.make_dragons(0);
-        // compute_scores(chinese_rules || aftermath_play);
-        /* We have automatically done a partial dragon analysis as well. */
-        // dragons_examined_without_owl = position_number;
-      }
-
+    if (this.NEEDS_UPDATE(dragons_examined)) {
+      this.make_dragons(0);
+      // compute_scores(chinese_rules || aftermath_play);
+      /* We have automatically done a partial dragon analysis as well. */
+      // dragons_examined_without_owl = position_number;
+    }
   }
   // else if (how_much == EXAMINE_INITIAL_INFLUENCE
   //   || how_much == EXAMINE_DRAGONS
