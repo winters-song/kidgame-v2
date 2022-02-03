@@ -1,5 +1,5 @@
 import {
-  colors,
+  colors,codes,
   NO_MOVE, OWL_NODE_LIMIT, PASS_MOVE, SEMEAI_NODE_LIMIT
 } from './Constants'
 import {dragon_status} from "./Liberty";
@@ -164,7 +164,7 @@ export const Utils = {
   * break through was succesful and 2 if it only managed to cut
   * through.
   */
-    
+  // 按照list顺序交替落子num_moves步
   play_break_through_n(color, num_moves, list) {
     let mcolor = color;
     let success = 0;
@@ -208,9 +208,146 @@ export const Utils = {
     return success;
   },
 
-  play_attack_defend_n(){}, 
+  /* The function play_attack_defend_n() plays a sequence of moves,
+  * alternating between the players and starting with color. After
+  * having played through the sequence, the last coordinate pair gives
+  * a target to attack or defend, depending on the value of do_attack.
+  * If there is no stone present to attack or defend, it is assumed
+  * that it has already been captured. If one or more of the moves to
+  * play turns out to be illegal for some reason, the rest of the
+  * sequence is played anyway, and attack/defense is tested as if
+  * nothing special happened.
+  *
+  * A typical use for these functions is to set up a ladder in an
+  * autohelper and see whether it works or not.
+  */
+  play_attack_defend_n(color, do_attack, num_moves, list){
+    const b= this.board
+    let mcolor = color;
+    let success = 0;
+    let i;
+    let played_moves = 0;
+    let apos;
+  
+    /* Do all the moves with alternating colors. */
+    for (i = 0; i < num_moves; i++) {
+      apos = list[i]
 
-  play_attack_defend2_n() {},
+      if (apos !== NO_MOVE
+        && (b.trymove(apos, mcolor, "play_attack_defend_n", NO_MOVE)
+        || b.tryko(apos, mcolor, "play_attack_defend_n"))){
+          played_moves++;
+        }
+      mcolor = b.OTHER_COLOR(mcolor);
+    }
+
+    /* Now do the real work. */
+    let zpos = list[num_moves]
+
+    /* Temporarily increase the depth values with the number of explicitly
+    * placed stones.
+    *
+    * This improves the reading of pattern constraints but
+    * unfortunately tends to be too expensive. For the time being it is
+    * disabled.
+    */
+    
+    if (do_attack) {
+      if (b.board[zpos] === colors.EMPTY){
+        success = codes.WIN;
+      }
+      else {
+        success = this.attack(zpos, null);
+      }
+    }
+    else {
+      if (b.board[zpos] === colors.EMPTY) {
+        success = 0;
+      }
+      else {
+        let dcode = this.find_defense(zpos, null);
+        if (dcode === 0 && !this.attack(zpos, null))
+          success = codes.WIN;
+        else{
+          success = dcode;
+        }
+      }
+    }
+
+    
+    /* Pop all the moves we could successfully play. */
+    for (i = 0; i < played_moves; i++){
+      b.popgo();
+    }
+
+    return success;
+  }, 
+
+  /* The function play_attack_defend2_n() plays a sequence of moves,
+  * alternating between the players and starting with color. After
+  * having played through the sequence, the two last coordinate pairs
+  * give two targets to simultaneously attack or defend, depending on
+  * the value of do_attack. If there is no stone present to attack or
+  * defend, it is assumed that it has already been captured. If one or
+  * more of the moves to play turns out to be illegal for some reason,
+  * the rest of the sequence is played anyway, and attack/defense is
+  * tested as if nothing special happened.
+  *
+  * A typical use for these functions is to set up a crosscut in an
+  * autohelper and see whether at least one cutting stone can be
+  * captured.
+  */
+  play_attack_defend2_n(color, do_attack, num_moves, list) {
+    const b = this.board
+    let mcolor = color;
+    let success = 0;
+    let i;
+    let played_moves = 0;
+    let apos;
+    let ypos;
+    let zpos;
+
+    /* Do all the moves with alternating colors. */
+    for (i = 0; i < num_moves; i++) {
+      apos = list[i]
+
+      if (apos !== NO_MOVE
+        && (b.trymove(apos, mcolor, "play_attack_defend_n", NO_MOVE)
+        || b.tryko(apos, mcolor, "play_attack_defend_n"))){
+          played_moves++;
+        }
+      mcolor = b.OTHER_COLOR(mcolor);
+    }
+
+    /* Now do the real work. */
+    ypos = list[num_moves]
+    zpos = list[num_moves+1]
+    
+    /* FIXED: tm - returns ko results correctly (3.1.22) */
+    if (do_attack) {
+      if (b.board[ypos] === colors.EMPTY || b.board[zpos] === colors.EMPTY){
+        success = codes.WIN;
+      }
+      else{
+        success = this.attack_either(ypos, zpos);
+      }
+    }
+    else {
+      if (b.board[ypos] === colors.EMPTY || b.board[zpos] === colors.EMPTY) {
+        success = 0;
+      }
+      else {
+        success = this.defend_both(ypos, zpos);
+      }
+    }
+    
+    /* Pop all the moves we could successfully play. */
+    for (i = 0; i < played_moves; i++){
+      b.popgo();
+    }
+
+    return success;
+  },
   play_connect_n() {},
   play_lib_n() {},
   /* Set the various reading depth parameters. If mandated_depth_value

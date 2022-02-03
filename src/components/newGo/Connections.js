@@ -60,10 +60,10 @@ export const Connections = {
 
       for (k = 0; k < pattern.patlen; ++k) { /* match each point */
         /* transform pattern real coordinate */
-        let pos = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+        let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
         
         /* Look for distinct dragons. */
-        if (pattern.patn[k].att === ATT_O) {
+        if (pattern.patn[k][1] === ATT_O) {
           if (first_dragon === NO_MOVE){
             first_dragon = this.dragon[pos].origin;
           }
@@ -100,9 +100,9 @@ export const Connections = {
     if ((pattern.class & CLASS_B) && !(pattern.class & CLASS_s)) {
       /* Require that the X stones in the pattern are tactically safe. */
       for (k = 0; k < pattern.patlen; ++k) { /* match each point */
-        if (pattern.patn[k].att === ATT_X) {
+        if (pattern.patn[k][1] === ATT_X) {
           /* transform pattern real coordinate */
-          let pos = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+          let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
           if (this.attack(pos, null) === codes.WIN && (move === NO_MOVE || !this.does_defend(move, pos))){
             return; /* Match failed */
@@ -143,12 +143,12 @@ export const Connections = {
     second_dragon = NO_MOVE;
     for (k = 0; k < pattern.patlen; ++k) { /* match each point */
       /* transform pattern real coordinate */
-      let pos = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+      let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
       /* Look for dragons to amalgamate. Never amalgamate stones which
       * can be attacked.
       */
-      if ((pattern.class & CLASS_C) && b.board[pos] === color && pattern.patn[k].att === ATT_O
+      if ((pattern.class & CLASS_C) && b.board[pos] === color && pattern.patn[k][1] === ATT_O
           && ((pattern.class & CLASS_s) || this.attack(pos, null) === 0)) {
         if (first_dragon === NO_MOVE) {
           first_dragon = this.dragon[pos].origin;
@@ -168,7 +168,7 @@ export const Connections = {
       
       /* Inhibit connections */
       if (pattern.class & CLASS_B) {
-        if (pattern.patn[k].att !== ATT_not)
+        if (pattern.patn[k][1] !== ATT_not)
           break; /* The inhibition points are guaranteed to come first. */
         this.cutting_points[pos] |= color;
         // DEBUG(DEBUG_DRAGONS, "inhibiting connection at %1m\n", pos);

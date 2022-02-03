@@ -551,11 +551,11 @@ export const Influence = {
       for (k = 0; k < pattern.patlen; ++k) { /* match each point */
         let blocking_color;
         /* The order of elements is: All commas, all "!", then other. */
-        if (pattern.patn[k].att !== ATT_comma && pattern.patn[k].att !== ATT_not){
+        if (pattern.patn[k][1] !== ATT_comma && pattern.patn[k][1] !== ATT_not){
           break;
         }
 
-        let ii = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+        let ii = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
         if (pattern.class & CLASS_D) {
           blocking_color = color;
@@ -582,13 +582,13 @@ export const Influence = {
      */
     if ((pattern.class & (CLASS_D | CLASS_A | CLASS_B | CLASS_E | CLASS_t)) && !(pattern.class & CLASS_s)) {
       for (k = 0; k < pattern.patlen; ++k) { /* match each point */
-        let ii = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
-        if (pattern.patn[k].att === ATT_O) {
+        let ii = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
+        if (pattern.patn[k][1] === ATT_O) {
           if ((pattern.class & (CLASS_B | CLASS_t | CLASS_E | CLASS_D))
             && ((color === colors.WHITE && q.white_strength[ii] === 0.0) || (color === colors.BLACK && q.black_strength[ii] === 0.0)))
           return;
         }
-        else if (pattern.patn[k].att === ATT_X) {
+        else if (pattern.patn[k][1] === ATT_X) {
           if ((pattern.class & (CLASS_A | CLASS_t))
             && ((color === colors.BLACK && q.white_strength[ii] === 0.0) || (color === colors.WHITE && q.black_strength[ii] === 0.0)))
           return; /* Match failed. */
@@ -657,9 +657,9 @@ export const Influence = {
       /* match each point */
       for (k = 0; k < pattern.patlen; ++k) {
 
-        if (pattern.patn[k].att === ATT_not) {
+        if (pattern.patn[k][1] === ATT_not) {
           /* transform pattern real coordinate */
-          let ii = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+          let ii = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
           /* Low intensity influence source for the color in turn to move. */
           if (q.is_territorial_influence) {
@@ -677,9 +677,9 @@ export const Influence = {
     // gg_assert(pattern.class & (CLASS_D | CLASS_A));
     /* For A, D patterns, add blocks for all "," or "!" points.  */
     for (k = 0; k < pattern.patlen; ++k) { /* match each point */
-      if (pattern.patn[k].att === ATT_comma || pattern.patn[k].att === ATT_not) {
+      if (pattern.patn[k][1] === ATT_comma || pattern.patn[k][1] === ATT_not) {
         /* transform pattern real coordinate */
-        let ii = AFFINE_TRANSFORM(pattern.patn[k].offset, ll, anchor);
+        let ii = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
         let blocking_color;
         if (pattern.class & CLASS_D) {
           blocking_color = color;
@@ -688,7 +688,7 @@ export const Influence = {
           blocking_color = b.OTHER_COLOR(color);
         }
         // DEBUG(DEBUG_INFLUENCE, "  barrier for %s influence at %1m\n", color_to_string(OTHER_COLOR(blocking_color)), ii);
-        if (pattern.patn[k].att === ATT_comma) {
+        if (pattern.patn[k][1] === ATT_comma) {
           if (blocking_color === colors.WHITE) {
             q.black_permeability[ii] = 0.0;
           }

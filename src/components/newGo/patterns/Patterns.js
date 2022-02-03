@@ -85,3 +85,18 @@ export class PatternDB {
     }
   }
 };
+
+export function ATTACK_MACRO (pos) {
+  if(this.board.stackp === 0) {
+    return this.worm[pos].attack_codes[0]
+  }else {
+    return this.attack(pos, null)
+  } 
+}
+export function DEFEND_MACRO(pos) {
+  if(this.board.stackp === 0) {
+    return this.worm[pos].defense_codes[0]
+  }else {
+    return this.find_defense(pos, null)
+  } 
+}

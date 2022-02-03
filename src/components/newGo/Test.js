@@ -7,13 +7,8 @@ const maskMap = {
   3: '?',
 }
 
-const map = {
-  0: '.',
-  1: 'X',
-  2: 'O',
-  3: 'x',
-  4: 'o',
-}
+const map = ['.', 'X', 'O', 'x', 'o', ',', 'a','!']
+ 
 export const Test = {
   // 模式特征码打印
   printMask(val) {
@@ -30,7 +25,10 @@ export const Test = {
 
     for (let i = 0; i < 4; i++) {
       let temp = arr.slice(i* 4, (i+1) * 4 ).map(i => maskMap[i]).join(' ')
-      res.push(temp);
+
+      let numbers = [646,683,720,757].map(j => i+j).join(' ')
+      
+      res.push(temp.concat(`    ${numbers}`));
     }
     console.log(res.join('\n'))
   },

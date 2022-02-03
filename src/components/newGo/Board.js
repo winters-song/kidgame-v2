@@ -487,7 +487,59 @@ class Board {
 
   // is_pass() {}
 
-  is_legal() {}
+
+  /*
+  * is_legal(pos, color) determines whether the move (color) at pos is
+  * legal. This is for internal use in the engine and always assumes
+  * that suicide is allowed and only simple ko restrictions, no
+  * superko, regardless of the rules actually used in the game.
+  *
+  * Use is_allowed_move() if you want to take alternative suicide and
+  * ko rules into account.
+  */
+  is_legal(pos, color) {
+     /* 0. A pass move is always legal. */
+    if (pos === PASS_MOVE) {
+      return 1;
+    }
+
+    /* 1. The move must be inside the board. */
+    this.ASSERT_ON_BOARD1(pos);
+
+    /* 2. The location must be empty. */
+    if (this.board[pos] !== colors.EMPTY) {
+      return 0;
+    }
+
+    /* 3. The location must not be the ko point. */
+    if (pos === board_ko_pos) {
+      /*    The ko position is guaranteed to have all neighbors of the
+      *    same color, or off board. If that color is the same as the
+      *    move the ko is being filled, which is always allowed. This
+      *    could be tested with has_neighbor() but here a faster test
+      *    suffices.
+      */
+      if (this.board[this.WEST(pos)] === this.OTHER_COLOR(color)
+      || this.board[this.EAST(pos)] === this.OTHER_COLOR(color)) {
+        return 0;
+      }
+    }
+
+    /* Check for stack overflow. */
+    if (this.stackp >= this.MAXSTACK-2) {
+      // fprintf(stderr, 
+      //   "gnugo: Truncating search. This is beyond my reading ability!\n");
+      /* FIXME: Perhaps it's best to just assert here and be done with it? */
+      return 0;
+    }
+
+    /* Check for suicide. */
+    if (this.is_suicide(pos, color)){
+      return 0;
+    }
+
+    return 1;
+  }
 
   // 打印棋盘
   print_board(){
