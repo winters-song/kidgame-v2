@@ -19,8 +19,17 @@ import {AFFINE_TRANSFORM, dragon_status, TRANSFORM2} from "./Liberty";
  *
  *  gcc allows the entries to be computed at run-time, but that is not ANSI.
  */
-// i=3: 掩码为黑，结果为白或空， i=4: 掩码为白，结果为黑或空
-//  O - 白棋， X - 黑棋
+// 
+/**
+ * i=3: 掩码为黑，结果为白或空， i=4: 掩码为白，结果为黑或空
+ * patn中：O - 白棋， X - 黑棋
+ * 用法：
+ * and_mask[color-1][att]:
+ * 
+ * color为当前视角。黑视角：and_mask[0]; 白视角：取and_mask[1]
+ * 白视角下： board[pos]=1(黑棋) & 3 = val_mask[1][1], board[pos]=2(白棋) & 3 = val_mask[1][2]
+ * 黑视角下：board[pos]=1(黑棋) & 3 = val_mask[0][2], board[pos]=2(白棋) & 3 = val_mask[1][1] （对模式的黑白互换了）
+ */
 const and_mask = [
 /* .   O   X  o             x             ,   a   !      color */
   [3,  3,  3, colors.BLACK, colors.WHITE,  3,  3,  3], /* BLACK */
@@ -129,6 +138,9 @@ export const Matchpat = {
     }
   },
 
+  /**
+   * 预设class_mask的我方、敌方颜色
+   */
   prepare_for_match(color) {
     const other = this.board.OTHER_COLOR(color);
 
@@ -349,7 +361,8 @@ export const Matchpat = {
    * point of view.
    * the board must be prepared by dfa_prepare_for_match(color) !
    */
-  // anchor: 锚点颜色
+  // color: 当前视角
+  // anchor: 锚点颜色， 当前位置必须和锚点颜色一致
   matchpat_loop(callback, color, anchor, pdb, callback_data, goal, anchor_in_goal) {
     const b = this.board
 

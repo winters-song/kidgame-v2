@@ -93,7 +93,7 @@ const moyo_restricted_data = new MoyoDeterminationData()
 /* Thresholds value used in the whose_territory() function */
 let territory_determination_value = 0
 
-
+// 段数，下限，上限，刻度
 const min_infl_for_territory = new InterpolationData(6, 0.0, 24.0, [ 6.0, 15.0, 26.0, 36.0, 45.0, 50.0, 55.0 ])
 
 /* Determines the territory correction factor in dependence of the ratio
@@ -310,13 +310,13 @@ export const Influence = {
     //用于 whose_territory function()
     territory_determination_value = 0.95;
 
-    min_infl_for_territory.values[0] = 6.0;
-    min_infl_for_territory.values[1] = 15.0;
-    min_infl_for_territory.values[2] = 26.0;
-    min_infl_for_territory.values[3] = 36.0;
-    min_infl_for_territory.values[4] = 45.0;
-    min_infl_for_territory.values[5] = 50.0;
-    min_infl_for_territory.values[6] = 55.0;
+    // min_infl_for_territory.values[0] = 6.0;
+    // min_infl_for_territory.values[1] = 15.0;
+    // min_infl_for_territory.values[2] = 26.0;
+    // min_infl_for_territory.values[3] = 36.0;
+    // min_infl_for_territory.values[4] = 45.0;
+    // min_infl_for_territory.values[5] = 50.0;
+    // min_infl_for_territory.values[6] = 55.0;
 
     if (q.is_territorial_influence) {
       attenuation = TERR_DEFAULT_ATTENUATION(cosmic_importance);
@@ -413,7 +413,7 @@ export const Influence = {
     })
     q.intrusion_counter++;
   },
-  
+
   compare_intrusions(p1, p2){
     if (p1.source_pos - p2.source_pos !== 0) {
       return (p1.source_pos - p2.source_pos);
@@ -889,6 +889,7 @@ export const Influence = {
          *  5  8  9 10 10 10 10 10  9  8  5
          *  4  5  6  7  7  7  7  7  6  5  4
          */
+        // 离边界最近距离
         dist_i = Math.min(b.I(ii), b.board_size - b.I(ii) - 1);
         dist_j = Math.min(b.J(ii), b.board_size - b.J(ii) - 1);
         if (dist_i > dist_j){
@@ -897,7 +898,9 @@ export const Influence = {
         else {
           dist_j = Math.min(4, dist_j);
         }
+        // 中心化附加值
         central =  2 * Math.min(dist_i, dist_j) + dist_i + dist_j;
+        // 比值= 该位置影响值 / 插值
         ratio = Math.max(q.black_influence[ii], q.white_influence[ii]) / gg_interpolate(min_infl_for_territory, central);
 
         /* Do not make this adjustment when scoring unless both
@@ -907,6 +910,7 @@ export const Influence = {
           ratio = 1.0;
         }
 
+        // 比值修正
         first_guess[ii] *= gg_interpolate(territory_correction, ratio);
 
         /* Dead stone, upgrade to territory. Notice that this is not

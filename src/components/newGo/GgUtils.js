@@ -1,9 +1,9 @@
-
+// 插值
 export const gg_interpolate = function (f, x) {
   if (x < f.range_lowerbound){
     return f.values[0];
   }
-  else if (x > f.range_upperbound){
+  else if (x >= f.range_upperbound){
     return f.values[f.sections];
   }
   else {
@@ -13,3 +13,5 @@ export const gg_interpolate = function (f, x) {
     return ((1 - diff) * f.values[i] + diff * f.values[i+1]);
   }
 }
+
+window.gg_interpolate = gg_interpolate

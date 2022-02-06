@@ -8,10 +8,11 @@ import './index.less'
 
 //matchpat
 const map = {
+  'Attack1': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-01-08]AB[dd][ee]AW[de][df][ed][fd]CR[dd][df][ee][ef][eg][fd][fe][ge]MA[ff])',
  'Barriers3': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-02-01]AW[dd][fd])'
 }
 
-const sgf = map['Barriers3']
+const sgf = map['Attack1']
 
 function Puzzle (props){
   const goboardRef = useRef()
