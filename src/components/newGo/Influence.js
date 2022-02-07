@@ -125,6 +125,8 @@ const PRINTMOYO_STRENGTH          = 0x80
 const PRINTMOYO_ATTENUATION       = 0x100
 // const PRINTMOYO_VALUE_TERRITORY   = 0x200
 
+let pattern_counter = 0
+
 const code1 = function (arg_di, arg_dj, arg, arg_d , {ii, q, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}) {
   if (!q.safe[arg] && (arg_di * delta_i + arg_dj * delta_j > 0 || queue_start === 1)) {
     let contribution;
@@ -551,6 +553,10 @@ export const Influence = {
       return;
     }
 
+    pattern_counter++
+    console.log('match influence pattern', {anchor, color, pattern, ll, pos})
+
+
     /* Loop through pattern elements to see if an A or D pattern
      * can possibly have any effect. If not we can skip evaluating
      * constraint and/or helper.
@@ -738,6 +744,8 @@ export const Influence = {
     if (q.color_to_move !== colors.EMPTY){
       this.matchpat(this.influence_callback, q.color_to_move, barrierspat_db, q, null);
     }
+
+    console.log("influence pattern total:", pattern_counter)
 
     if (q.is_territorial_influence){
       this.add_marked_intrusions(q);

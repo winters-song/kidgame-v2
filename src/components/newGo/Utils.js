@@ -41,7 +41,16 @@ export const Utils = {
 
   change_dragon_status() {},
   defend_against(){},
-  cut_possible() {},
+
+  /*
+   * Returns true if color can cut at (pos), or if connection through (pos)
+   * is inhibited. This information is collected by find_cuts(), using the B
+   * patterns in the connections database.
+   */
+  cut_possible(pos, color){
+    return (this.cutting_points[pos] & this.board.OTHER_COLOR(color)) !== 0;
+  },
+
   does_attack() {},
 
   /*
@@ -222,7 +231,7 @@ export const Utils = {
   * autohelper and see whether it works or not.
   */
   play_attack_defend_n(color, do_attack, num_moves, list){
-    const b= this.board
+    const b = this.board
     let mcolor = color;
     let success = 0;
     let i;
@@ -348,7 +357,65 @@ export const Utils = {
 
     return success;
   },
-  play_connect_n() {},
+
+  /* The function play_connect_n() plays a sequence of moves,
+   * alternating between the players and starting with color. After
+   * having played through the sequence, the two last coordinates
+   * give two targets that should be connected or disconnected, depending on
+   * the value of do_connect. If there is no stone present to connect or
+   * disconnect, it is assumed that the connection has failed. If one or
+   * more of the moves to play turns out to be illegal for some reason,
+   * the rest of the sequence is played anyway, and connection/disconnection
+   * is tested as if nothing special happened.
+   */
+
+  play_connect_n(color, do_connect, num_moves, list) {
+    const b = this.board
+    let mcolor = color;
+    let success = 0;
+    let i;
+    let played_moves = 0;
+    let ypos = list[num_moves];
+    let zpos = list[num_moves+1];
+
+    /* Do all the moves with alternating colors. */
+    for (i = 0; i < num_moves; i++) {
+      let apos = list[i];
+
+      if (apos !== NO_MOVE
+        && (b.trymove(apos, mcolor, "play_connect_n", NO_MOVE)
+          || b.tryko(apos, mcolor, "play_connect_n"))){
+        played_moves++;
+      }
+      mcolor = b.OTHER_COLOR(mcolor);
+    }
+
+    /* See if ypos and zpos can be connected (or disconnected). */
+    if (do_connect) {
+      if (b.board[ypos] === colors.EMPTY || b.board[zpos] === colors.EMPTY) {
+        success = 0;
+      }
+      else {
+        success = this.string_connect(ypos, zpos, null);
+      }
+    }
+    else {
+      if (b.board[ypos] === colors.EMPTY || b.board[zpos] === colors.EMPTY) {
+        success = codes.WIN;
+      }
+      else {
+        success = this.disconnect(ypos, zpos, null);
+      }
+    }
+
+    /* Pop all the moves we could successfully play. */
+    for (i = 0; i < played_moves; i++){
+      b.popgo();
+    }
+
+    return success;
+  },
+
   play_lib_n() {},
   /* Set the various reading depth parameters. If mandated_depth_value
    * is not -1 that value is used; otherwise the depth values are

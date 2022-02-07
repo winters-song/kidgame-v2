@@ -18,6 +18,7 @@ import {ReadConnect} from "./ReadConnect";
 import {Dragon} from "./Dragon";
 
 import {transformation_init} from "./patterns/transform";
+import {Helpers} from "./patterns/Helpers";
 import {Test} from "./Test";
 
 // private
@@ -39,7 +40,7 @@ export default class Genmove {
     this.board = board
     Object.assign(this, Globals, 
       Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat, Influence, Connections, ReadConnect, Dragon, Test)
+      Matchpat, Influence, Connections, ReadConnect, Dragon, Helpers, Test)
 
     this.reading_cache_init()
     this.persistent_cache_init()
@@ -98,7 +99,7 @@ export default class Genmove {
   //
   if (this.board.stones_on_board(colors.BLACK | colors.WHITE) !== 0) {
     if (this.NEEDS_UPDATE(initial_influence_examined)){
-      // this.compute_worm_influence();
+      this.compute_worm_influence();
     }
     if (this.NEEDS_UPDATE(dragons_examined)) {
       // this.make_dragons(0);

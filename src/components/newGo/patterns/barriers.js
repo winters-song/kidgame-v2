@@ -2449,7 +2449,7 @@ const autohelperbarrierspat176 = function (trans, move, color, action){
   const b = AFFINE_TRANSFORM(683, trans, move);
 
   if (!action){
-    return this.play_attack_defend_n(color, 1, 2, move, [a, a]) && this.safe_move(move, color);
+    return this.play_attack_defend_n(color, 1, 2, [move, a, a]) && this.safe_move(move, color);
   }
   this.influence_mark_non_territory(move, this.board.OTHER_COLOR(color));
   this.influence_mark_non_territory(b, this.board.OTHER_COLOR(color));
@@ -2461,7 +2461,7 @@ const autohelperbarrierspat177 = function (trans, move, color, action){
   const b = AFFINE_TRANSFORM(722, trans, move);
 
   if (!action) {
-    return ATTACK_MACRO(b) && this.play_attack_defend_n(color, 1, 1, [move, b]);
+    return ATTACK_MACRO.call(this, b) && this.play_attack_defend_n(color, 1, 1, [move, b]);
   }
   this.influence_mark_non_territory(a, color);
 
@@ -2671,7 +2671,7 @@ const autohelperbarrierspat193 = function (trans, move, color, action){
   const b = AFFINE_TRANSFORM(685, trans, move);
 
   if (!action){
-    return this.board.countlib(a)===2 && ATTACK_MACRO(a);
+    return this.board.countlib(a)===2 && ATTACK_MACRO.call(this, a);
   }
   this.influence_mark_non_territory(b, color);
 
