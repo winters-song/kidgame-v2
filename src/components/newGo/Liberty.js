@@ -106,8 +106,26 @@ export class HalfEyeData {
   }
 }
 
+
+export class EyeData {
+  color;             /* BLACK, WHITE, or GRAY                     */
+  esize;             /* size of the eyespace                      */
+  msize;             /* number of marginal vertices               */
+  origin;            /* The origin                                */
+  value; /* Number of eyes.                           */
+
+  /* The above fields are constant on the whole eyespace.             */
+  /* ---------------------------------------------------------------- */
+  /* The below fields are not.                                        */
+  marginal;             /* This vertex is marginal               */
+  neighbors;            /* number of neighbors in eyespace       */
+  marginal_neighbors;   /* number of marginal neighbors          */
+};
+
 export class VitalEyePoints {
   attack_points =[]
   defense_points =[]
 };
+
+
 

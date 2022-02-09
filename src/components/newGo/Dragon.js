@@ -129,7 +129,7 @@ export const Dragon = {
     this.make_domains(this.black_eye, this.white_eye, 0);
 
     // /* Find adjacent worms which can be easily captured: */
-    // this.find_lunches();
+    this.find_lunches();
 
     // /* Find topological half eyes and false eyes. */
     // this.find_half_and_false_eyes(colors.BLACK, black_eye, half_eye, null);
@@ -439,7 +439,48 @@ export const Dragon = {
     //   }
   },
 
-  find_lunches () {},
+  /* Find capturable worms adjacent to each dragon. */
+  find_lunches () {
+    const b = this.board
+    let str;
+    for (str = b.BOARDMIN; str < b.BOARDMAX; str++){
+      if (b.ON_BOARD(str)) {
+        let food;
+
+        if (this.worm[str].origin !== str || b.board[str] === colors.EMPTY || this.worm[str].lunch === NO_MOVE){
+          continue;
+        }
+
+        food = this.worm[str].lunch;
+
+        /* In contrast to worm lunches, a dragon lunch must also be
+         * able to defend itself.
+         */
+        if (this.worm[food].defense_codes[0] === 0){
+          continue;
+        }
+
+        /* Tell the move generation code about the lunch. */
+        this.add_lunch(str, food);
+
+        /* If several lunches are found, we pick the juiciest.
+         * First maximize cutstone, then minimize liberties.
+         */
+
+        let origin = this.dragon[str].origin;
+        let lunch = this.DRAGON2(origin).lunch;
+
+        if (lunch === NO_MOVE
+          || this.worm[food].cutstone > this.worm[lunch].cutstone
+          || (this.worm[food].cutstone === this.worm[lunch].cutstone
+            && (this.worm[food].liberties < this.worm[lunch].liberties))) {
+          this.DRAGON2(origin).lunch = this.worm[food].origin;
+          // TRACE("at %1m setting %1m.lunch to %1m (cutstone=%d)\n",
+          //   str, origin, worm[food].origin, worm[food].cutstone);
+        }
+      }
+    }
+  },
   eye_computations () {},
   revise_inessentiality () {},
 

@@ -1,4 +1,5 @@
-import {colors} from "./Constants";
+import {colors, NO_MOVE} from "./Constants";
+import {EyeData} from "./Liberty";
 
 const MAXEYE = 20
 
@@ -36,10 +37,10 @@ export const Optics = {
     this.white_domain = []
 
     if (b_eye) {
-      b_eye.fill(0)
+      b_eye.splice(0, b_eye.length)
     }
     if (w_eye){
-      w_eye.fill(0)
+      w_eye.splice(0, w_eye.length)
     }
 
     /* Initialize eye data and compute the lively array. */
@@ -61,6 +62,9 @@ export const Optics = {
       if (!b.ON_BOARD(pos)){
         continue;
       }
+
+      w_eye[pos] = new EyeData()
+      b_eye[pos] = new EyeData()
 
       if (b.board[pos] === colors.EMPTY || !lively[pos]) {
         if (this.black_domain[pos] === 0 && this.white_domain[pos] === 0) {
@@ -130,7 +134,37 @@ export const Optics = {
 
   /* Find connected eyespace components and compute relevant statistics. */
   partition_eyespaces (eye, color) {
+    const b = this.board
+    let pos;
 
+    if (!eye){
+      return;
+    }
+
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
+      if (b.ON_BOARD(pos)){
+        eye[pos].origin = NO_MOVE;
+      }
+    }
+
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos)){
+        continue;
+      }
+      if (eye[pos].origin === NO_MOVE && eye[pos].color === color) {
+        let esize = [0];
+        let msize = [0];
+
+        this.originate_eye(pos, pos, esize, msize, eye);
+        eye[pos].esize = esize[0];
+        eye[pos].msize = msize[0];
+      }
+    }
+
+    /* Now we count the number of neighbors and marginal neighbors
+     * of each vertex.
+     */
+    this.count_neighbours(eye);
   },
 
 
@@ -299,7 +333,30 @@ export const Optics = {
     }
 
   },
-  count_neighbours () {},
+  count_neighbours (eyedata) {
+    const b = this.board
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos) || eyedata[pos].origin === NO_MOVE)
+        continue;
+
+      eyedata[pos].esize = eyedata[eyedata[pos].origin].esize;
+      eyedata[pos].msize = eyedata[eyedata[pos].origin].msize;
+      eyedata[pos].neighbors = 0;
+      eyedata[pos].marginal_neighbors = 0;
+
+      for (let k = 0; k < 4; k++) {
+        let pos2 = pos + b.delta[k];
+        if (b.ON_BOARD(pos2) && eyedata[pos2].origin === eyedata[pos].origin) {
+          eyedata[pos].neighbors++;
+          if (eyedata[pos2].marginal){
+            eyedata[pos].marginal_neighbors++;
+          }
+        }
+      }
+    }
+  },
+
   is_lively (owl_call, pos) {
     if (this.board.board[pos] === colors.EMPTY){
       return 0;
@@ -314,7 +371,35 @@ export const Optics = {
     }
   },
   false_margin () {},
-  originate_eye () {},
+
+  /*
+   * originate_eye(pos, pos, *esize, *msize, eye) creates an eyeshape
+   * with origin pos. esize and msize return the size and the number of
+   * marginal vertices. The repeated variables (pos) are due to the
+   * recursive definition of the function.
+   */
+  originate_eye (origin, pos, esize, msize, eye) {
+    const b = this.board
+    b.ASSERT_ON_BOARD1(origin);
+    b.ASSERT_ON_BOARD1(pos);
+
+    eye[pos].origin = origin;
+    esize[0]++;
+    if (eye[pos].marginal){
+      msize[0]++;
+    }
+
+    for (let k = 0; k < 4; k++) {
+      let pos2 = pos + b.delta[k];
+      if (b.ON_BOARD(pos2)
+        && eye[pos2].color === eye[pos].color
+        && eye[pos2].origin === NO_MOVE
+        && (!eye[pos2].marginal || !eye[pos].marginal)){
+        this.originate_eye(origin, pos2, esize, msize, eye);
+      }
+    }
+  },
+
   propagate_eye () {},
   find_eye_dragons () {},
   print_eye () {},
