@@ -738,7 +738,7 @@ export const Worm = {
 
       const acode = this.attack(str, attack_point);
       if (acode !== 0) {
-        console.log(`worm at ${str} can be attacked at ${attack_point}`);
+        // console.log(`worm at ${str} can be attacked at ${attack_point}`);
         this.change_attack(str, attack_point[0], acode);
       }
     }

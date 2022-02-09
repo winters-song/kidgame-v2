@@ -57,6 +57,7 @@ export const Test = {
     console.log(res.join('\n'))
   },
 
+  // 模式在当前棋盘的展示
   printPatnBoard(pattern, ll, anchor){
     const b = this.board
     const board = b.board.slice()

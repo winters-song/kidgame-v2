@@ -554,7 +554,7 @@ export const Influence = {
     }
 
     pattern_counter++
-    console.log('match influence pattern', {anchor, color, pattern, ll, pos})
+    // console.log('match influence pattern', {anchor, color, pattern, ll, pos})
 
 
     /* Loop through pattern elements to see if an A or D pattern
@@ -631,6 +631,7 @@ export const Influence = {
     /* For I patterns, add a low intensity, both colored, influence
      * source at *.
      */
+    // CLASS_I： 入侵：invasions patterns
     if (pattern.class & CLASS_I) {
       let this_color = colors.EMPTY;
       let strength;
@@ -647,6 +648,7 @@ export const Influence = {
       attenuation = 1.5;
 
       /* Increase strength if we're computing escape influence. */
+      // CLASS_e： 扩张实地 intended to expand territory
       if (!q.is_territorial_influence && (pattern.class & CLASS_e)) {
         this.add_influence_source(pos, this_color, 20 * strength, attenuation, q);
       }
@@ -691,7 +693,7 @@ export const Influence = {
       return;
     }
 
-    // gg_assert(pattern.class & (CLASS_D | CLASS_A));
+    b.ASSERT1(pattern.class & (CLASS_D | CLASS_A));
     /* For A, D patterns, add blocks for all "," or "!" points.  */
     for (k = 0; k < pattern.patlen; ++k) { /* match each point */
       if (pattern.patn[k][1] === ATT_comma || pattern.patn[k][1] === ATT_not) {
@@ -745,7 +747,7 @@ export const Influence = {
       this.matchpat(this.influence_callback, q.color_to_move, barrierspat_db, q, null);
     }
 
-    console.log("influence pattern total:", pattern_counter)
+    // console.log("influence pattern total:", pattern_counter)
 
     if (q.is_territorial_influence){
       this.add_marked_intrusions(q);

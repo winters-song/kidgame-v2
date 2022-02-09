@@ -1576,7 +1576,7 @@ const autohelperbarrierspat89 = function (trans, move, color, action){
   const B = AFFINE_TRANSFORM(682, trans, move);
 
   if (!action) {
-    return this.play_attack_defend_n(color, 1, 1, [a, B]) && !ATTACK_MACRO(B);
+    return this.play_attack_defend_n(color, 1, 1, [a, B]) && !ATTACK_MACRO.call(this,B);
   }
   return !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [a, c])
 
@@ -1587,7 +1587,7 @@ const autohelperbarrierspat90 = function (trans, move, color, action){
   const B = AFFINE_TRANSFORM(719, trans, move);
 
   if (!action) {
-    return this.play_attack_defend_n(color, 1, 1, [a, B]) && !ATTACK_MACRO(B);
+    return this.play_attack_defend_n(color, 1, 1, [a, B]) && !ATTACK_MACRO.call(this,B);
   }
   return !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [a, c]);
 
@@ -1860,7 +1860,7 @@ const autohelperbarrierspat124 = function (trans, move, color, action){
 const autohelperbarrierspat125 = function (trans, move, color, action){
   const A = AFFINE_TRANSFORM(682, trans, move);
 
-  return this.board.countlib(A)===1 && ATTACK_MACRO(A);
+  return this.board.countlib(A)===1 && ATTACK_MACRO.call(this,A);
 }
 const autohelperbarrierspat126 = function (trans, move, color, action){
 
@@ -1885,7 +1885,7 @@ const autohelperbarrierspat128 = function (trans, move, color, action){
   const d = AFFINE_TRANSFORM(499, trans, move);
   const A = AFFINE_TRANSFORM(534, trans, move);
 
-  return this.board.countlib(A)===2 && !ATTACK_MACRO(A) && 
+  return this.board.countlib(A)===2 && !ATTACK_MACRO.call(this,A) && 
   !this.play_attack_defend_n(color, 1, 3, [b, c, d, d]);
 
 }
@@ -1955,7 +1955,7 @@ const autohelperbarrierspat135 = function (trans, move, color, action){
   const c = AFFINE_TRANSFORM(647, trans, move);
 
   if (!action) {
-    return this.play_attack_defend_n(color, 1, 1, [a, b]) && !ATTACK_MACRO(b);
+    return this.play_attack_defend_n(color, 1, 1, [a, b]) && !ATTACK_MACRO.call(this,b);
   }
   return !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [a, c])
 
@@ -2083,7 +2083,7 @@ const autohelperbarrierspat146 = function (trans, move, color, action){
   const A = AFFINE_TRANSFORM(607, trans, move);
   const B = AFFINE_TRANSFORM(717, trans, move);
 
-  return !ATTACK_MACRO(A) && this.play_connect_n(color, 0, 0, [A, B]) && !ATTACK_MACRO(B);
+  return !ATTACK_MACRO.call(this,A) && this.play_connect_n(color, 0, 0, [A, B]) && !ATTACK_MACRO.call(this,B);
 
 }
 const autohelperbarrierspat148 = function (trans, move, color, action){

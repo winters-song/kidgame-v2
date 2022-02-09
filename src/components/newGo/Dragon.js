@@ -1,4 +1,5 @@
-import {dragon_status, HalfEyeData} from "./Liberty";
+import {dragon_status, EyeValue, HalfEyeData} from "./Liberty";
+import {colors, NO_MOVE} from "./Constants";
 
 /* A "dragon" is a union of strings of the same color which will be
  * treated as a unit. The dragons are generated anew at each
@@ -35,48 +36,50 @@ class DragonData {
   }
 };
 
-
 class DragonData2 {
   origin;                         /* the origin of the dragon            */
   adjacent =[]; /* adjacent dragons                    */
-  neighbors;                      /* number of adjacent dragons          */
-  hostile_neighbors;              /* neighbors of opposite color         */
+  neighbors = 0;                      /* number of adjacent dragons          */
+  hostile_neighbors = 0;              /* neighbors of opposite color         */
 
-  moyo_size;		      /* size of surrounding influence moyo, */
-  moyo_territorial_value;       /* ...and its territorial value        */
-  safety;          /* a more detailed status estimate     */
+  moyo_size = -1;		      /* size of surrounding influence moyo, */
+  moyo_territorial_value = 0.0;       /* ...and its territorial value        */
+  safety = -1;          /* a more detailed status estimate     */
   weakness;           /* a continuous estimate of the dragon's safety  */
   weakness_pre_owl;   /* dragon safety based on pre-owl computations   */
   strategic_size; /* An effective size including weakness of neighbors */
-  escape_route;         /* a measurement of likelihood of escape         */
+  escape_route = 0;         /* a measurement of likelihood of escape         */
   genus;    /* the number of eyes (approximately)            */
-  heye;     /* coordinates of a half eye                                 */
-  lunch;    /* if lunch != 0 then lunch points to a boundary worm which can be captured easily.                                   */
-  surround_status;         /* Is it surrounded?                          */
+  heye = NO_MOVE;     /* coordinates of a half eye                                 */
+  lunch = NO_MOVE;    /* if lunch != 0 then lunch points to a boundary worm which can be captured easily.                                   */
+  surround_status = 0;         /* Is it surrounded?                          */
   surround_size;           /* Size of the surrounding area               */
 
-  semeais;         /* number of semeais in which the dragon is involved  */
-  semeai_defense_code ;/* Result code for semeai defense.                */
-  semeai_defense_point;/* Move found by semeai code to rescue dragon     */
+  semeais = 0;         /* number of semeais in which the dragon is involved  */
+  semeai_defense_code = 0;/* Result code for semeai defense.                */
+  semeai_defense_point	= NO_MOVE;/* Move found by semeai code to rescue dragon     */
   semeai_defense_certain;
   semeai_defense_target; /* The opponent dragon involved in the semeai   */
-  semeai_attack_code ; /* Result code for semeai attack.                 */
-  semeai_attack_point; /* Move found by semeai code to kill dragon       */
+  semeai_attack_code = 0; /* Result code for semeai attack.                 */
+  semeai_attack_point	= NO_MOVE; /* Move found by semeai code to kill dragon       */
   semeai_attack_certain;
   semeai_attack_target; /* The opponent dragon involved in the semeai    */
-  owl_threat_status; /* CAN_THREATEN_ATTACK/DEFENSE       */
-  owl_status; /* (ALIVE, DEAD, UNKNOWN, CRITICAL, UNCHECKED)    */
-  owl_attack_point;    /* vital pofor attack                         */
-  owl_attack_code;     /* ko result code                                 */
-  owl_attack_certain;  /* 0 if owl reading node limit is reached         */
+  owl_threat_status = dragon_status.UNCHECKED; /* CAN_THREATEN_ATTACK/DEFENSE       */
+  owl_status = dragon_status.UNCHECKED; /* (ALIVE, DEAD, UNKNOWN, CRITICAL, UNCHECKED)    */
+  owl_attack_point = NO_MOVE;    /* vital pofor attack                         */
+  owl_attack_code = 0;     /* ko result code                                 */
+  owl_attack_certain = 1;  /* 0 if owl reading node limit is reached         */
   owl_attack_node_count;
-  owl_second_attack_point;/* if attacker gets both attack points, wins   */
-  owl_defense_point;   /* vital pofor defense                        */
-  owl_defense_code;    /* ko result code                                 */
-  owl_defense_certain; /* 0 if owl reading node limit is reached         */
-  owl_second_defense_point;/* if defender gets both attack points, wins  */
+  owl_second_attack_point = NO_MOVE;/* if attacker gets both attack points, wins   */
+  owl_defense_point = NO_MOVE;   /* vital pofor defense                        */
+  owl_defense_code = 0;    /* ko result code                                 */
+  owl_defense_certain = 1; /* 0 if owl reading node limit is reached         */
+  owl_second_defense_point = NO_MOVE;/* if defender gets both attack points, wins  */
   owl_attack_kworm;    /* only valid when owl_attack_code is GAIN        */
   owl_defense_kworm;   /* only valid when owl_defense_code is LOSS       */
+  constructor(cfg) {
+    Object.assign(this, cfg)
+  }
 }
 
 let dragon2_initialized;
@@ -91,9 +94,12 @@ let lively_black_dragons;
  * information is passed on to the move generation code. If
  * color == EMPTY no information at all is passed on to the move generation.
  */
-
-
 export const Dragon = {
+
+  // macro
+  DRAGON2(pos){
+    return this.dragon2[this.dragon[pos].id]
+  },
 
   dragon2_func(dragon , pos){
     const b = this.board
@@ -103,12 +109,14 @@ export const Dragon = {
 
   make_dragons(stop_before_owl){
     const b = this.board
+
+    dragon2_initialized = 0;
     this.initialize_dragon_data();
 
     /* Find explicit connections patterns in database and amalgamate
      * involved dragons.
      */
-    // memset(cutting_points, 0, sizeof(cutting_points));
+    this.cutting_points = []
     this.find_cuts();
     this.find_connections();
 
@@ -118,7 +126,7 @@ export const Dragon = {
      */
     this.initialize_supplementary_dragon_data();
 
-    // this.make_domains(black_eye, white_eye, 0);
+    this.make_domains(this.black_eye, this.white_eye, 0);
 
     // /* Find adjacent worms which can be easily captured: */
     // this.find_lunches();
@@ -482,7 +490,56 @@ export const Dragon = {
     this.num_cuts = 0;
   },
 
-  initialize_supplementary_dragon_data () {},
+  /* Initialize the dragon2[] array. */
+  initialize_supplementary_dragon_data () {
+    let str;
+    let d;
+    let origin;
+    const b = this.board
+    /* Give each dragon (caves excluded) an id number for indexing into
+     * the dragon2 array. After this the DRAGON2 macro can be used.
+     */
+    this.number_of_dragons = 0;
+    for (str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (!b.ON_BOARD(str)){
+        continue;
+      }
+      origin = this.dragon[str].origin;
+
+      if (b.board[str] === colors.EMPTY){
+        continue;
+      }
+
+      if (this.dragon[origin].id === -1) {
+        this.dragon[origin].id = this.number_of_dragons++;
+      }
+      this.dragon[str].id = this.dragon[origin].id;
+    }
+
+    this.dragon2 = [];
+
+    /* Initialize the rest of the dragon2 data. */
+    for (d = 0; d < this.number_of_dragons; d++) {
+      this.dragon2[d] = new DragonData2({
+        genus: new EyeValue({a:0, b:0, c:0, d: 0})
+      })
+    }
+
+    /* Find the origins of the dragons to establish the mapping back to
+     * the board. After this the DRAGON macro can be used.
+     */
+    for (str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (!b.ON_BOARD(str))
+        continue;
+      if (b.IS_STONE(b.board[str]) && this.dragon[str].origin === str) {
+        this.DRAGON2(str).origin = str;
+      }
+    }
+
+
+
+    dragon2_initialized = 1;
+  },
   find_neighbor_dragons () {},
   add_adjacent_dragons () {},
   add_adjacent_dragon () {},
@@ -501,7 +558,71 @@ export const Dragon = {
   show_dragons () {},
   compute_new_dragons () {},
   join_new_dragons () {},
-  join_dragons () {},
+
+  /*
+   * join_dragons amalgamates the dragon at (d1) to the
+   * dragon at (d2).
+   */
+  join_dragons(d1, d2) {
+    let ii;
+    let origin; /* new origin */
+    const b = this.board
+    /* If not called from make_dragons(), we don't work on the main
+     * dragon[] array.
+     */
+    if (b.stackp > 0) {
+      this.join_new_dragons(d1, d2);
+      return;
+    }
+    //
+    // /* Normalize dragon coordinates. */
+    d1 = this.dragon[d1].origin;
+    d2 = this.dragon[d2].origin;
+
+    /* If d1 and d2 are the same dragon, we do nothing. */
+    if (d1 === d2){
+      return;
+    }
+
+    b.ASSERT1(b.board[d1] === b.board[d2], d1);
+    b.ASSERT1(dragon2_initialized === 0);
+    b.ASSERT1(b.IS_STONE(b.board[d1]), d1);
+    //
+    // /* We want to have the origin pointing to the largest string of
+    //  * the dragon.  If this is not unique, we take the "upper
+    //  * leftmost" one.
+    //  */
+    if (this.worm[d1].size > this.worm[d2].size
+      || (this.worm[d1].size === this.worm[d2].size && d1 < d2)) {
+      origin = d1;
+      // DEBUG(DEBUG_DRAGONS, "joining dragon at %1m to dragon at %1m\n", d2, d1);
+    }
+    else {
+      origin = d2;
+      // DEBUG(DEBUG_DRAGONS, "joining dragon at %1m to dragon at %1m\n", d1, d2);
+    }
+    //
+    this.dragon[origin].size = this.dragon[d2].size + this.dragon[d1].size;
+    this.dragon[origin].effective_size = this.dragon[d2].effective_size + this.dragon[d1].effective_size;
+    //
+    // /* Join the second next_worm_in_dragon chain at the end of the first one. */
+    //
+    let last_worm_origin_dragon = origin;
+    while (this.next_worm_list[last_worm_origin_dragon]){
+      last_worm_origin_dragon = this.next_worm_list[last_worm_origin_dragon];
+    }
+    if (origin === d1)
+      this.next_worm_list[last_worm_origin_dragon] = d2;
+    else
+      this.next_worm_list[last_worm_origin_dragon] = d1;
+
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
+      if (b.ON_BOARD(ii) && (this.dragon[ii].origin === d1 || this.dragon[ii].origin === d2)){
+        this.dragon[ii].origin = origin;
+      }
+    }
+  },
+
   compute_crude_status () {},
   dragon_escape () {},
   compute_escape () {},

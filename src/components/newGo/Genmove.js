@@ -16,6 +16,8 @@ import {Influence} from "./Influence";
 import {Connections} from "./Connections";
 import {ReadConnect} from "./ReadConnect";
 import {Dragon} from "./Dragon";
+import {Optics} from "./Optics";
+import {Owl} from "./Owl";
 
 import {transformation_init} from "./patterns/transform";
 import {Helpers} from "./patterns/Helpers";
@@ -38,9 +40,9 @@ const EXAMINE_ALL = 99
 export default class Genmove {
   constructor(board) {
     this.board = board
-    Object.assign(this, Globals, 
-      Utils, Worm, Unconditional, Reading, MoveList,Persistent, Cache,
-      Matchpat, Influence, Connections, ReadConnect, Dragon, Helpers, Test)
+    Object.assign(this, Globals, Utils, Helpers, Test,
+      Worm, Unconditional, Reading, MoveList, Persistent, Cache,
+      Matchpat, Influence, Connections, ReadConnect, Dragon, Optics, Owl )
 
     this.reading_cache_init()
     this.persistent_cache_init()
@@ -102,7 +104,7 @@ export default class Genmove {
       this.compute_worm_influence();
     }
     if (this.NEEDS_UPDATE(dragons_examined)) {
-      // this.make_dragons(0);
+      this.make_dragons(0);
       // compute_scores(chinese_rules || aftermath_play);
       /* We have automatically done a partial dragon analysis as well. */
       // dragons_examined_without_owl = position_number;

@@ -239,7 +239,7 @@ const autohelperconn3 = function(trans, move, color, action)
 const autohelperconn4 = function(trans, move, color, action)
 {
   const  A = AFFINE_TRANSFORM(646, trans, move);
-  return ATTACK_MACRO(A);
+  return ATTACK_MACRO.call(this,A);
 }
 
 const autohelperconn5 = function(trans, move, color, action)
@@ -437,8 +437,8 @@ const autohelperconn28 = function(trans, move, color, action)
   const A = AFFINE_TRANSFORM(648, trans, move);
   const B = AFFINE_TRANSFORM(610, trans, move);
 
-  return ((ATTACK_MACRO(A) && !this.distrust_tactics_helper(A)) 
-  || (ATTACK_MACRO(B) && !this.distrust_tactics_helper(B))) && !this.disconnect_helper(c,d);
+  return ((ATTACK_MACRO.call(this,A) && !this.distrust_tactics_helper(A)) 
+  || (ATTACK_MACRO.call(this,B) && !this.distrust_tactics_helper(B))) && !this.disconnect_helper(c,d);
 }
 
 const autohelperconn29 = function(trans, move, color, action)
@@ -510,7 +510,7 @@ const autohelperconn34 = function(trans, move, color, action)
   const c = AFFINE_TRANSFORM(648, trans, move);
   const d = AFFINE_TRANSFORM(610, trans, move);
 
-  return ATTACK_MACRO(a) && ATTACK_MACRO(b) 
+  return ATTACK_MACRO.call(this,a) && ATTACK_MACRO.call(this,b) 
   && !this.cut_possible(c, this.board.OTHER_COLOR(color)) 
   && !this.cut_possible(d, this.board.OTHER_COLOR(color));
 }

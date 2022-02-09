@@ -88,6 +88,9 @@ export class EyeValue {
   b; /* number of eyes if attacker plays first */
   c; /* number of eyes if defender plays first */
   d; /* number of eyes if defender plays first twice */
+  constructor(cfg) {
+    Object.assign(this, cfg)
+  }
 };
 
 
