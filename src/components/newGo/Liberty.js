@@ -3,6 +3,8 @@ import {
 } from './Constants'
 import {transformation, transformation2} from "./patterns/transform";
 
+export const FALSE_EYE = 1
+export const HALF_EYE = 1
 /* Routine names used by persistent and non-persistent caching schemes. */
 export const routine_id ={
   OWL_ATTACK : 0,
@@ -106,6 +108,8 @@ export class HalfEyeData {
   }
 }
 
+
+export const MAX_EYE_ATTACKS = 3
 
 export class EyeData {
   color;             /* BLACK, WHITE, or GRAY                     */

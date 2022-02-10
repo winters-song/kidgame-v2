@@ -108,7 +108,7 @@ export const Dragon = {
   },
 
   make_dragons(stop_before_owl){
-    const b = this.board
+    // const b = this.board
 
     dragon2_initialized = 0;
     this.initialize_dragon_data();
@@ -132,12 +132,12 @@ export const Dragon = {
     this.find_lunches();
 
     // /* Find topological half eyes and false eyes. */
-    // this.find_half_and_false_eyes(colors.BLACK, black_eye, half_eye, null);
-    // this.find_half_and_false_eyes(colors.WHITE, white_eye, half_eye, null);
+    this.find_half_and_false_eyes(colors.BLACK, this.black_eye, this.half_eye, null);
+    this.find_half_and_false_eyes(colors.WHITE, this.white_eye, this.half_eye, null);
 
     // /* Compute the number of eyes, half eyes, determine attack/defense points
     //  * etc. for all eye spaces. */
-    // this.eye_computations();
+    this.eye_computations();
     // /* Try to determine whether topologically false and half eye points
     //  * contribute to territory even if the eye doesn't solidify.
     //  */
@@ -481,7 +481,42 @@ export const Dragon = {
       }
     }
   },
-  eye_computations () {},
+
+  /* Compute the value of each eye space. Store its attack and defense point.
+   * A more comlete list of attack and defense points is stored in the lists
+   * black_vital_points and white_vital_points.
+   */
+  eye_computations () {
+    const b = this.board
+
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (!b.ON_BOARD(str)){
+        continue;
+      }
+
+      if (this.black_eye[str].color === colors.BLACK && this.black_eye[str].origin === str) {
+        let value = []
+        let attack_point = []
+        let defense_point = []
+
+        this.compute_eyes(str, value, attack_point, defense_point, this.black_eye, this.half_eye, 1);
+        // DEBUG(DEBUG_EYES, "Black eyespace at %1m: %s\n", str, eyevalue_to_string(&value));
+        this.black_eye[str].value = value;
+        this.propagate_eye(str, this.black_eye);
+      }
+
+      if (this.white_eye[str].color === colors.WHITE && this.white_eye[str].origin === str) {
+        let value = []
+        let attack_point = []
+        let defense_point = []
+
+        this.compute_eyes(str, value, attack_point, defense_point, this.white_eye, this.half_eye, 1);
+        // DEBUG(DEBUG_EYES, "White eyespace at %1m: %s\n", str, eyevalue_to_string(&value));
+        this.white_eye[str].value = value;
+        this.propagate_eye(str, this.white_eye);
+      }
+    }
+  },
   revise_inessentiality () {},
 
 /* Initialize the dragon[] array. */
