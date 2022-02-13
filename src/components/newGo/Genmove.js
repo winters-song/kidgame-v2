@@ -101,10 +101,10 @@ export default class Genmove {
   //
   if (this.board.stones_on_board(colors.BLACK | colors.WHITE) !== 0) {
     if (this.NEEDS_UPDATE(initial_influence_examined)){
-      this.compute_worm_influence();
+      // this.compute_worm_influence();
     }
     if (this.NEEDS_UPDATE(dragons_examined)) {
-      this.make_dragons(0);
+      // this.make_dragons(0);
       // compute_scores(chinese_rules || aftermath_play);
       /* We have automatically done a partial dragon analysis as well. */
       // dragons_examined_without_owl = position_number;

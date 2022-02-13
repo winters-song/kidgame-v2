@@ -47,7 +47,7 @@ export const Worm = {
     this.build_worms();
 
     /* No point continuing if the board is completely empty. */
-    if (this.board.stones_on_board(colors.BLACK | colors.WHITE) === 0){
+    if (b.stones_on_board(colors.BLACK | colors.WHITE) === 0){
       return;
     }
 
@@ -87,26 +87,7 @@ export const Worm = {
     
     /*
      * There are two concepts of cutting stones in the worm array.
-     *
-     * worm.cutstone:
-     *
-     *     A CUTTING STONE is one adjacent to two enemy strings,
-     *     which do not have a liberty in common. The most common
-     *     type of cutting string is in this situation.
-     *
-     *     XO
-     *     OX
-     *
-     *     A POTENTIAL CUTTING STONE is adjacent to two enemy
-     *     strings which do share a liberty. For example, X in:
-     *
-     *     XO
-     *     O.
-     *
-     *     For cutting strings we set worm[m][n].cutstone=2. For potential
-     *     cutting strings we set worm[m][n].cutstone=1. For other strings,
-     *     worm[m][n].cutstone=0.
-     *
+  
      * worm.cutstone2:
      *
      *     Cutting points are identified by the patterns in the
@@ -141,19 +122,19 @@ export const Worm = {
       let w1 = NO_MOVE;
       let w2 = NO_MOVE;
     
-      /* Only work on each worm once. This is easiest done if we only
-       * work with the origin of each worm.
-       */
-      if (!b.IS_STONE(b.board[pos]) || !this.is_worm_origin(pos, pos))
+      // 遍历每个棋串
+      if (!b.IS_STONE(b.board[pos]) || !this.is_worm_origin(pos, pos)){
         continue;
+      }
     
       /* Try to find two adjacent worms (w1) and (w2)
-       * of opposite colour from (pos).
+       * of opposite color from (pos).
        */
       for (let pos2 = b.BOARDMIN; pos2 < b.BOARDMAX; pos2++) {
         /* Work only with the opposite color from (pos). */
-        if (b.board[pos2] !== b.OTHER_COLOR(b.board[pos]))
+        if (b.board[pos2] !== b.OTHER_COLOR(b.board[pos])){
           continue;
+        }
     
         for (let k = 0; k < 4; k++) {
           if (!b.ON_BOARD(pos2 + b.delta[k])
@@ -165,10 +146,12 @@ export const Worm = {
           /* If we have not already found a worm which meets the criteria,
            * store it into (w1), otherwise store it into (w2).
            */
-          if (w1 === NO_MOVE)
+          if (w1 === NO_MOVE){
             w1 = this.worm[pos2].origin;
-          else if (!this.is_same_worm(pos2, w1))
+          }
+          else if (!this.is_same_worm(pos2, w1)){
             w2 = this.worm[pos2].origin;
+          }
         }
       }
     
@@ -190,7 +173,6 @@ export const Worm = {
     }
     
     b.ASSERT1(b.stackp === 0, null);
-
     
     /* Set the genus of all worms. */
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
@@ -1210,6 +1192,7 @@ export const Worm = {
    * eyes of the string.
    */
   // str是棋串id
+  // 
   genus(str) {
     const b = this.board
     let gen = -1;
@@ -1228,19 +1211,116 @@ export const Worm = {
   /* This recursive function marks the component at (pos) of
    * the complement of the string with origin (str)
    */
+  // 标记pos所在串（空+非当前串棋子）
   markcomponent(str, pos, mg) {
     const b = this.board
     mg[pos] = 1;
     for (let k = 0; k < 4; k++) {
       const apos = pos + b.delta[k];
-      if (b.ON_BOARD(apos) && mg[apos] === 0 && (b.board[apos] === colors.EMPTY || !this.is_same_worm(apos, str))){
+      if (b.ON_BOARD(apos) && !mg[apos] && (b.board[apos] === colors.EMPTY || !this.is_same_worm(apos, str))){
         this.markcomponent(str, apos, mg);
       }
     }
   },
 
-  examine_cavity() {},
-  cavity_recurse() {},
+  /* examine_cavity(pos, *edge), if (pos) is EMPTY, examines the
+  * cavity at (m, n) and returns its bordercolor,
+  * which can be BLACK, WHITE or GRAY. The edge parameter is set to the
+  * number of edge vertices in the cavity.
+  *
+  * If (pos) is nonempty, it returns the same result, imagining
+  * that the string at (pos) is removed. The edge parameter is
+  * set to the number of vertices where the cavity meets the
+  * edge in a point outside the removed string.  
+  */
+  examine_cavity(pos, edge) {
+    let border_color = [colors.EMPTY];
+    let ml = [];
+    let origin = NO_MOVE;
+    const b = this.board
+    b.ASSERT_ON_BOARD1(pos);
+  
+    edge[0] = 0;
+
+    if (b.IS_STONE(b.board[pos])){
+      origin = b.find_origin(pos);
+    }
+    
+    this.cavity_recurse(pos, ml, border_color, edge, origin);
+
+    if (border_color[0] !== colors.EMPTY)
+      return border_color[0];
+
+    /* We should have returned now, unless the board is completely empty.
+    * Verify that this is the case and then return GRAY.
+    *
+    * Notice that the board appears completely empty if there's only a
+    * single string and pos points to it.
+    */
+    // gg_assert(border_color == EMPTY
+    //     && ((pos == NO_MOVE
+    //   && stones_on_board(BLACK | WHITE) == 0)
+    //   || (pos != NO_MOVE
+    //       && stones_on_board(BLACK | WHITE) == countstones(pos))));
+    
+    return colors.GRAY;
+  },
+
+
+  /* helper function for examine_cavity.
+  * border_color contains information so far : transitions allowed are
+  *   EMPTY       -> BLACK/WHITE
+  *   BLACK/WHITE -> BLACK | WHITE
+  *
+  * mx[pos] is 1 if (pos) has already been visited.
+  *
+  * if (str) points to the origin of a string, it will be ignored.
+  *
+  * On (fully-unwound) exit
+  *   *border_color should be BLACK, WHITE or BLACK | WHITE
+  *   *edge is the count of edge pieces
+  *
+  * *border_color should be EMPTY if and only if the board
+  * is completely empty or only contains the ignored string.
+  */
+  cavity_recurse(pos, mx, border_color, edge, str) {
+    const b = this.board
+    b.ASSERT1(!mx[pos], pos);
+  
+    mx[pos] = 1;
+  
+    if (b.is_edge_vertex(pos) && b.board[pos] === colors.EMPTY) {
+      edge[0]++;
+    }
+  
+    /* Loop over the four neighbors. */
+    for (let k = 0; k < 4; k++) {
+      let apos = pos + b.delta[k];
+      if (b.ON_BOARD(apos) && !mx[apos]) {
+        let neighbor_empty = 0;
+        
+        if (b.board[apos] === colors.EMPTY){
+          neighbor_empty = 1;
+        }
+        else {
+          /* Count the neighbor as empty if it is part of the (ai, aj) string. */
+          if (str === b.find_origin(apos)){
+            neighbor_empty = 1;
+          }
+          else{
+            neighbor_empty = 0;
+          }
+        }
+        
+        if (!neighbor_empty){
+          border_color[0] |= b.board[apos];
+        }
+        else {
+          this.cavity_recurse(apos, mx, border_color, edge, str);
+        }
+      }
+    }
+  },
 
   /* Find attacking moves by pattern matching, for both colors. */
   find_attack_patterns() {

@@ -585,7 +585,7 @@ export const Dragon = {
       if (b.board[str] === colors.EMPTY){
         continue;
       }
-
+      // number_of_dragons计数作为dragon.id
       if (this.dragon[origin].id === -1) {
         this.dragon[origin].id = this.number_of_dragons++;
       }
@@ -604,6 +604,7 @@ export const Dragon = {
     /* Find the origins of the dragons to establish the mapping back to
      * the board. After this the DRAGON macro can be used.
      */
+    // 设置origin
     for (str = b.BOARDMIN; str < b.BOARDMAX; str++) {
       if (!b.ON_BOARD(str))
         continue;
@@ -612,10 +613,9 @@ export const Dragon = {
       }
     }
 
-
-
     dragon2_initialized = 1;
   },
+  
   find_neighbor_dragons () {},
   add_adjacent_dragons () {},
   add_adjacent_dragon () {},
@@ -660,6 +660,7 @@ export const Dragon = {
       return;
     }
 
+    // 同色
     b.ASSERT1(b.board[d1] === b.board[d2], d1);
     b.ASSERT1(dragon2_initialized === 0);
     b.ASSERT1(b.IS_STONE(b.board[d1]), d1);

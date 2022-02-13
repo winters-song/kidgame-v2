@@ -35,6 +35,7 @@ export const Optics = {
     this.black_domain = []
     this.white_domain = []
 
+    // 清空数组
     if (b_eye) {
       b_eye.splice(0, b_eye.length)
     }
