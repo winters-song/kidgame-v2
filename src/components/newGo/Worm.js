@@ -3,8 +3,9 @@ import {
   colors, matchpat, NO_MOVE
 } from './Constants'
 import {AFFINE_TRANSFORM, dragon_status, MAX_CLOSE_WORMS, MAX_TACTICAL_POINTS, REVERSE_RESULT} from "./Liberty";
-import {ATT_X, HAVE_CONSTRAINT} from "./patterns/Patterns";
+import {ATT_X, ATT_O, HAVE_CONSTRAINT} from "./patterns/Patterns";
 import {attpat_db} from "./patterns/apatterns"
+import {defpat_db} from "./patterns/dpatterns"
 import {initial_black_influence, initial_white_influence} from "./Influence";
 
 
@@ -59,7 +60,7 @@ export const Worm = {
     /* Look for unconditionally alive and dead worms, and unconditional
      * territory.
      */
-    // this.compute_unconditional_status();
+    this.compute_unconditional_status();
 
     this.find_worm_attacks_and_defenses();
 
@@ -86,34 +87,6 @@ export const Worm = {
     b.ASSERT1(b.stackp === 0, null);
     
     /*
-     * There are two concepts of cutting stones in the worm array.
-  
-     * worm.cutstone2:
-     *
-     *     Cutting points are identified by the patterns in the
-     *     connections database. Proper cuts are handled by the fact
-     *     that attacking and defending moves also count as moves
-     *     cutting or connecting the surrounding dragons.
-     *
-     * The cutstone field will now be set. The cutstone2 field is set
-     * later, during find_cuts(), called from make_dragons().
-     *
-     * We maintain both fields because the historically older cutstone
-     * field is needed to deal with the fact that e.g. in the position
-     *
-     *
-     *    OXX.O
-     *    .OOXO
-     *    OXX.O
-     *
-     * the X stones are amalgamated into one dragon because neither cut
-     * works as long as the two O stones are in atari. Therefore we add
-     * one to the cutstone field for each potential cutting point,
-     * indicating that these O stones are indeed worth rescuing.
-     *
-     * For the time being we use both concepts in parallel. It's
-     * possible we also need the old concept for correct handling of lunches.
-     *
      * cutstone：切断状态
      * cutstone2: 在收集大龙信息时设置，
      */
@@ -191,209 +164,198 @@ export const Worm = {
      * defended.
      */
     // 攻防兼备
-    // {
-    // let color;
-    // let str;
-    // let moves_to_try = [];
-    //   memset(moves_to_try, 0, sizeof(moves_to_try));
-    //
-    //   /* Find which colors to try at what points. */
-    //   for (str = BOARDMIN; str < BOARDMAX; str++) {
-    //     if (IS_STONE(board[str]) && is_worm_origin(str, str)) {
-    //       color = board[str];
-    //       moves_to_try[worm[str].defense_points[0]] |= color;
-    //       moves_to_try[worm[str].attack_points[0]] |= OTHER_COLOR(color);
-    //     }
-    //   }
-    //
-    //   /* Loop over the board and over the colors and try the moves found
-    //    * in the previous loop.
-    //    */
-    //   for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //     if (!ON_BOARD(pos))
-    //       continue;
-    //
-    //     for (color = WHITE; color <= BLACK; color++) {
-    //       if (!(moves_to_try[pos] & color))
-    //         continue;
-    //
-    //       /* Try to play color at pos and see what it leads to. */
-    //       if (!trymove(pos, color, "make_worms", NO_MOVE))
-    //         continue;
-    //
-    //       /* We must read to the same depth that was used in the
-    //        * initial determination of worm.attack and worm.defend
-    //        * to avoid horizon effects. Since stackp has been
-    //        * incremented we must also increment depth values.
-    //        */
-    //
-    //       DEBUG(DEBUG_WORMS, "trying %1m\n", pos);
-    //       increase_depth_values();
-    //
-    //       /* Now we try to find a group which is saved or attacked as well
-    //        * by this move.
-    //        */
-    //       for (str = BOARDMIN; str < BOARDMAX; str++) {
-    //         if (!IS_STONE(board[str])
-    //           || !is_worm_origin(str, str))
-    //           continue;
-    //
-    //         /* If the worm is of the opposite color to the move,
-    //          * then we try to defend it. If there was a previous
-    //          * attack and defense of it, and there is no defense
-    //          * for the attack now...
-    //          */
-    //         if (worm[str].color == OTHER_COLOR(color)
-    //           && worm[str].attack_codes[0] != 0
-    //           && worm[str].defense_codes[0] != 0) {
-    //           int dcode = find_defense(str, NULL);
-    //           if (dcode < worm[str].defense_codes[0]) {
-    //             int attack_works = 1;
-    //
-    //             /* Sometimes find_defense() fails to find a
-    //              * defense which has been found by other means.
-    //              * Try if the old defense move still works.
-    //              *
-    //              * However, we first check if the _attack_ still exists,
-    //              * because we could, for instance, drive the worm into
-    //              * seki with our move.
-    //              */
-    //             if (attack(str, NULL) >= worm[str].attack_codes[0]) {
-    //               if (worm[str].defense_codes[0] != 0
-    //                 && trymove(worm[str].defense_points[0],
-    //                   OTHER_COLOR(color), "make_worms", 0)) {
-    //                 int this_dcode = REVERSE_RESULT(attack(str, NULL));
-    //                 if (this_dcode > dcode) {
-    //                   dcode = this_dcode;
-    //                   if (dcode >= worm[str].defense_codes[0])
-    //                     attack_works = 0;
-    //                 }
-    //                 popgo();
-    //               }
-    //             }
-    //             else
-    //               attack_works = 0;
-    //
-    //             /* ...then add an attack point of that worm at pos. */
-    //             if (attack_works) {
-    //               DEBUG(DEBUG_WORMS,
-    //                 "adding point of attack of %1m at %1m with code %d\n",
-    //                 str, pos, REVERSE_RESULT(dcode));
-    //               change_attack(str, pos, REVERSE_RESULT(dcode));
-    //             }
-    //           }
-    //         }
-    //
-    //         /* If the worm is of the same color as the move we try to
-    //          * attack it. If there previously was an attack on it, but
-    //          * there is none now, then add a defense point of str at
-    //          * pos.
-    //          */
-    //         else if (worm[str].color == color
-    //           && worm[str].attack_codes[0] != 0) {
-    //           int acode = attack(str, NULL);
-    //           if (acode < worm[str].attack_codes[0]) {
-    //             int defense_works = 1;
-    //             /* Sometimes attack() fails to find an
-    //              * attack which has been found by other means.
-    //              * Try if the old attack move still works.
-    //              */
-    //             if (worm[str].attack_codes[0] != 0
-    //               && trymove(worm[str].attack_points[0],
-    //                 OTHER_COLOR(color), "make_worms", 0)) {
-    //               int this_acode;
-    //               if (board[str] == EMPTY)
-    //                 this_acode = WIN;
-    //               else
-    //                 this_acode = REVERSE_RESULT(find_defense(str, NULL));
-    //               if (this_acode > acode) {
-    //                 acode = this_acode;
-    //                 if (acode >= worm[str].attack_codes[0])
-    //                   defense_works = 0;
-    //               }
-    //               popgo();
-    //             }
-    //
-    //             /* ...then add an attack point of that worm at pos. */
-    //             if (defense_works) {
-    //               DEBUG(DEBUG_WORMS,
-    //                 "adding point of defense of %1m at %1m with code %d\n",
-    //                 str, pos, REVERSE_RESULT(acode));
-    //               change_defense(str, pos, REVERSE_RESULT(acode));
-    //             }
-    //           }
-    //         }
-    //       }
-    //       decrease_depth_values();
-    //       popgo();
-    //     }
-    //   }
-    // }
-    //
-    // gg_assert(stackp == 0);
-    //
-    // /* Sometimes it happens that the tactical reading finds adjacent
-    //  * strings which both can be attacked but not defended. (The reason
-    //  * seems to be that the attacker tries harder to attack a string,
-    //  * than the defender tries to capture it's neighbors.) When this
-    //  * happens, the eyes code produces overlapping eye spaces and, still
-    //  * worse, all the nondefendable stones actually get amalgamated with
-    //  * their allies on the outside.
-    //  *
-    //  * To solve this we scan through the strings which can't be defended
-    //  * and check whether they have a neighbor that can be attacked. In
-    //  * this case we set the defense point of the former string to the
-    //  * attacking point of the latter.
-    //  *
-    //  * Please notice that find_defense() will still read this out
-    //  * incorrectly, which may lead to some confusion later.
-    //  */
-    //
-    // /* First look for vertical neighbors. */
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   if (IS_STONE(board[pos])
-    //     && IS_STONE(board[SOUTH(pos)])
-    //     && !is_same_worm(pos, SOUTH(pos))) {
-    //     if (worm[pos].attack_codes[0] != 0
-    //       && worm[SOUTH(pos)].attack_codes[0] != 0) {
-    //       if (worm[pos].defense_codes[0] == 0
-    //         && does_defend(worm[SOUTH(pos)].attack_points[0], pos)) {
-    //         /* FIXME: need to check ko relationship here */
-    //         change_defense(pos, worm[SOUTH(pos)].attack_points[0], WIN);
-    //       }
-    //       if (worm[SOUTH(pos)].defense_codes[0] == 0
-    //         && does_defend(worm[pos].attack_points[0], SOUTH(pos))) {
-    //         /* FIXME: need to check ko relationship here */
-    //         change_defense(SOUTH(pos), worm[pos].attack_points[0], WIN);
-    //       }
-    //     }
-    //   }
-    // }
-    //
-    // /* Then look for horizontal neighbors. */
-    // for (pos = BOARDMIN; pos < BOARDMAX; pos++) {
-    //   if (IS_STONE(board[pos])
-    //     && IS_STONE(board[EAST(pos)])
-    //     && !is_same_worm(pos, EAST(pos))) {
-    //     if (worm[pos].attack_codes[0] != 0
-    //       && worm[EAST(pos)].attack_codes[0] != 0) {
-    //       if (worm[pos].defense_codes[0] == 0
-    //         && does_defend(worm[EAST(pos)].attack_points[0], pos)) {
-    //         /* FIXME: need to check ko relationship here */
-    //         change_defense(pos, worm[EAST(pos)].attack_points[0], WIN);
-    //       }
-    //       if (worm[EAST(pos)].defense_codes[0] == 0
-    //         && does_defend(worm[pos].attack_points[0], EAST(pos))) {
-    //         /* FIXME: need to check ko relationship here */
-    //         change_defense(EAST(pos), worm[pos].attack_points[0], WIN);
-    //       }
-    //     }
-    //   }
-    // }
-    //
-    // gg_assert(stackp == 0);
-    //
+    let color;
+    let str;
+    let moves_to_try = [];
+      // memset(moves_to_try, 0, sizeof(moves_to_try));
+  
+    /* Find which colors to try at what points. */
+    for (str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (b.IS_STONE(b.board[str]) && this.is_worm_origin(str, str)) {
+        color = b.board[str];
+        moves_to_try[this.worm[str].defense_points[0]] |= color;
+        moves_to_try[this.worm[str].attack_points[0]] |= b.OTHER_COLOR(color);
+      }
+    }
+  
+    /* Loop over the board and over the colors and try the moves found
+      * in the previous loop.
+      */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos)){
+        continue;
+      }
+  
+      for (color = colors.BLACK; color <= colors.WHITE; color++) {
+        if (!(moves_to_try[pos] & color)){
+          continue;
+        }
+  
+        /* Try to play color at pos and see what it leads to. */
+        if (!b.trymove(pos, color, "make_worms", NO_MOVE)){
+          continue;
+        }
+  
+        /* We must read to the same depth that was used in the
+          * initial determination of worm.attack and worm.defend
+          * to avoid horizon effects. Since stackp has been
+          * incremented we must also increment depth values.
+          */
+  
+        // DEBUG(DEBUG_WORMS, "trying %1m\n", pos);
+        this.increase_depth_values();
+  
+        /* Now we try to find a group which is saved or attacked as well
+          * by this move.
+          */
+        for (str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+          if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str)){
+            continue;
+          }
+  
+          /* If the worm is of the opposite color to the move,
+            * then we try to defend it. If there was a previous
+            * attack and defense of it, and there is no defense
+            * for the attack now...
+            */
+          if (this.worm[str].color === b.OTHER_COLOR(color)
+            && this.worm[str].attack_codes[0] !== 0
+            && this.worm[str].defense_codes[0] !== 0) {
+            let dcode = this.find_defense(str, null);
+            if (dcode < this.worm[str].defense_codes[0]) {
+              let attack_works = 1;
+  
+              /* Sometimes find_defense() fails to find a
+                * defense which has been found by other means.
+                * Try if the old defense move still works.
+                *
+                * However, we first check if the _attack_ still exists,
+                * because we could, for instance, drive the worm into
+                * seki with our move.
+                */
+              if (this.attack(str, null) >= this.worm[str].attack_codes[0]) {
+                if (this.worm[str].defense_codes[0] != 0 
+                  && b.trymove(this.worm[str].defense_points[0], b.OTHER_COLOR(color), "make_worms", 0)) {
+                  let this_dcode = REVERSE_RESULT(this.attack(str, null));
+                  if (this_dcode > dcode) {
+                    dcode = this_dcode;
+                    if (dcode >= this.worm[str].defense_codes[0]){
+                      attack_works = 0;
+                    }
+                  }
+                  b.popgo();
+                }
+              }
+              else{
+                attack_works = 0;
+              }
+  
+              /* ...then add an attack point of that worm at pos. */
+              if (attack_works) {
+                // DEBUG(DEBUG_WORMS, "adding point of attack of %1m at %1m with code %d\n", str, pos, REVERSE_RESULT(dcode));
+                this.change_attack(str, pos, REVERSE_RESULT(dcode));
+              }
+            }
+          }
+  
+          /* If the worm is of the same color as the move we try to
+            * attack it. If there previously was an attack on it, but
+            * there is none now, then add a defense point of str at
+            * pos.
+            */
+          else if (this.worm[str].color === color && this.worm[str].attack_codes[0] !== 0) {
+            let acode = this.attack(str, null);
+            if (acode < this.worm[str].attack_codes[0]) {
+              let defense_works = 1;
+              /* Sometimes attack() fails to find an
+                * attack which has been found by other means.
+                * Try if the old attack move still works.
+                */
+              if (this.worm[str].attack_codes[0] !== 0 
+                && b.trymove(this.worm[str].attack_points[0], b.OTHER_COLOR(color), "make_worms", 0)) {
+                let this_acode;
+                if (b.board[str] === colors.EMPTY){
+                  this_acode = codes.WIN;
+                }
+                else{
+                  this_acode = REVERSE_RESULT(this.find_defense(str, null));
+                }
+                if (this_acode > acode) {
+                  acode = this_acode;
+                  if (acode >= this.worm[str].attack_codes[0]) {
+                    defense_works = 0;
+                  }
+                }
+                b.popgo();
+              }
+  
+              /* ...then add an attack point of that worm at pos. */
+              if (defense_works) {
+                // DEBUG(DEBUG_WORMS, "adding point of defense of %1m at %1m with code %d\n", str, pos, REVERSE_RESULT(acode));
+                this.change_defense(str, pos, REVERSE_RESULT(acode));
+              }
+            }
+          }
+        }
+        this.decrease_depth_values();
+        b.popgo();
+      }
+    }
 
+    b.ASSERT1(b.stackp === 0)
+
+    /* Sometimes it happens that the tactical reading finds adjacent
+     * strings which both can be attacked but not defended. (The reason
+     * seems to be that the attacker tries harder to attack a string,
+     * than the defender tries to capture it's neighbors.) When this
+     * happens, the eyes code produces overlapping eye spaces and, still
+     * worse, all the nondefendable stones actually get amalgamated with
+     * their allies on the outside.
+     *
+     * To solve this we scan through the strings which can't be defended
+     * and check whether they have a neighbor that can be attacked. In
+     * this case we set the defense point of the former string to the
+     * attacking point of the latter.
+     *
+     * Please notice that find_defense() will still read this out
+     * incorrectly, which may lead to some confusion later.
+     */
+    
+    /* First look for vertical neighbors. */
+    // 双方都可被进攻，无法防守，则尝试一方的进攻着手作为另一方防守着手
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos]) && b.IS_STONE(b.board[b.SOUTH(pos)]) && !this.is_same_worm(pos, b.SOUTH(pos))) {
+        if (this.worm[pos].attack_codes[0] !== 0
+          && this.worm[b.SOUTH(pos)].attack_codes[0] !== 0) {
+          if (this.worm[pos].defense_codes[0] === 0 && this.does_defend(this.worm[b.SOUTH(pos)].attack_points[0], pos)) {
+            /* FIXME: need to check ko relationship here */
+            this.change_defense(pos, this.worm[b.SOUTH(pos)].attack_points[0], codes.WIN);
+          }
+          if (this.worm[b.SOUTH(pos)].defense_codes[0] === 0 && this.does_defend(this.worm[pos].attack_points[0], b.SOUTH(pos))) {
+            /* FIXME: need to check ko relationship here */
+            this.change_defense(b.SOUTH(pos), this.worm[pos].attack_points[0], codes.WIN);
+          }
+        }
+      }
+    }
+    
+    /* Then look for horizontal neighbors. */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos]) && b.IS_STONE(b.board[b.EAST(pos)]) && !this.is_same_worm(pos, b.EAST(pos))) {
+        if (this.worm[pos].attack_codes[0] !== 0 && this.worm[b.EAST(pos)].attack_codes[0] !== 0) {
+          if (this.worm[pos].defense_codes[0] === 0 && this.does_defend(this.worm[b.EAST(pos)].attack_points[0], pos)) {
+            /* FIXME: need to check ko relationship here */
+            this.change_defense(pos, this.worm[b.EAST(pos)].attack_points[0], codes.WIN);
+          }
+          if (this.worm[b.EAST(pos)].defense_codes[0] === 0 && this.does_defend(this.worm[pos].attack_points[0], b.EAST(pos))) {
+            /* FIXME: need to check ko relationship here */
+            this.change_defense(b.EAST(pos), this.worm[pos].attack_points[0], codes.WIN);
+          }
+        }
+      }
+    }
+
+    b.ASSERT1(b.stackp === 0)
 
     /* Find adjacent worms that can be easily captured, aka lunches. */
     // 一定能提子成功的叫lunch
@@ -443,7 +405,7 @@ export const Worm = {
      * An inessential string can be thought of as residing inside the
      * opponent's eye space.
      */
-    // 无关紧要的棋串： 驻留在对手眼位中
+    // 无关紧要的棋串（死子）： 驻留在对手眼位中
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.IS_STONE(b.board[pos])
         && this.worm[pos].origin === pos
@@ -453,6 +415,7 @@ export const Worm = {
         && this.worm[pos].lunch === NO_MOVE) {
         let edge = [];
         let border_color = this.examine_cavity(pos, edge);
+        // 棋子在2线，边缘气在1线（边缘气<3）
         if (border_color !== colors.GRAY && edge[0] < 3) {
           // DEBUG(DEBUG_WORMS, "Worm %1m identified as inessential.\n", pos);
           this.worm[pos].inessential = 1;
@@ -732,14 +695,12 @@ export const Worm = {
     this.find_attack_patterns();
     b.ASSERT1(b.stackp === 0, null);
 
-    return
-
-
     /* 3. Now find defense moves. */
     for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
 
-      if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str))
+      if (!b.IS_STONE(b.board[str]) || !this.is_worm_origin(str, str)){
         continue;
+      }
     
       if (this.worm[str].attack_codes[0] !== 0) {
     
@@ -747,7 +708,7 @@ export const Worm = {
         const dcode = this.find_defense(str, defense_point);
         if (dcode !== 0) {
           // TRACE("worm at %1m can be defended at %1m\n", str, defense_point);
-          if (defense_point !== NO_MOVE){
+          if (defense_point[0] !== NO_MOVE){
             this.change_defense(str, defense_point[0], dcode);
           }
         }
@@ -755,9 +716,11 @@ export const Worm = {
           /* If the point of attack is not adjacent to the worm,
            * it is possible that this is an overlooked point of
            * defense, so we try and see if it defends.
+           * 
+           * 最优进攻点不临近worm，可能是看的太远，尝试该点能否防守
            */
           attack_point[0] = this.worm[str].attack_points[0];
-          if (!b.liberty_of_string(attack_point[0], str))
+          if (!b.liberty_of_string(attack_point[0], str)){
             if (b.trymove(attack_point[0], this.worm[str].color, "make_worms", NO_MOVE)) {
               const acode = this.attack(str, null);
               if (acode !== codes.WIN) {
@@ -766,6 +729,7 @@ export const Worm = {
               }
               b.popgo();
             }
+          }
         }
       }
     }
@@ -775,7 +739,6 @@ export const Worm = {
     // /* 4. Use pattern matching to find a few more defense moves. */
     this.find_defense_patterns();
     b.ASSERT1(b.stackp === 0, null);
-
 
     /*
      * 5. Find additional attacks and defenses by testing all immediate
@@ -981,7 +944,11 @@ export const Worm = {
     this.change_tactical_point(str, move, acode, this.worm[str].attack_points, this.worm[str].attack_codes);
   },
 
-  change_defense() {},
+  change_defense(str, move, dcode){
+    str = this.worm[str].origin;
+    this.change_tactical_point(str, move, dcode, this.worm[str].defense_points, this.worm[str].defense_codes);
+  },
+
   change_attack_threat() {},
   change_defense_threat() {},
 
@@ -990,7 +957,15 @@ export const Worm = {
       this.worm[str].attack_points,
       this.worm[str].attack_codes);
   },
-  defense_move_known() {},
+
+  /* Check whether (move) is listed as a defense point for (str) and
+  * return the defense code. If (move) is not listed, return 0.
+  */
+  defense_move_known(move, str) {
+    return this.movelist_move_known(move, MAX_TACTICAL_POINTS,
+      this.worm[str].defense_points,
+      this.worm[str].defense_codes);
+  },
   attack_threat_move_known() {},
   defense_threat_move_known() {},
   /*
@@ -1109,8 +1084,9 @@ export const Worm = {
    *          .O
    *          --
    *
-   *
+   * 
    * 计算气序（气序一到四），判断被包围的状态
+   * 气序：某空点到达str的最短距离，路径上不可以接触敌方棋子，边线位置小尖方位也算接触
    */
   ping_cave(str, lib1, lib2, lib3, lib4) {
     const b = this.board
@@ -1120,7 +1096,7 @@ export const Worm = {
     let mrc = [];
     let mse = [];
   
-  /* Find and mark the first order liberties. */
+    /* Find and mark the first order liberties. */
     lib1[0] = b.findlib(str, b.MAXLIBS, libs);
     for (let k = 0; k < lib1[0]; k++){
       mse[libs[k]] = 1;
@@ -1129,7 +1105,7 @@ export const Worm = {
     /* Reset mse at liberties which are flanked by two stones of the
     * opposite color, or one stone and the edge.
     */
-    // 左右或上下被对方棋子夹住，或边线上被夹到
+    // 左右或上下被对方棋子夹住，或边线上被夹到，移除标记
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
       if (b.ON_BOARD(pos) && mse[pos]
         && ((( !b.ON_BOARD(b.SOUTH(pos)) || b.board[b.SOUTH(pos)] === other) && (!b.ON_BOARD(b.NORTH(pos)) || b.board[b.NORTH(pos)] === other))
@@ -1191,7 +1167,7 @@ export const Worm = {
    * its complement, minus one. It is an approximation to the number of
    * eyes of the string.
    */
-  // str是棋串id
+  // genus: 数眼位，str分隔区域总数-1
   // 
   genus(str) {
     const b = this.board
@@ -1248,8 +1224,9 @@ export const Worm = {
     
     this.cavity_recurse(pos, ml, border_color, edge, origin);
 
-    if (border_color[0] !== colors.EMPTY)
+    if (border_color[0] !== colors.EMPTY){
       return border_color[0];
+    }
 
     /* We should have returned now, unless the board is completely empty.
     * Verify that this is the case and then return GRAY.
@@ -1401,8 +1378,65 @@ export const Worm = {
     }
   },
 
-  find_defense_patterns() {},
-  defense_callback() {},
+  find_defense_patterns() {
+    this.matchpat(this.defense_callback, matchpat.ANCHOR_COLOR, defpat_db, null, null);
+  },
+
+  defense_callback(anchor, color, pattern, ll){
+    const b = this.board
+
+    // anchor对应找到target move着手位置
+    let move = AFFINE_TRANSFORM(pattern.move_offset, ll, anchor);
+    
+    /* If the pattern has a constraint, call the autohelper to see
+      * if the pattern must be rejected.
+      */
+    if (pattern.autohelper_flag & HAVE_CONSTRAINT) {
+      if (!pattern.autohelper.call(this,ll, move, color, 0)) {
+        return;
+      }
+    }
+
+    /* If the pattern has a helper, call it to see if the pattern must
+      * be rejected.
+      */
+    if (pattern.helper) {
+      if (!pattern.helper(pattern, ll, move, color)) {
+        // DEBUG(DEBUG_WORMS, "Defense pattern %s+%d rejected by helper at %1m\n", pattern.name, ll, move);
+        return;
+      }
+    }
+
+    /* Loop through pattern elements in search for O strings to defend. */
+    for (let k = 0; k < pattern.patlen; ++k) { /* match each point */
+      if (pattern.patn[k][1] === ATT_O) {
+        /* transform pattern real coordinate */
+        const pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
+        const str = this.worm[pos].origin;
+
+        if (this.worm[str].attack_codes[0] === 0 || this.defense_move_known(move, str)){
+          continue;
+        }
+        
+        /* FIXME: Don't try to defend the same string more than once.
+          * FIXME: For all attacks on this string, we should test whether
+          *        the proposed move happens to refute the attack.
+          * Play (move) and see if there is an attack.
+          */
+        if (b.trymove(move, color, "defense_callback", str)) {
+          const acode = this.attack(str, null);
+
+          b.popgo();
+      
+          // 防守后，进攻结果值变低了
+          if (acode < this.worm[str].attack_codes[0]) {
+            this.change_defense(str, move, REVERSE_RESULT(acode));
+            // DEBUG(DEBUG_WORMS, "Defense pattern %s+%d found defense of %1m at %1m with code %d\n", pattern.name, ll, str, move, REVERSE_RESULT(acode));
+          }
+        }
+      }
+    }
+  },
 
   // 标记所有活棋串, color判断守方是否能防守成功
   get_lively_stones(color, safe_stones) {

@@ -8,12 +8,13 @@ import './index.less'
 
 //matchpat
 const map = {
+  'inessential': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-02-19]AB[ca][cb][cc][dc][ec][fc][gc][gb][ga]AW[db][eb][fb])',
   'test': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-02-06]AB[ca][cb][cc][dc][ec][fc][gc][gb][ga][ac][bc][hc][ic])',
   'Attack1': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-01-08]AB[dd][ee]AW[de][df][ed][fd]CR[dd][df][ee][ef][eg][fd][fe][ge]MA[ff])',
  'Barriers3': '(;GM[1]FF[4]CA[UTF-8]AP[Sabaki:0.51.1]KM[5]SZ[9]DT[2022-02-01]AW[dd][fd])'
 }
 
-const sgf = map['test']
+const sgf = map['inessential']
 
 function Puzzle (props){
   const goboardRef = useRef()

@@ -39,6 +39,14 @@ const BREAKIN_DEPTH	     = 14
 
 export const Utils = {
 
+  increase_depth_values () {
+    this.modify_depth_values(1);
+  },
+
+  decrease_depth_values () {
+    this.modify_depth_values(-1);
+  },
+
   change_dragon_status() {},
   defend_against(){},
 
@@ -229,6 +237,8 @@ export const Utils = {
   *
   * A typical use for these functions is to set up a ladder in an
   * autohelper and see whether it works or not.
+  * 
+  * 一系列交替落子
   */
   play_attack_defend_n(color, do_attack, num_moves, list){
     const b = this.board
