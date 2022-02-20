@@ -234,7 +234,7 @@ export const Worm = {
                 * seki with our move.
                 */
               if (this.attack(str, null) >= this.worm[str].attack_codes[0]) {
-                if (this.worm[str].defense_codes[0] != 0 
+                if (this.worm[str].defense_codes[0] !== 0 
                   && b.trymove(this.worm[str].defense_points[0], b.OTHER_COLOR(color), "make_worms", 0)) {
                   let this_dcode = REVERSE_RESULT(this.attack(str, null));
                   if (this_dcode > dcode) {
@@ -889,8 +889,11 @@ export const Worm = {
 
     lunch[0] = NO_MOVE;
     for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
-      if (b.board[pos] !== b.OTHER_COLOR(b.board[str]))
+      // 找不同色棋子
+      if (b.board[pos] !== b.OTHER_COLOR(b.board[str])){
         continue;
+      }
+      // 8个方位与str棋串相邻
       for (let k = 0; k < 8; k++) {
         let apos = pos + b.delta[k];
         if (b.ON_BOARD(apos) && this.is_same_worm(apos, str)) {

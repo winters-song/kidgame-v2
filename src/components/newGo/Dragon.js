@@ -83,8 +83,8 @@ class DragonData2 {
 }
 
 let dragon2_initialized;
-let lively_white_dragons;
-let lively_black_dragons;
+// let lively_white_dragons;
+// let lively_black_dragons;
 
 /* This basic function finds all dragons and collects some basic information
  * about them in the dragon array.
@@ -442,8 +442,7 @@ export const Dragon = {
   /* Find capturable worms adjacent to each dragon. */
   find_lunches () {
     const b = this.board
-    let str;
-    for (str = b.BOARDMIN; str < b.BOARDMAX; str++){
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++){
       if (b.ON_BOARD(str)) {
         let food;
 
@@ -456,6 +455,7 @@ export const Dragon = {
         /* In contrast to worm lunches, a dragon lunch must also be
          * able to defend itself.
          */
+        // 大龙的lunch不能是死子
         if (this.worm[food].defense_codes[0] === 0){
           continue;
         }

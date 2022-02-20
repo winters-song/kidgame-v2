@@ -18,6 +18,7 @@ import {ReadConnect} from "./ReadConnect";
 import {Dragon} from "./Dragon";
 import {Optics} from "./Optics";
 import {Owl} from "./Owl";
+import {MoveReasons} from "./MoveReasons";
 
 import {transformation_init} from "./patterns/transform";
 import {Helpers} from "./patterns/Helpers";
@@ -27,12 +28,6 @@ import {Test} from "./Test";
 // let limit_search = 0;
 // let search_mask = [];
 
-let worms_examined = -1;
-let initial_influence_examined = -1;
-let dragons_examined_without_owl = -1;
-let dragons_examined = -1;
-let initial_influence2_examined = -1;
-let dragons_refinedly_examined = -1;
 
 const EXAMINE_ALL = 99
 
@@ -42,7 +37,17 @@ export default class Genmove {
     this.board = board
     Object.assign(this, Globals, Utils, Helpers, Test,
       Worm, Unconditional, Reading, MoveList, Persistent, Cache,
-      Matchpat, Influence, Connections, ReadConnect, Dragon, Optics, Owl )
+      Matchpat, Influence, Connections, ReadConnect, Dragon, Optics, Owl,
+      MoveReasons, {
+        worms_examined : -1,
+        initial_influence_examined : -1,
+        dragons_examined_without_owl : -1,
+        dragons_examined : -1,
+        initial_influence2_examined : -1,
+        dragons_refinedly_examined : -1,
+      } )
+
+
 
     this.reading_cache_init()
     this.persistent_cache_init()
@@ -65,15 +70,15 @@ export default class Genmove {
 
     // hashdata_recalc(&board_hash, board, board_ko_pos);
 
-    worms_examined = -1;
-    initial_influence_examined = -1;
-    dragons_examined_without_owl = -1;
-    dragons_examined = -1;
-    initial_influence2_examined = -1;
-    dragons_refinedly_examined = -1;
+    this.worms_examined = -1;
+    this.initial_influence_examined = -1;
+    this.dragons_examined_without_owl = -1;
+    this.dragons_examined = -1;
+    this.initial_influence2_examined = -1;
+    this.dragons_refinedly_examined = -1;
 
     /* Prepare our table of move reasons. */
-    // clear_move_reasons();
+    this.clear_move_reasons();
     // clear_break_in_list();
 
     /* Set up depth values (see comments there for details). */
@@ -91,8 +96,8 @@ export default class Genmove {
     // 清除缓存
     // purge_persistent_caches();
 
-    if (this.NEEDS_UPDATE(worms_examined)) {
-      worms_examined = this.position_number
+    if (this.NEEDS_UPDATE(this.worms_examined)) {
+      this.worms_examined = this.position_number
       this.start_timer(0);
       this.make_worms();
       this.time_report(0, "  make worms", NO_MOVE, 1.0);
@@ -100,14 +105,14 @@ export default class Genmove {
 
   //
   if (this.board.stones_on_board(colors.BLACK | colors.WHITE) !== 0) {
-    if (this.NEEDS_UPDATE(initial_influence_examined)){
-      // this.compute_worm_influence();
+    if (this.NEEDS_UPDATE(this.initial_influence_examined)){
+      this.compute_worm_influence();
     }
-    if (this.NEEDS_UPDATE(dragons_examined)) {
+    if (this.NEEDS_UPDATE(this.dragons_examined)) {
       // this.make_dragons(0);
       // compute_scores(chinese_rules || aftermath_play);
       /* We have automatically done a partial dragon analysis as well. */
-      // dragons_examined_without_owl = position_number;
+      this.dragons_examined_without_owl = this.position_number;
     }
   }
   // else if (how_much == EXAMINE_INITIAL_INFLUENCE

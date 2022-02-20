@@ -1,4 +1,4 @@
-
+import {NO_MOVE} from "./Constants";
 
 
 /* values for move_reason.type */
@@ -74,35 +74,34 @@ class MoveReason {
 
 
 class MoveData {
-  value;    /* total comparison value, computed at the very end */
-  final_value; /* value after point redistribution. */
-  additional_ko_value; /* Additional threat value if ko fight going on.*/
+  value = 0.0;    /* total comparison value, computed at the very end */
+  final_value = 0.0; /* value after point redistribution. */
+  additional_ko_value = 0.0; /* Additional threat value if ko fight going on.*/
 
-  territorial_value; /* Value in terms of actual profit. */
-  strategical_value; /* Value with respect to strength, weakness, and
-			      safety of all groups on the board. */
+  territorial_value = 0.0; /* Value in terms of actual profit. */
+  strategical_value = 0.0; /* Value with respect to strength, weakness, and safety of all groups on the board. */
 
-  maxpos_shape;      /* Maximal positive contribution to shape */
-  maxneg_shape;      /* Maximal negative contribution to shape */
-  numpos_shape;        /* Number of positive contributions to shape */
-  numneg_shape;        /* Number of negative contributions to shape */
+  maxpos_shape = 0.0;      /* Maximal positive contribution to shape */
+  maxneg_shape = 0;      /* Maximal negative contribution to shape */
+  numpos_shape = 0.0;        /* Number of positive contributions to shape */
+  numneg_shape = 0;        /* Number of negative contributions to shape */
 
-  followup_value;    /* Value of followup move (our sente). */
-  influence_followup_value;  /* Followup value of move as reported by
+  followup_value = 0.0;;    /* Value of followup move (our sente). */
+  influence_followup_value = 0.0;;  /* Followup value of move as reported by
                                       experimental influence. */
-  reverse_followup_value;	/* Value of opponents followup move
+  reverse_followup_value = 0.0;;	/* Value of opponents followup move
 				   (reverse sente). */
-  secondary_value;      /* Secondary move value. */
-  min_value;            /* Minimum allowed value for the move. */
-  max_value;            /* Maximum allowed value for the move. */
-  min_territory;        /* Minimum territorial value. */
-  max_territory;        /* Maximum territorial value. */
-  randomness_scaling;   /* Increase to randomize this move. */
+  secondary_value = 0.0;;      /* Secondary move value. */
+  min_value = 0.0;;            /* Minimum allowed value for the move. */
+  max_value = HUGE_MOVE_VALUE;;            /* Maximum allowed value for the move. */
+  min_territory = 0.0;;        /* Minimum territorial value. */
+  max_territory = HUGE_MOVE_VALUE;;        /* Maximum territorial value. */
+  randomness_scaling = 1.0;;   /* Increase to randomize this move. */
 
-  reason = []; /* List of reasons for a move. */
-  move_safety;         /* Whether the move seems safe. */
-  worthwhile_threat;   /* Play this move as a pure threat. */
-  random_number;     /* Random number connected to this move. */
+  reason = new Array(MAX_REASONS).fill(-1); /* List of reasons for a move. */
+  move_safety = 0;         /* Whether the move seems safe. */
+  worthwhile_threat = 0;   /* Play this move as a pure threat. */
+  random_number = 1.0;     /* Random number connected to this move. */
 };
 
 const MAX_MOVE_REASONS =	1000
@@ -119,17 +118,14 @@ const MAX_ATTACK_THREATS =	6
 
 let move = [];
 let move_reasons = [];
-let next_reason;
 
 /* Connections */
 let conn_worm1 = [];
 let conn_worm2 = [];
-let next_connection;
 
 /* Potential semeai moves. */
 let semeai_target1 = [];
 let semeai_target2 = [];
-let next_semeai;
 
 /* Unordered sets (currently pairs) of move reasons / targets */
 let either_data = [];
@@ -140,12 +136,10 @@ let next_all;
 /* Eye shapes */
 let eyes = [];
 let eyecolor = [];
-let next_eye;
 
 /* Lunches */
 let lunch_dragon = []; /* eater */
 let lunch_worm = [];   /* food */
-let next_lunch;
 
 /* Point redistribution */
 let replacement_map = [];
@@ -171,58 +165,87 @@ class DiscardRule {
 };
 
 
-
-
-/* This array lists rules according to which we set the status
- * flags of a move reasons.
- * The format is:
- * { List of reasons to which the rule applies, condition of the rule,
- * flags to be set, trace message }
- * The condition must be of type discard_condition_fn_ptr, that is a pointer
- * to a function with parameters (pos, what).
- *
- * FIXME: Add handling of ALL and EITHER moves for inessential worms.
- */
-
-// static struct discard_rule
-const discard_rules = [
-[ [ ATTACK_MOVE, ATTACK_MOVE_GOOD_KO, ATTACK_MOVE_BAD_KO, ATTACK_THREAT,
-  DEFEND_MOVE, DEFEND_MOVE_GOOD_KO, DEFEND_MOVE_BAD_KO, DEFEND_THREAT, -1 ],
-  owl_move_vs_worm_known, TERRITORY_REDUNDANT,
-    "  %1m: 0.0 - (threat of) attack/defense of %1m (owl attack/defense as well)\n" ],
-[ [ SEMEAI_MOVE, SEMEAI_THREAT, -1 ],
-  owl_move_reason_known, REDUNDANT,
-    "  %1m: 0.0 - (threat to) win semeai involving %1m (owl move as well)\n"],
-[ [ SEMEAI_MOVE, SEMEAI_THREAT, -1 ],
-  tactical_move_vs_whole_dragon_known, REDUNDANT,
-    "  %1m: 0.0 - (threat to) win semeai involving %1m (tactical move as well)\n"],
-[ [ EITHER_MOVE, -1 ],
-  either_worm_attackable, REDUNDANT,
-    "  %1m: 0.0 - 'attack either' is redundant at %1m (direct att./def. as well)\n"],
-[ [ ALL_MOVE, -1 ],
-  one_of_both_attackable, REDUNDANT,
-    "  %1m: 0.0 - 'defend both' is redundant at %1m (direct att./def. as well)\n"],
-[ [ ATTACK_THREAT, DEFEND_THREAT, -1 ],
-  concerns_inessential_worm, TERRITORY_REDUNDANT,
-    "  %1m: 0.0 - attack/defense threat of %1m (inessential)\n"],
-[ [ OWL_ATTACK_THREAT, UNCERTAIN_OWL_DEFENSE, -1 ],
-  concerns_inessential_dragon, REDUNDANT,
-    "  %1m: 0.0 - (uncertain) owl attack/defense of %1m (inessential)\n"],
-[ [ ATTACK_MOVE, ATTACK_MOVE_GOOD_KO, ATTACK_MOVE_BAD_KO,
-  DEFEND_MOVE, DEFEND_MOVE_GOOD_KO, DEFEND_MOVE_BAD_KO, -1],
-  move_is_marked_unsafe, REDUNDANT,
-    "  %1m: 0.0 - tactical move vs %1m (unsafe move)\n"],
-[ [ OWL_ATTACK_MOVE, OWL_ATTACK_MOVE_GOOD_KO, OWL_ATTACK_MOVE_BAD_KO,
-  OWL_DEFEND_MOVE, OWL_DEFEND_MOVE_GOOD_KO, OWL_DEFEND_MOVE_BAD_KO, -1],
-  concerns_noncritical_dragon, REDUNDANT,
-    "  %1m: 0.0 - owl move vs %1m (non-critical)\n"],
-[ [ -1 ], NULL, 0, ""]  /* Keep this entry at end of the list. */
-];
-
-
 export const MoveReasons = {
 
-  clear_move_reasons () {},
+  clear_move_reasons () {
+    this.next_reason = 0;
+    this.next_connection = 0;
+    this.next_semeai = 0;
+    this.next_either = 0;
+    this.next_all = 0;
+    this.next_eye = 0;
+    this.next_lunch = 0;
+      
+    const b = this.board
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.ON_BOARD(pos)) {
+       
+        move[pos] = new MoveData()
+        /* The reason we assign a random number to each move immediately
+         * is to avoid dependence on which moves are evaluated when it
+         * comes to choosing between multiple moves of the same value.
+         * In this way we can get consistent results for use in the
+         * regression tests.
+         */
+        move[pos].random_number = Math.random();
+  
+        /* Do not send away the points (yet). */
+        replacement_map[pos] = NO_MOVE;
+      }
+    }
+  
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      known_safe_moves[pos] = 0;
+      known_good_attack_threats[pos] = []
+      for (let k = 0; k < MAX_ATTACK_THREATS; k++){
+        known_good_attack_threats[pos][k] = NO_MOVE;
+      }
+    }
+    /* This array lists rules according to which we set the status
+    * flags of a move reasons.
+    * The format is:
+    * { List of reasons to which the rule applies, condition of the rule,
+    * flags to be set, trace message }
+    * The condition must be of type discard_condition_fn_ptr, that is a pointer
+    * to a function with parameters (pos, what).
+    *
+    * FIXME: Add handling of ALL and EITHER moves for inessential worms.
+    */
+
+    this.discard_rules = [
+      [ [ ATTACK_MOVE, ATTACK_MOVE_GOOD_KO, ATTACK_MOVE_BAD_KO, ATTACK_THREAT,
+        DEFEND_MOVE, DEFEND_MOVE_GOOD_KO, DEFEND_MOVE_BAD_KO, DEFEND_THREAT, -1 ],
+        this.owl_move_vs_worm_known, TERRITORY_REDUNDANT,
+          "  %1m: 0.0 - (threat of) attack/defense of %1m (owl attack/defense as well)\n" ],
+      [ [ SEMEAI_MOVE, SEMEAI_THREAT, -1 ], this.owl_move_reason_known, REDUNDANT,
+          "  %1m: 0.0 - (threat to) win semeai involving %1m (owl move as well)\n"],
+      [ [ SEMEAI_MOVE, SEMEAI_THREAT, -1 ], this.tactical_move_vs_whole_dragon_known, REDUNDANT,
+          "  %1m: 0.0 - (threat to) win semeai involving %1m (tactical move as well)\n"],
+      [ [ EITHER_MOVE, -1 ],
+        this.either_worm_attackable, REDUNDANT,
+          "  %1m: 0.0 - 'attack either' is redundant at %1m (direct att./def. as well)\n"],
+      [ [ ALL_MOVE, -1 ],
+        this.one_of_both_attackable, REDUNDANT,
+          "  %1m: 0.0 - 'defend both' is redundant at %1m (direct att./def. as well)\n"],
+      [ [ ATTACK_THREAT, DEFEND_THREAT, -1 ],
+        this.concerns_inessential_worm, TERRITORY_REDUNDANT,
+          "  %1m: 0.0 - attack/defense threat of %1m (inessential)\n"],
+      [ [ OWL_ATTACK_THREAT, UNCERTAIN_OWL_DEFENSE, -1 ],
+        this.concerns_inessential_dragon, REDUNDANT,
+          "  %1m: 0.0 - (uncertain) owl attack/defense of %1m (inessential)\n"],
+      [ [ ATTACK_MOVE, ATTACK_MOVE_GOOD_KO, ATTACK_MOVE_BAD_KO,
+        DEFEND_MOVE, DEFEND_MOVE_GOOD_KO, DEFEND_MOVE_BAD_KO, -1],
+        this.move_is_marked_unsafe, REDUNDANT,
+          "  %1m: 0.0 - tactical move vs %1m (unsafe move)\n"],
+      [ [ OWL_ATTACK_MOVE, OWL_ATTACK_MOVE_GOOD_KO, OWL_ATTACK_MOVE_BAD_KO,
+        OWL_DEFEND_MOVE, OWL_DEFEND_MOVE_GOOD_KO, OWL_DEFEND_MOVE_BAD_KO, -1],
+        this.concerns_noncritical_dragon, REDUNDANT,
+          "  %1m: 0.0 - owl move vs %1m (non-critical)\n"],
+      [ [ -1 ], null, 0, ""]  /* Keep this entry at end of the list. */
+      ]
+  
+  },
   find_connection () {},
   find_either_data () {},
   find_all_data () {},
@@ -239,17 +262,17 @@ export const MoveReasons = {
     this.board.ASSERT_ON_BOARD1(eater);
     this.board.ASSERT_ON_BOARD1(food);
 
-    for (let k = 0; k < next_lunch; k++) {
+    for (let k = 0; k < this.next_lunch; k++) {
       if ((lunch_dragon[k] === dragon1) && (lunch_worm[k] === worm1)){
         return;
       }
     }
 
     /* Add a new entry. */
-    this.board.ASSERT1(next_lunch < MAX_LUNCHES);
-    lunch_dragon[next_lunch] = dragon1;
-    lunch_worm[next_lunch] = worm1;
-    next_lunch++;
+    this.board.ASSERT1(this.next_lunch < MAX_LUNCHES);
+    lunch_dragon[this.next_lunch] = dragon1;
+    lunch_worm[this.next_lunch] = worm1;
+    this.next_lunch++;
     return;
   },
   add_move_reason () {},
