@@ -628,7 +628,113 @@ export const Dragon = {
   set_strength_data () {},
   compute_dragon_influence () {},
   compute_dragon_genus () {},
-  analyze_false_eye_territory () {},
+
+
+  /* Try to determine whether topologically false and half eye points
+   * contribute to territory even if the eye doesn't solidify. The purpose
+   * is to be able to distinguish between, e.g., these positions:
+   *
+   * |.OOOOO       |.OOOOO
+   * |.O.XXO       |.O.OXO
+   * |OOX.XO       |OOX.XO
+   * |O*XXXO  and  |O*XXXO
+   * |OX.XOO       |OX.XOO
+   * |X.XOO.       |X.XOO.
+   * |.XXO..       |.XXO..
+   * +------       +------
+   *
+   * In the left one the move at * is a pure dame point while in the
+   * right one it is worth one point of territory for either player.
+   *
+   * In general the question is whether a topologically false eye vertex
+   * counts as territory or not and the answer depends on whether each
+   * string adjoining the eye is externally connected to at least one
+   * proper eye.
+   *
+   * This function loops over the topologically false and half eye
+   * vertices and calls connected_to_eye() for each adjoining string to
+   * determine whether they all have external connection to an eye. The
+   * result is stored in the false_eye_territory[] array.
+   */
+  analyze_false_eye_territory () {
+    const b = this.board
+    let color;
+    let eye_color;
+    let eye
+
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos)){
+        continue;
+      }
+
+      this.false_eye_territory[pos] = 0;
+
+      /* The analysis only applies to false and half eyes. */
+      if (this.half_eye[pos].type === 0){
+        continue;
+      }
+
+      /* Determine the color of the eye. */
+      if (this.white_eye[pos].color === colors.WHITE) {
+        color = colors.WHITE;
+        eye_color = colors.WHITE;
+        eye = this.white_eye;
+      }
+      else if (this.black_eye[pos].color === colors.BLACK) {
+        color = colors.BLACK;
+        eye_color = colors.BLACK;
+        eye = this.black_eye;
+      }
+      else
+        continue;
+
+      /* Make sure we have a "closed" position. Positions like
+       *
+       * |XXXXXX.
+       * |OOOOOXX
+       * |.O.O*..
+       * +-------
+       *
+       * disqualify without further analysis. (* is a false eye vertex)
+       */
+      let k = 0
+      for (k = 0; k < 4; k++){
+        if (b.ON_BOARD(pos + b.delta[k]) && b.board[pos + b.delta[k]] !== color
+          && eye[pos + b.delta[k]].color !== eye_color){
+          break;
+        }
+      }
+
+      if (k < 4){
+        continue;
+      }
+
+      /* Check that all adjoining strings have external connection to an
+       * eye.
+       */
+      for (k = 0; k < 4; k++){
+        if (b.ON_BOARD(pos + b.delta[k])
+          && b.board[pos + b.delta[k]] === color
+          && !this.connected_to_eye(pos, pos + b.delta[k], color, eye_color, eye)){
+          break;
+        }
+      }
+
+      if (k === 4) {
+        this.false_eye_territory[pos] = 1;
+      }
+    }
+
+    /* FIXME: This initialization doesn't really belong here but must be
+     *        done somewhere within examine_position().
+     *        The array is eventually filled by the endgame() function.
+     */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
+      if (b.ON_BOARD(pos)){
+        this.forced_backfilling_moves[pos] = 0;
+      }
+    }
+  },
   connected_to_eye () {},
   connected_to_eye_recurse () {},
   show_dragons () {},

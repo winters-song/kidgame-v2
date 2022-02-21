@@ -275,6 +275,7 @@ export const MoveReasons = {
     this.next_lunch++;
     return;
   },
+
   add_move_reason () {},
   remove_move_reason () {},
   move_reason_known () {},

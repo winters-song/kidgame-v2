@@ -1588,6 +1588,7 @@ class Board {
   }
 
   // 获取棋串相邻的具有指定气数的棋串数量
+  // adj: 返回满足条件的worm.origin列表
   chainlinks2(str, adj, lib) {
     this.ASSERT1(this.IS_STONE(this.board[str]), str);
 

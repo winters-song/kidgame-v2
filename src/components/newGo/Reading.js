@@ -1091,23 +1091,18 @@ export const Reading = {
     const other = b.OTHER_COLOR(color);
 
     const xpos = [NO_MOVE];
-    let liberties;
     const libs = [];
-    let liberties2;
     const libs2 = [];
     const savemove = [0];
     const savecode = [0];
     const suggest_move = [NO_MOVE];
-    let string_size;
-    let be_aggressive;
 
-    // SETUP_TRACE_INFO("defend2", str);
     reading_node_counter++;
 
     b.ASSERT1(b.IS_STONE(b.board[str]), str);
     b.ASSERT1(b.countlib(str) === 2, str);
 
-    liberties = b.findlib(str, 2, libs);
+    const liberties = b.findlib(str, 2, libs);
 
     if (this.fast_defense(str, liberties, libs, xpos)){
       return this.RETURN_RESULT([codes.WIN], xpos, move, "fast defense");
@@ -1128,11 +1123,13 @@ export const Reading = {
      * single stone (in which case it might be a snapback move).  Sacrifices
      * might be good moves, but not in tactical reading.
      */
-    string_size = b.countstones(str);
-    if (string_size === 1 || !b.is_self_atari(libs[0], color))
+    const string_size = b.countstones(str);
+    if (string_size === 1 || !b.is_self_atari(libs[0], color)) {
       this.ADD_CANDIDATE_MOVE(libs[0], 0, moves, "liberty");
-    if (string_size === 1 || !b.is_self_atari(libs[1], color))
+    }
+    if (string_size === 1 || !b.is_self_atari(libs[1], color)) {
       this.ADD_CANDIDATE_MOVE(libs[1], 0, moves, "liberty");
+    }
 
     this.break_chain_moves(str, moves);
     this.break_chain2_efficient_moves(str, moves);
@@ -1159,7 +1156,7 @@ export const Reading = {
     /* Look for backfilling moves. */
     for (let k = 0; k < liberties; k++) {
       if (b.is_self_atari(libs[k], other)) {
-        liberties2 = b.approxlib(libs[k], color, 6, libs2);
+        let liberties2 = b.approxlib(libs[k], color, 6, libs2);
         /* Note: liberties2 must be smaller than 5, otherwise libs[k] had been
          * a direct defense.
          */
@@ -1173,7 +1170,7 @@ export const Reading = {
         }
       }
 
-      liberties2 = b.approxlib(libs[k], other, 3, libs2);
+      let liberties2 = b.approxlib(libs[k], other, 3, libs2);
       if (liberties2 <= 2) {
         for (let r = 0; r < liberties2; r++) {
           xpos[0] = libs2[r];
@@ -1194,7 +1191,7 @@ export const Reading = {
     /* If we haven't found any useful moves in first batches, be more
      * aggressive in break_chain[23]_moves().
      */
-    be_aggressive = moves.num === 0;
+    const be_aggressive = moves.num === 0;
 
     if (b.stackp <= this.superstring_depth){
       this.superstring_break_chain_moves(str, 4, moves);
@@ -1214,11 +1211,13 @@ export const Reading = {
       this.special_rescue5_moves(str, libs, moves);
     }
 
-    if (b.stackp <= this.break_chain_depth || (be_aggressive && b.stackp <= this.backfill_depth))
+    if (b.stackp <= this.break_chain_depth || (be_aggressive && b.stackp <= this.backfill_depth)){
       this.break_chain3_moves(str, moves, be_aggressive);
+    }
 
-    if (be_aggressive && b.stackp <= this.backfill_depth)
+    if (be_aggressive && b.stackp <= this.backfill_depth) {
       this.break_chain4_moves(str, moves, be_aggressive);
+    }
 
     /* Only order and test the new set of moves. */
     this.order_moves(str, moves, color, 'read_function_name', move[0]);
@@ -3377,7 +3376,7 @@ export const Reading = {
   /* Add the chainbreaking moves relative to the string (str) to the
    * (moves) struct.
    */
-  // 相邻1口气对方棋串
+  // 查找相邻的对方棋串是1口气的
   break_chain_moves(str, moves){
     const b = this.board
     const xpos = []
@@ -3405,7 +3404,7 @@ export const Reading = {
    */
   break_chain2_efficient_moves(str, moves) {
     const adjs = [];
-    /* Find links with 2 liberties. */
+    // 查找相邻的对方棋串是2口气的
     const adj = this.board.chainlinks2(str, adjs, 2);
 
     for (let r = 0; r < adj; r++){
@@ -3413,6 +3412,11 @@ export const Reading = {
     }
   },
 
+  /*
+  * str: 目标worm
+  * adj: 相邻2口气对方棋串，
+  * adj2: adj相邻的我方1口气棋串
+  * */
   do_find_break_chain2_efficient_moves(str, adj, moves) {
     const b = this.board
     const color = b.board[str];
@@ -3422,6 +3426,7 @@ export const Reading = {
     const libs = []
     b.ASSERT1(b.countlib(adj) === 2, adj);
 
+    //adj相邻的我方1口气棋串， str气数>2不会被打吃，先打吃对方
     const adj2 = b.chainlinks2(adj, adjs2, 1);
     if (adj2 === 1 && b.countlib(str) > 2) {
       const apos = [];
@@ -3472,14 +3477,17 @@ export const Reading = {
     const pos1 = b.NORTH(Math.max(libs[0], libs[1]));
     const pos2 = b.SOUTH(Math.min(libs[0], libs[1]));
     if ((b.board[pos1] !== other || !b.is_edge_vertex(pos2) || !b.same_string(pos1, adj))
-      && (b.board[pos2] !== other || !b.is_edge_vertex(pos1) || !b.same_string(pos2, adj)))
+      && (b.board[pos2] !== other || !b.is_edge_vertex(pos1) || !b.same_string(pos2, adj))){
       return;
+    }
 
-    if (b.is_edge_vertex(libs[0]) && !b.is_self_atari(libs[1], color))
+    if (b.is_edge_vertex(libs[0]) && !b.is_self_atari(libs[1], color)){
       this.ADD_CANDIDATE_MOVE(libs[1], 1, moves, "break_chain2_efficient-C");
+    }
 
-    if (b.is_edge_vertex(libs[1]) && !b.is_self_atari(libs[0], color))
+    if (b.is_edge_vertex(libs[1]) && !b.is_self_atari(libs[0], color)) {
       this.ADD_CANDIDATE_MOVE(libs[0], 1, moves, "break_chain2_efficient-C");
+    }
   },
 
   /* (str) points to a string with two or more liberties. break_chain2_moves()
