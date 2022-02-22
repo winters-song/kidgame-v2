@@ -601,8 +601,33 @@ export const Surround = {
     // print方法
     return
   },
-  is_surrounded () {},
-  does_surround () {},
-  reset_surround_data () {},
-  surround_map () {},
+
+  is_surrounded (dr) {
+    return this.DRAGON2(dr).surround_status
+  },
+
+  does_surround (move, dr) {
+    if (this.DRAGON2(dr).surround_status){
+      return 0;
+    }
+    return this.compute_surroundings(dr, move, 0, null);
+  },
+
+  /* Should be run once per genmove, before make_dragons. */
+  reset_surround_data () {
+    this.surround_pointer = 0;
+  },
+
+  /* Returns 1 (respectively 2) if pos is in the convex hull
+   * (respectively expanded hull boundary) of the surrounding
+   * dragons. Returns -1 if the dragon is not found.
+   */
+  surround_map (dr, pos) {
+    for (let k = 0; k < this.surround_pointer; k++){
+      if (this.surroundings[k].dragon_number === this.dragon[dr].id){
+        return this.surroundings[k].surround_map[pos];
+      }
+    }
+    return -1;
+  },
 }
