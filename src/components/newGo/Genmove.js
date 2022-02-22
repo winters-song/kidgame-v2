@@ -19,6 +19,7 @@ import {Dragon} from "./Dragon";
 import {Optics} from "./Optics";
 import {Owl} from "./Owl";
 import {MoveReasons} from "./MoveReasons";
+import {Surround} from "./Surround";
 
 import {transformation_init} from "./patterns/transform";
 import {Helpers} from "./patterns/Helpers";
@@ -38,7 +39,7 @@ export default class Genmove {
     Object.assign(this, Globals, Utils, Helpers, Test,
       Worm, Unconditional, Reading, MoveList, Persistent, Cache,
       Matchpat, Influence, Connections, ReadConnect, Dragon, Optics, Owl,
-      MoveReasons, {
+      MoveReasons, Surround, {
         worms_examined : -1,
         initial_influence_examined : -1,
         dragons_examined_without_owl : -1,

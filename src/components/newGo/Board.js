@@ -2620,6 +2620,13 @@ class Board {
       }
     }
   }
+
+
+  square_dist(pos1, pos2) {
+    const idist = this.I(pos1) - this.I(pos2);
+    const jdist = this.J(pos1) - this.J(pos2);
+    return idist*idist + jdist*jdist;
+  }
 }
 
 export default Board

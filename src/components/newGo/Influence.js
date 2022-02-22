@@ -858,10 +858,103 @@ export const Influence = {
     this.do_compute_influence(safe_stones, null, strength, q, move, trace_message);
   },
 
-  whose_territory () {},
-  whose_moyo () {},
-  whose_moyo_restricted () {},
-  whose_area () {},
+
+  /* Return the color of the territory at (pos). If it's territory for
+   * neither color, EMPTY is returned.
+   */
+  whose_territory (q, pos) {
+    const bi = q.black_influence[pos];
+    const wi = q.white_influence[pos];
+    const terr = q.territory_value[pos];
+
+    this.board.ASSERT_ON_BOARD1(pos);
+
+    if (bi > 0.0 && wi === 0.0 && terr < -territory_determination_value){
+      return colors.BLACK;
+    }
+    if (wi > 0.0 && bi === 0.0 && terr > territory_determination_value){
+      return colors.WHITE;
+    }
+
+    return colors.EMPTY;
+  },
+
+
+  /* Return the color who has a moyo at (pos). If neither color has a
+   * moyo there, EMPTY is returned. The definition of moyo in terms of the
+   * influences is totally ad hoc.
+   */
+  whose_moyo (q, pos) {
+    const bi = q.black_influence[pos];
+    const wi = q.white_influence[pos];
+
+    const territory_color = this.whose_territory(q, pos);
+    if (territory_color !== colors.EMPTY){
+      return territory_color;
+    }
+
+    if (bi > moyo_data.influence_balance * wi && bi > moyo_data.my_influence_minimum && wi < moyo_data.opp_influence_maximum){
+      return colors.BLACK;
+    }
+    if (wi > moyo_data.influence_balance * bi && wi > moyo_data.my_influence_minimum && bi < moyo_data.opp_influence_maximum){
+      return colors.WHITE;
+    }
+
+    return colors.EMPTY;
+  },
+
+  /* Return the color who has a moyo at (pos). If neither color has a
+   * moyo there, EMPTY is returned.
+   * The definition of moyo in terms of the influences is totally ad
+   * hoc.
+   *
+   * It has a slightly different definition of moyo than whose_moyo.
+   */
+  whose_moyo_restricted (q, pos) {
+    const bi = q.black_influence[pos];
+    const wi = q.white_influence[pos];
+
+    const territory_color = this.whose_territory(q, pos);
+
+    /* default */
+    if (territory_color !== colors.EMPTY){
+      return territory_color;
+    }
+    else if (bi > moyo_restricted_data.influence_balance * wi && bi > moyo_restricted_data.my_influence_minimum && wi < moyo_restricted_data.opp_influence_maximum) {
+      return colors.BLACK;
+    }
+    else if (wi > moyo_restricted_data.influence_balance * bi && wi > moyo_restricted_data.my_influence_minimum && bi < moyo_restricted_data.opp_influence_maximum){
+      return colors.WHITE;
+    }
+    else{
+      return colors.EMPTY;
+    }
+  },
+
+  /* Return the color who has dominating influence ("area") at (pos).
+   * If neither color dominates the influence there, EMPTY is returned.
+   * The definition of area in terms of the influences is totally ad
+   * hoc.
+   */
+  whose_area (q, pos) {
+    const bi = q.black_influence[pos];
+    const wi = q.white_influence[pos];
+
+    const moyo_color = this.whose_moyo(q, pos);
+    if (moyo_color !== colors.EMPTY){
+      return moyo_color;
+    }
+
+    if (bi > 3.0 * wi && bi > 1.0 && wi < 40.0){
+      return colors.BLACK;
+    }
+
+    if (wi > 3.0 * bi && wi > 1.0 && bi < 40.0){
+      return colors.WHITE;
+    }
+
+    return colors.EMPTY;
+  },
 
   value_territory (q) {
     const b = this.board
@@ -999,10 +1092,141 @@ export const Influence = {
 
   segment_region () {},
   influence_get_territory_segmentation () {},
-  influence_territory () {},
+
+  /* Export the territory valuation at an intersection from initial_influence;
+   * it is given from (color)'s point of view.
+   */
+  influence_territory (q, pos, color) {
+    if (color === colors.WHITE){
+      return q.territory_value[pos];
+    }
+    else {
+      return -q.territory_value[pos];
+    }
+  },
   influence_considered_lively () {},
   compute_followup_influence () {},
-  compute_escape_influence () {},
+
+
+  /* Compute influence based escape values and return them in the
+   * escape_value array.
+   */
+  compute_escape_influence (color, safe_stones, goal, strength, escape_value) {
+    let k;
+    let ii;
+    // let save_debug = debug;
+    const b = this.board
+
+    /* IMPORTANT: The caching relies on the fact that safe_stones[] and
+     * strength[] will currently always be identical for identical board[]
+     * states. Better check for these, too.
+     */
+    let cached_board = [];
+    let escape_values = [];
+    let active_caches = [0, 0];
+
+    let cache_number = color === colors.WHITE
+
+    if (!goal) {
+      /* Encode the values of color and dragons_known into an integer
+       * between 0 and 3.
+       */
+      let board_was_cached = 1;
+
+      /* Notice that we compare the out of board markers as well, in
+       * case the board size should have changed between calls.
+       */
+      for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
+        if (cached_board[ii] !== b.board[ii]) {
+          cached_board[ii] = b.board[ii];
+          board_was_cached = 0;
+        }
+      }
+
+      if (!board_was_cached){
+        for (k = 0; k < 2; k++){
+          active_caches[k] = 0;
+        }
+      }
+
+      if (active_caches[cache_number]) {
+        for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++){
+          if (b.ON_BOARD(ii)){
+            escape_value[ii] = escape_values[ii][cache_number];
+          }
+        }
+
+        return;
+      }
+    }
+
+    /* Use enhance pattern and higher attenuation for escape influence. */
+    escape_influence.is_territorial_influence = 0;
+    escape_influence.color_to_move = colors.EMPTY;
+
+    /* Turn off DEBUG_INFLUENCE unless we are specifically interested in
+     * escape computations.
+     */
+    // if (!(debug & DEBUG_ESCAPE))
+    //   debug &= ~DEBUG_INFLUENCE;
+
+    this.do_compute_influence(safe_stones, goal, strength, escape_influence, -1, null);
+
+    // debug = save_debug;
+
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++){
+      if (b.ON_BOARD(ii)) {
+        if (this.whose_moyo(escape_influence, ii) === color){
+          escape_value[ii] = 4;
+        }
+        else if (this.whose_area(escape_influence, ii) === color){
+          escape_value[ii] = 2;
+        }
+        else if (this.whose_area(escape_influence, ii) === colors.EMPTY) {
+          if (goal) {
+            escape_value[ii] = 0;
+
+            if (!goal[ii]) {
+              let goal_proximity = 0;
+
+              for (k = 0; k < 8; k++) {
+                if (b.ON_BOARD(ii + b.delta[k])) {
+                  goal_proximity += 2 * goal[ii + b.delta[k]];
+                  if (k < 4 && b.ON_BOARD(ii + 2 * b.delta[k])){
+                    goal_proximity += goal[ii + b.delta[k]];
+                  }
+                }
+                else{
+                  goal_proximity += 1;
+                }
+              }
+
+              if (goal_proximity < 6){
+                escape_value[ii] = 1;
+              }
+            }
+          }
+          else{
+            escape_value[ii] = 1;
+          }
+        }
+        else{
+          escape_value[ii] = 0;
+        }
+      }
+    }
+
+    if (!goal) {
+      /* Save the computed values in the cache. */
+      for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++){
+        if (b.ON_BOARD(ii)){
+          escape_values[ii][cache_number] = escape_value[ii];
+        }
+      }
+      active_caches[cache_number] = 1;
+    }
+  },
+
   retrieve_delta_territory_cache () {},
   store_delta_territory_cache () {},
   influence_delta_territory () {},

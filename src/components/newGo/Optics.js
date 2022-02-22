@@ -417,7 +417,35 @@ export const Optics = {
       }
     }
   },
-  find_eye_dragons () {},
+
+  /* Find the dragon or dragons surrounding an eye space. Up to
+   * max_dragons dragons adjacent to the eye space are added to
+   * the dragon array, and the number of dragons found is returned.
+   */
+  find_eye_dragons (origin, eye, eye_color, dragons, max_dragons) {
+    const b = this.board
+    let mx = []
+    let num_dragons = 0;
+
+    // DEBUG(DEBUG_MISCELLANEOUS, "find_eye_dragons: %1m %C\n", origin, eye_color);
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.board[pos] === eye_color && mx[this.dragon[pos].origin] === 0
+        && ((b.ON_BOARD(b.SOUTH(pos)) && eye[b.SOUTH(pos)].origin === origin && !eye[b.SOUTH(pos)].marginal)
+          || (b.ON_BOARD(b.WEST(pos)) && eye[b.WEST(pos)].origin === origin && !eye[b.WEST(pos)].marginal)
+          || (b.ON_BOARD(b.NORTH(pos)) && eye[b.NORTH(pos)].origin === origin && !eye[b.NORTH(pos)].marginal)
+          || (b.ON_BOARD(b.EAST(pos)) && eye[b.EAST(pos)].origin === origin && !eye[b.EAST(pos)].marginal))) {
+        // DEBUG(DEBUG_MISCELLANEOUS, "  dragon: %1m %1m\n", pos, dragon[pos].origin);
+        mx[this.dragon[pos].origin] = 1;
+        if (dragons !== null && num_dragons < max_dragons) {
+          dragons[num_dragons] = this.dragon[pos].origin;
+        }
+        num_dragons++;
+      }
+    }
+
+    return num_dragons;
+  },
+
   print_eye () {},
 
   /*
@@ -1243,12 +1271,63 @@ export const Optics = {
     e.c = c
     e.d = d
   },
-  min_eye_threat () {},
-  min_eyes () {},
-  max_eyes () {},
-  max_eye_threat () {},
-  add_eyevalues () {},
-  eye_move_urgency () {},
+  min_eye_threat (e) {
+    return e.a
+  },
+  min_eyes (e) {
+    return e.b
+  },
+  max_eyes (e) {
+    return e.c
+  },
+  max_eye_threat (e) {
+    return e.d
+  },
+
+  /* Add the eyevalues *e1 and *e2, leaving the result in *sum. It is
+   * safe to let sum be the same as e1 or e2.
+   */
+  add_eyevalues (e1, e2, sum) {
+    let res;
+    res.a = Math.min(Math.min(e1.a + e2.c, e1.c + e2.a), Math.max(e1.a + e2.b, e1.b + e2.a));
+    res.b = Math.min(Math.max(e1.b + e2.b, Math.min(e1.a + e2.d, e1.b + e2.c)),
+      Math.max(e1.b + e2.b, Math.min(e1.d + e2.a, e1.c + e2.b)));
+    res.c = Math.max(Math.min(e1.c + e2.c, Math.max(e1.d + e2.a, e1.c + e2.b)),
+      Math.min(e1.c + e2.c, Math.max(e1.a + e2.d, e1.b + e2.c)));
+    res.d = Math.max(Math.max(e1.d + e2.b, e1.b + e2.d), Math.min(e1.d + e2.c, e1.c + e2.d));
+
+    /* The rules above give 0011 + 0002 = 0012, which is incorrect. Thus
+     * we need this annoying exception.
+     */
+    if ((e1.d - e1.c === 2 && e2.c - e2.b === 1) || (e1.c - e1.b === 1 && e2.d - e2.c === 2)) {
+      res.d = Math.max(Math.min(e1.c + e2.d, e1.d + e2.b), Math.min(e1.d + e2.c, e1.b + e2.d));
+    }
+
+    /* The temporary storage in res is necessary if sum is the same as
+     * e1 or e2.
+     */
+    Object.assign(sum, res)
+  },
+
+  /* The impact on the number of eyes (counting up to two) if a vital
+   * move is made. The possible values are
+   * 0 - settled eye, no vital move
+   * 2 - 1/2 eye or 3/2 eyes
+   * 3 - 3/4 eyes or 5/4 eyes
+   * 4 - 1* eyes (a chimera)
+   */
+  eye_move_urgency (e) {
+    const a = Math.min(e.a, 2);
+    const b = Math.min(e.b, 2);
+    const c = Math.min(e.c, 2);
+    const d = Math.min(e.d, 2);
+    if (b === c){
+      return 0;
+    }
+    else{
+      return d + c - b - a;
+    }
+  },
   eyevalue_to_string () {},
   test_eyeshape () {},
   eyegraph_trymove () {},

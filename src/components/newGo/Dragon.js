@@ -1,5 +1,6 @@
 import {dragon_status, EyeValue, HalfEyeData} from "./Liberty";
-import {colors, NO_MOVE} from "./Constants";
+import {colors, NO_MOVE, SURROUNDED, WEAKLY_SURROUNDED} from "./Constants";
+import {initial_black_influence, initial_white_influence} from "./Influence";
 
 /* A "dragon" is a union of strings of the same color which will be
  * treated as a unit. The dragons are generated anew at each
@@ -21,6 +22,7 @@ import {colors, NO_MOVE} from "./Constants";
  *                   ( )))         ( ))))) 
  */
 
+const MAX_NEIGHBOR_DRAGONS = 10
 
 class DragonData {
   color;    /* its color                                                 */
@@ -96,6 +98,10 @@ let dragon2_initialized;
  */
 export const Dragon = {
 
+  DRAGON(d) {
+    return this.dragon[this.dragon2[d].origin]
+  },
+
   // macro
   DRAGON2(pos){
     return this.dragon2[this.dragon[pos].id]
@@ -108,7 +114,7 @@ export const Dragon = {
   },
 
   make_dragons(stop_before_owl){
-    // const b = this.board
+    const b = this.board
 
     dragon2_initialized = 0;
     this.initialize_dragon_data();
@@ -141,64 +147,63 @@ export const Dragon = {
     // /* Try to determine whether topologically false and half eye points
     //  * contribute to territory even if the eye doesn't solidify.
     //  */
-    // this.analyze_false_eye_territory();
+    this.analyze_false_eye_territory();
 
     // /* Now we compute the genus. */
-    // for (let d = 0; d < number_of_dragons; d++){
-    //   this.compute_dragon_genus(dragon2[d].origin, this.dragon2[d].genus, NO_MOVE);
-    // }
+    for (let d = 0; d < this.number_of_dragons; d++){
+      this.compute_dragon_genus(this.dragon2[d].origin, this.dragon2[d].genus, NO_MOVE);
+    }
 
-    // /* Compute the escape route measure. */
-    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++){
-    //   if (b.IS_STONE(b.board[str]) && this.dragon[str].origin === str){
-    //     this.DRAGON2(str).escape_route = this.compute_escape(str, 0);
-    //   }
-    // }
+    /* Compute the escape route measure. */
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++){
+      if (b.IS_STONE(b.board[str]) && this.dragon[str].origin === str){
+        this.DRAGON2(str).escape_route = this.compute_escape(str, 0);
+      }
+    }
 
-    // /* Set dragon weaknesses according to initial_influence. */
-    // this.compute_refined_dragon_weaknesses();
-    // for (let d = 0; d < number_of_dragons; d++){
-    //   this.dragon2[d].weakness_pre_owl = this.dragon2[d].weakness;
-    // }
+    /* Set dragon weaknesses according to initial_influence. */
+    this.compute_refined_dragon_weaknesses();
+    for (let d = 0; d < this.number_of_dragons; d++){
+      this.dragon2[d].weakness_pre_owl = this.dragon2[d].weakness;
+    }
 
-    // /* Determine status: ALIVE, DEAD, CRITICAL or UNKNOWN */
-    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
-    //   if (b.ON_BOARD(str)){
-    //     if (this.dragon[str].origin === str && b.board[str]){
-    //       this.dragon[str].crude_status = this.compute_crude_status(str);
-    //     }
-    //   }
-    // }
+    /* Determine status: ALIVE, DEAD, CRITICAL or UNKNOWN */
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++) {
+      if (b.ON_BOARD(str)){
+        if (this.dragon[str].origin === str && b.board[str]){
+          this.dragon[str].crude_status = this.compute_crude_status(str);
+        }
+      }
+    }
 
-    // /* We must update the dragon status at every intersection before we
-    //  * call the owl code. This updates all fields.
-    //  */
-    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++){
-    //   if (b.ON_BOARD(str) && b.board[str] !== EMPTY){
-    //     this.dragon[str] = this.dragon[this.dragon[str].origin];
-    //   }
-    // }
+    /* We must update the dragon status at every intersection before we
+     * call the owl code. This updates all fields.
+     */
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++){
+      if (b.ON_BOARD(str) && b.board[str] !== colors.EMPTY){
+        this.dragon[str] = this.dragon[this.dragon[str].origin];
+      }
+    }
 
-    // this.find_neighbor_dragons();
+    this.find_neighbor_dragons();
 
-    // for (let d = 0; d < number_of_dragons; d++) {
-    //   this.dragon2[d].surround_status
-    //     = compute_surroundings(this.dragon2[d].origin, NO_MOVE, 0, this.dragon2[d].surround_size);
-    //   if (this.dragon2[d].surround_status === SURROUNDED) {
-    //     this.dragon2[d].escape_route = 0;
-    //     // if (debug & DEBUG_DRAGONS)
-    //     //   gprintf("surrounded dragon found at %1m\n", dragon2[d].origin);
-    //   }
-    //   else if (this.dragon2[d].surround_status === WEAKLY_SURROUNDED) {
-    //     this.dragon2[d].escape_route /= 2;
-    //     // if (debug & DEBUG_DRAGONS)
-    //     //   gprintf("weakly surrounded dragon found at %1m\n", dragon2[d].origin);
-    //   }
-    // }
+    for (let d = 0; d < this.number_of_dragons; d++) {
+      this.dragon2[d].surround_status = this.compute_surroundings(this.dragon2[d].origin, NO_MOVE, 0, this.dragon2[d].surround_size);
+      if (this.dragon2[d].surround_status === SURROUNDED) {
+        this.dragon2[d].escape_route = 0;
+        // if (debug & DEBUG_DRAGONS)
+        //   gprintf("surrounded dragon found at %1m\n", dragon2[d].origin);
+      }
+      else if (this.dragon2[d].surround_status === WEAKLY_SURROUNDED) {
+        this.dragon2[d].escape_route /= 2;
+        // if (debug & DEBUG_DRAGONS)
+        //   gprintf("weakly surrounded dragon found at %1m\n", dragon2[d].origin);
+      }
+    }
 
-    // if (stop_before_owl){
-    //   return;
-    // }
+    if (stop_before_owl){
+      return;
+    }
 
     // /* Determine life and death status of each dragon using the owl code
     //  * if necessary.
@@ -615,10 +620,174 @@ export const Dragon = {
 
     dragon2_initialized = 1;
   },
-  
-  find_neighbor_dragons () {},
-  add_adjacent_dragons () {},
-  add_adjacent_dragon () {},
+
+  /* Examine which dragons are adjacent to each other. This is
+   * complicated by the fact that adjacency may involve a certain
+   * amount of empty space.
+   *
+   * The approach we use is to extend the dragons into their
+   * surrounding influence areas until they collide. We also accept
+   * one step extensions into neutral regions. After having done this
+   * we can look for immediate adjacencies.
+   */
+  find_neighbor_dragons () {
+    let m, n;
+    let pos;
+    let pos2;
+    let i, j;
+    // let d;
+    let dragons = [];
+    let distances = [];
+    let dist;
+    let k;
+    let color;
+
+    const b = this.board
+    b.ASSERT1(dragon2_initialized);
+
+    /* Initialize the arrays. */
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.IS_STONE(b.board[pos])) {
+        dragons[pos] = this.dragon[pos].id;
+        distances[pos] = 0;
+      }
+      else if (b.ON_BOARD(pos)) {
+        dragons[pos] = -1;
+        distances[pos] = -1;
+      }
+    }
+
+    /* Expand from dist-1 to dist. Break out of the loop at the end if
+     * we couldn't expand anything. Never expand more than five steps.
+     */
+    for (dist = 1; dist <= 5; dist++) {
+      let found_one = 0;
+
+      for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+        if (!b.ON_BOARD(pos)){
+          continue;
+        }
+
+        if (distances[pos] !== dist-1 || dragons[pos] < 0){
+          continue;
+        }
+
+        color = this.DRAGON(dragons[pos]).color;
+        for (k = 0; k < 4; k++) {
+          pos2 = pos + b.delta[k];
+
+          if (!b.ON_BOARD1(pos2)){
+            continue;
+          }
+
+          /* Consider expansion from (pos) to adjacent intersection
+           * (pos2).
+           */
+          if (distances[pos2] >= 0 && distances[pos2] < dist){
+            continue; /* (pos2) already occupied. */
+          }
+
+          /* We can always expand the first step, regardless of influence. */
+          if (dist === 1
+            || (this.whose_area(this.INITIAL_INFLUENCE(color), pos) === color
+              && this.whose_area(this.INITIAL_INFLUENCE(color), pos2) !== b.OTHER_COLOR(color))) {
+            /* Expansion ok. Now see if someone else has tried to
+             * expand here. In that case we indicate a collision by
+             * setting the dragon number to -2.
+             */
+            if (distances[pos2] === dist) {
+              if (dragons[pos2] !== dragons[pos]){
+                dragons[pos2] = -2;
+              }
+            }
+            else {
+              dragons[pos2] = dragons[pos];
+              distances[pos2] = dist;
+              found_one = 1;
+            }
+          }
+        }
+      }
+      if (!found_one){
+        break;
+      }
+    }
+
+
+    /* Now go through dragons to find neighbors. It suffices to look
+     * south and east for neighbors. In the case of a collision zone
+     * where dragons==-2 we set all the neighbors of this intersection
+     * as adjacent to each other.
+     */
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos)){
+        continue;
+      }
+      if (dragons[pos] === -2) {
+        let neighbors = 0;
+        let adjacent = [];
+
+        for (k = 0; k < 4; k++) {
+          pos2 = pos + b.delta[k];
+
+          if (b.ON_BOARD1(pos2) && dragons[pos2] >= 0){
+            adjacent[neighbors++] = dragons[pos2];
+          }
+        }
+        for (i = 0; i < neighbors; i++){
+          for (j = i+1; j < neighbors; j++){
+            this.add_adjacent_dragons(adjacent[i], adjacent[j]);
+          }
+        }
+      }
+      else if (dragons[pos] >= 0) {
+        if (b.ON_BOARD(b.NORTH(pos))) {
+          if (dragons[b.NORTH(pos)] >= 0 && dragons[b.NORTH(pos)] !== dragons[pos]){
+            this.add_adjacent_dragons(dragons[pos], dragons[b.NORTH(pos)]);
+          }
+        }
+        if (b.ON_BOARD(b.EAST(pos))) {
+          if (dragons[b.EAST(pos)] >= 0 && dragons[b.EAST(pos)] !== dragons[pos]) {
+            this.add_adjacent_dragons(dragons[pos], dragons[b.EAST(pos)]);
+          }
+        }
+      }
+    }
+  },
+
+  /* Add the dragons with id a and b as adjacent to each other. */
+  add_adjacent_dragons (a, b) {
+    this.board.ASSERT1(a >= 0 && a < this.number_of_dragons && b >= 0 && b < this.number_of_dragons);
+    if (a === b){
+      return;
+    }
+    this.add_adjacent_dragon(a, b);
+    this.add_adjacent_dragon(b, a);
+  },
+
+  /* Add the dragon with id b as adjacent to a. */
+  add_adjacent_dragon (a, b) {
+    const bd = this.board
+    bd.ASSERT1(a >= 0 && a < this.number_of_dragons && b >= 0 && b < this.number_of_dragons);
+    /* If the array of adjacent dragons already is full, ignore
+     * additional neighbors.
+     */
+    if (this.dragon2[a].neighbors === MAX_NEIGHBOR_DRAGONS)
+      return;
+
+    for (let i = 0; i < this.dragon2[a].neighbors; i++){
+      if (this.dragon2[a].adjacent[i] === b){
+        return;
+      }
+    }
+
+    this.dragon2[a].adjacent[this.dragon2[a].neighbors++] = b;
+
+    if (this.DRAGON(a).color === bd.OTHER_COLOR(this.DRAGON(b).color)){
+      this.dragon2[a].hostile_neighbors++;
+    }
+  },
+
   dragon_invincible () {},
   dragon_looks_inessential () {},
   get_alive_stones () {},
@@ -627,7 +796,64 @@ export const Dragon = {
   mark_inessential_stones () {},
   set_strength_data () {},
   compute_dragon_influence () {},
-  compute_dragon_genus () {},
+
+  /* Compute dragon's genus, possibly excluding one given eye.  To
+   * compute full genus, just set `eye_to_exclude' to NO_MOVE.
+   */
+  compute_dragon_genus (d, genus, eye_to_exclude) {
+    const b = this.board
+    const dr = [];
+
+    b.ASSERT1(b.IS_STONE(b.board[d]), d);
+    b.ASSERT1(eye_to_exclude === NO_MOVE || b.ON_BOARD1(eye_to_exclude));
+
+    this.set_eyevalue(genus, 0, 0, 0, 0);
+
+    if (b.board[d] === colors.BLACK) {
+      for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+        if (!b.ON_BOARD(pos)){
+          continue;
+        }
+
+        if (this.black_eye[pos].color === colors.BLACK && this.black_eye[pos].origin === pos
+          && (eye_to_exclude === NO_MOVE || this.black_eye[eye_to_exclude].origin !== pos)
+          && this.find_eye_dragons(pos, this.black_eye, colors.BLACK, dr, 1) === 1
+          && this.is_same_dragon(dr, d)) {
+            // TRACE("eye at %1m (%s) found for dragon at %1m--augmenting genus\n",
+            //   pos, eyevalue_to_string(&black_eye[pos].value), dr);
+
+          if (eye_to_exclude === NO_MOVE
+            && (this.eye_move_urgency(this.black_eye[pos].value) > this.eye_move_urgency(genus))) {
+            this.DRAGON2(d).heye = this.black_vital_points[pos].defense_points[0];
+          }
+
+          this.add_eyevalues(genus, this.black_eye[pos].value, genus);
+        }
+      }
+    }
+    else {
+      for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+        if (!b.ON_BOARD(pos)){
+          continue;
+        }
+
+        if (this.white_eye[pos].color === colors.WHITE && this.white_eye[pos].origin === pos
+          && (eye_to_exclude === NO_MOVE || this.white_eye[eye_to_exclude].origin !== pos)
+          && this.find_eye_dragons(pos, this.white_eye, colors.WHITE, dr, 1) === 1
+          && this.is_same_dragon(dr, d)) {
+          // TRACE("eye at %1m (%s) found for dragon at %1m--augmenting genus\n",
+          //   pos, eyevalue_to_string(&white_eye[pos].value), dr);
+
+          if (eye_to_exclude === NO_MOVE
+            && (this.eye_move_urgency(this.white_eye[pos].value) > this.eye_move_urgency(genus))) {
+            this.DRAGON2(d).heye = this.white_vital_points[pos].defense_points[0];
+          }
+
+          this.add_eyevalues(genus, this.white_eye[pos].value, genus);
+        }
+      }
+    }
+  },
 
 
   /* Try to determine whether topologically false and half eye points
@@ -806,15 +1032,438 @@ export const Dragon = {
     }
   },
 
-  compute_crude_status () {},
-  dragon_escape () {},
-  compute_escape () {},
-  compute_surrounding_moyo_sizes () {},
+  /*
+   * compute_crude_status(pos) tries to determine whether the dragon
+   * at (pos) is ALIVE, DEAD, or UNKNOWN. The algorithm is not perfect
+   * and can give incorrect answers.
+   *
+   * The dragon is judged alive if its genus is >1. It is judged dead if
+   * the genus is <2, it has no escape route, and no adjoining string can
+   * be easily captured. Otherwise it is judged UNKNOWN.  */
+  compute_crude_status (pos) {
+    /* FIXME: We lose information when constructing true_genus. This
+   * code can be improved.
+   */
+    let genus = this.DRAGON2(pos).genus;
+    let true_genus = this.max_eyes(genus) + this.min_eyes(genus);
+    let lunch = this.DRAGON2(pos).lunch;
+    const b = this.board
+    b.ASSERT1(dragon2_initialized);
+
+    /* If it has two sure eyes, everything is just dandy. */
+    if (true_genus > 3){
+      return dragon_status.ALIVE;
+    }
+
+    /* If the dragon consists of one worm, there is an attack, but
+     * no defense and there is less than one eye and one half eye,
+     * the situation is hopeless.
+     */
+    if (this.dragon[pos].size === this.worm[pos].size
+      && this.worm[pos].attack_codes[0] !== 0
+      && this.worm[pos].defense_codes[0] === 0
+      && true_genus < 3) {
+      return dragon_status.DEAD;
+    }
+
+    if (lunch !== NO_MOVE
+      && true_genus < 3
+      && this.worm[lunch].defense_codes[0] !== 0
+      && this.DRAGON2(pos).escape_route < 5) {
+      if (true_genus === 2 || this.worm[lunch].size > 2) {
+        return dragon_status.CRITICAL;
+      }
+    }
+
+    if (lunch !== NO_MOVE && true_genus >= 3) {
+      return dragon_status.ALIVE;
+    }
+
+    if (lunch === NO_MOVE || this.worm[lunch].cutstone < 2) {
+      if (true_genus < 3
+        && this.DRAGON2(pos).escape_route === 0
+        && this.DRAGON2(pos).moyo_size < 5) {
+        return dragon_status.DEAD;
+      }
+
+      if (true_genus === 3 && this.DRAGON2(pos).escape_route < 5){
+        return dragon_status.CRITICAL;
+      }
+    }
+
+    if (this.DRAGON2(pos).moyo_territorial_value > 9.99){
+      return dragon_status.ALIVE;
+    }
+
+    return dragon_status.UNKNOWN;
+  },
+
+  /* Compute the escape potential described above. The dragon is marked
+   * in the goal array.
+   */
+  dragon_escape (goal, color, escape_value) {
+    const b = this.board
+    let ii;
+    let k;
+    let mx = [];
+    let queue = [];
+    let queue_start = 0;
+    let queue_end = 0;
+    let other = b.OTHER_COLOR(color);
+    let distance;
+    let escape_potential = 0;
+
+    const ENQUEUE = (pos) => {
+      queue[queue_end++] = pos;
+      mx[pos] = 1
+    }
+
+    b.ASSERT1(b.IS_STONE(color));
+
+    /* Enter the stones of the dragon in the queue. */
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
+      if (b.ON_BOARD(ii) && goal[ii]){
+        ENQUEUE(ii);
+      }
+    }
+
+    /* Find points at increasing distances from the dragon. At distance
+     * four, sum the escape values at those points to get the escape
+     * potential.
+     */
+    for (distance = 0; distance <= 4; distance++) {
+      let save_queue_end = queue_end;
+      while (queue_start < save_queue_end) {
+        ii = queue[queue_start];
+        queue_start++;
+
+        /* Do not pass connection inhibited intersections. */
+        if (this.cut_possible(ii, b.OTHER_COLOR(color))){
+          continue;
+        }
+        if (distance === 4){
+          escape_potential += escape_value[ii];
+        }
+        else {
+          if (b.ON_BOARD(b.SOUTH(ii))
+            && !mx[b.SOUTH(ii)]
+            && (b.board[b.SOUTH(ii)] === color
+              || (b.board[b.SOUTH(ii)] === colors.EMPTY
+                && b.ON_BOARD(b.SE(ii)) && b.board[b.SE(ii)] !== other
+                && b.ON_BOARD(b.SS(ii)) && b.board[b.SS(ii)] !== other
+                && b.ON_BOARD(b.SW(ii)) && b.board[b.SW(ii)] !== other))){
+            ENQUEUE(b.SOUTH(ii));
+          }
+
+          if (b.ON_BOARD(b.WEST(ii))
+            && !mx[b.WEST(ii)]
+            && (b.board[b.WEST(ii)] === color
+              || (b.board[b.WEST(ii)] === colors.EMPTY
+                && b.ON_BOARD(b.SW(ii)) && b.board[b.SW(ii)] !== other
+                && b.ON_BOARD(b.WW(ii)) && b.board[b.WW(ii)] !== other
+                && b.ON_BOARD(b.NW(ii)) && b.board[b.NW(ii)] !== other))){
+            ENQUEUE(b.WEST(ii));
+          }
+
+          if (b.ON_BOARD(b.NORTH(ii))
+            && !mx[b.NORTH(ii)]
+            && (b.board[b.NORTH(ii)] === color
+              || (b.board[b.NORTH(ii)] === colors.EMPTY
+                && b.ON_BOARD(b.NW(ii)) && b.board[b.NW(ii)] !== other
+                && b.ON_BOARD(b.NN(ii)) && b.board[b.NN(ii)] !== other
+                && b.ON_BOARD(b.NE(ii)) && b.board[b.NE(ii)] !== other))){
+            ENQUEUE(b.NORTH(ii));
+          }
+
+          if (b.ON_BOARD(b.EAST(ii))
+            && !mx[b.EAST(ii)]
+            && (b.board[b.EAST(ii)] === color
+              || (b.board[b.EAST(ii)] === colors.EMPTY
+                && b.ON_BOARD(b.NE(ii)) && b.board[b.NE(ii)] !== other
+                && b.ON_BOARD(b.EE(ii)) && b.board[b.EE(ii)] !== other
+                && b.ON_BOARD(b.SE(ii)) && b.board[b.SE(ii)] !== other))){
+            ENQUEUE(b.EAST(ii));
+          }
+
+          /* For distance one intersections, allow kosumi to move out. I.e.
+           *
+           * ??..
+           * X.*.
+           * ?O.?
+           * ??X?
+           *
+           */
+          if (distance === 0) {
+            if (b.board[b.SOUTH(ii)] === colors.EMPTY
+              && b.board[b.WEST(ii)] === colors.EMPTY
+              && !mx[b.SW(ii)]
+              && (b.board[b.SW(ii)] === color
+                || (b.board[b.SW(ii)] === colors.EMPTY
+                  && b.ON_BOARD(b.SOUTH(b.SW(ii)))
+                  && b.board[b.SOUTH(b.SW(ii))] !== other
+                  && b.ON_BOARD(b.WEST(b.SW(ii)))
+                  && b.board[b.WEST(b.SW(ii))] !== other))){
+              ENQUEUE(b.SW(ii));
+            }
+
+            if (b.board[b.WEST(ii)] === colors.EMPTY
+              && b.board[b.NORTH(ii)] === colors.EMPTY
+              && !mx[b.NW(ii)]
+              && (b.board[b.NW(ii)] === color
+                || (b.board[b.NW(ii)] === colors.EMPTY
+                  && b.ON_BOARD(b.WEST(b.NW(ii)))
+                  && b.board[b.WEST(b.NW(ii))] !== other
+                  && b.ON_BOARD(b.NORTH(b.NW(ii)))
+                  && b.board[b.NORTH(b.NW(ii))] !== other))){
+              ENQUEUE(b.NW(ii));
+            }
+
+            if (b.board[b.NORTH(ii)] === colors.EMPTY
+              && b.board[b.EAST(ii)] === colors.EMPTY
+              && !mx[b.NE(ii)]
+              && (b.board[b.NE(ii)] === color
+                || (b.board[b.NE(ii)] === colors.EMPTY
+                  && b.ON_BOARD(b.NORTH(b.NE(ii)))
+                  && b.board[b.NORTH(b.NE(ii))] !== other
+                  && b.ON_BOARD(b.EAST(b.NE(ii)))
+                  && b.board[b.EAST(b.NE(ii))] !== other))){
+              ENQUEUE(b.NE(ii));
+            }
+
+            if (b.board[b.EAST(ii)] === colors.EMPTY
+              && b.board[b.SOUTH(ii)] === colors.EMPTY
+              && !mx[b.SE(ii)]
+              && (b.board[b.SE(ii)] === color
+                || (b.board[b.SE(ii)] === colors.EMPTY
+                  && b.ON_BOARD(b.EAST(b.SE(ii)))
+                  && b.board[b.EAST(b.SE(ii))] !== other
+                  && b.ON_BOARD(b.SOUTH(b.SE(ii)))
+                  && b.board[b.SOUTH(b.SE(ii))] !== other))){
+              ENQUEUE(b.SE(ii));
+            }
+          }
+        }
+      }
+    }
+
+    /* Reset used mx cells. */
+    for (k = 0; k < queue_end; k++) {
+      /* The assertion fails if the same element should have been queued
+       * twice, which might happen if ENQUEUE() is called without
+       * checking mx[].
+       */
+      b.ASSERT1(mx[queue[k]] === 1, queue[k]);
+      mx[queue[k]] = 0;
+    }
+
+    return escape_potential;
+  },
+
+
+  /* Wrapper to call the function above and compute the escape potential
+   * for the dragon at (pos).
+   */
+  compute_escape (pos, dragon_status_known) {
+    let ii;
+    let goal = [];
+    let escape_value = [];
+    let safe_stones = [];
+    const b = this.board
+
+    b.ASSERT1(b.IS_STONE(b.board[pos]), pos);
+
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
+      if (b.ON_BOARD(ii)){
+        goal[ii] = this.is_same_dragon(ii, pos);
+      }
+    }
+
+    /* Compute escape_value array.  Points are awarded for moyo (4),
+     * area (2) or EMPTY (1).  Values may change without notice.
+     */
+    this.get_lively_stones(b.OTHER_COLOR(b.board[pos]), safe_stones);
+    this.compute_escape_influence(b.board[pos], safe_stones, null, 0, escape_value);
+
+    /* If we can reach a live group, award 6 points. */
+    for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++) {
+      if (!b.ON_BOARD(ii)) {
+        continue;
+      }
+
+      if (dragon_status_known) {
+        if (this.dragon[ii].crude_status === dragon_status.ALIVE) {
+          escape_value[ii] = 6;
+        }
+        else if (this.dragon[ii].crude_status === dragon_status.UNKNOWN &&
+          (this.DRAGON2(ii).escape_route > 5   || this.DRAGON2(ii).moyo_size  > 5)) {
+          escape_value[ii] = 4;
+        }
+      }
+      else {
+        if (b.board[ii] === b.board[pos] && !goal[ii] && this.worm[ii].attack_codes[0] === 0){
+          escape_value[ii] = 2;
+        }
+      }
+    }
+
+    return this.dragon_escape(goal, b.board[pos], escape_value);
+  },
+
+  /*
+   * Sum up the surrounding moyo sizes for each dragon. For this
+   * we retrieve the moyo data stored in influence_data (*q) (which must
+   * have been computed previously) from the influence module.
+   * We set dragon2[].moyo_size and .moyo_value if it is smaller than the
+   * current entry.
+   *
+   * Currently this is implemented differently depending on whether
+   * experimental connections are used or not. The reason why this is
+   * needed is that most of the B patterns in conn.db are disabled for
+   * experimental connections, which may cause the moyo segmentation to
+   * pass through cutting points between dragons, making the surrounding
+   * moyo size mostly useless. Instead we only use the part of the
+   * surrounding moyo which is closest to some worm of the dragon.
+   */
+  compute_surrounding_moyo_sizes (q) {
+    let pos;
+    let d;
+    let k;
+    let moyo_color;
+    const b = this.board
+    let moyo_sizes = [];
+    let moyo_values = [];
+
+
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      moyo_sizes[pos] = 0.0;
+      moyo_values[pos] = 0.0;
+    }
+
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (!b.ON_BOARD(pos)) {
+        continue;
+      }
+      moyo_color = this.whose_moyo_restricted(q, pos);
+
+      if (moyo_color === b.board[pos]){
+        continue;
+      }
+
+      if (moyo_color === colors.WHITE) {
+        for (k = 0; k < this.number_close_white_worms[pos]; k++) {
+          let w = this.close_white_worms[pos][k];
+          let dr = this.dragon[w].origin;
+
+          moyo_sizes[dr] += 1.0 / this.number_close_white_worms[pos];
+          moyo_values[dr] += Math.min(this.influence_territory(q, pos, colors.WHITE), 1.0) / this.number_close_white_worms[pos];
+        }
+      }
+
+      if (moyo_color === colors.BLACK) {
+        for (k = 0; k < this.number_close_black_worms[pos]; k++) {
+          let w = this.close_black_worms[pos][k];
+          let dr = this.dragon[w].origin;
+
+          moyo_sizes[dr] += 1.0 / this.number_close_black_worms[pos];
+          moyo_values[dr] += Math.min(this.influence_territory(q, pos, colors.BLACK), 1.0) / this.number_close_black_worms[pos];
+        }
+      }
+    }
+
+    for (d = 0; d < this.number_of_dragons; d++) {
+      let this_moyo_size = moyo_sizes[this.dragon2[d].origin];
+      let this_moyo_value = moyo_values[this.dragon2[d].origin];
+
+      if (this_moyo_size < this.dragon2[d].moyo_size) {
+        this.dragon2[d].moyo_size = this_moyo_size;
+        this.dragon2[d].moyo_territorial_value = this_moyo_value;
+      }
+    }
+  },
   crude_dragon_weakness () {},
-  compute_dragon_weakness_value () {},
-  compute_refined_dragon_weaknesses () {},
+
+  /* This function tries to guess a coefficient measuring the weakness of
+   * a dragon. This coefficient * the effective size of the dragon can be
+   * used to award a strategic penalty for weak dragons.
+   */
+  compute_dragon_weakness_value (d) {
+    // let origin = this.dragon2[d].origin;
+    /* Possible ingredients for the computation:
+     * 	'+' means currently used, '-' means not (yet?) used
+     * - pre-owl moyo_size
+     * + post-owl moyo_size and its territory value
+     * + escape factor
+     * + number of eyes
+     *   - minus number of vital attack moves?
+     * + from owl:
+     *   + attack certain?
+     *   - number of owl nodes
+     *   - maybe reading shadow?
+     *   + threat to attack?
+     * - possible connections to neighbour dragons
+     */
+
+    // DEBUG(DEBUG_DRAGONS, "Computing weakness of dragon at %1m:\n", origin);
+
+    let weakness = this.crude_dragon_weakness(this.dragon2[d].safety, this.dragon2[d].genus,
+      this.dragon2[d].lunch !== NO_MOVE, this.dragon2[d].moyo_territorial_value, this.dragon2[d].escape_route);
+
+    /* Now corrections due to (uncertain) owl results resp. owl threats. */
+    if (!this.dragon2[d].owl_attack_certain){
+      weakness += Math.min(0.25 * (1.0 - weakness), 0.25 * weakness);
+    }
+    if (!this.dragon2[d].owl_defense_certain){
+      weakness += Math.min(0.25 * (1.0 - weakness), 0.25 * weakness);
+    }
+    if (this.dragon2[d].owl_threat_status === dragon_status.CAN_THREATEN_ATTACK){
+      weakness += 0.15 * (1.0 - weakness);
+    }
+
+    if (weakness < 0.0){
+      weakness = 0.0;
+    }
+    if (weakness > 1.0){
+      weakness = 1.0;
+    }
+
+    // DEBUG(DEBUG_DRAGONS, " result: %f.\n", weakness);
+    return weakness;
+  },
+
+  /* This function has to be called _after_ the owl analysis and the
+   * subsequent re-run of the influence code.
+   */
+  compute_refined_dragon_weaknesses () {
+    let d;
+
+    /* Compute the surrounding moyo sizes. */
+    for (d = 0; d < this.number_of_dragons; d++) {
+      this.dragon2[d].moyo_size = 2 * this.board.BOARDMAX;
+    }
+
+    /* Set moyo sizes according to initial_influence. */
+    this.compute_surrounding_moyo_sizes(initial_black_influence);
+    this.compute_surrounding_moyo_sizes(initial_white_influence);
+
+    for (d = 0; d < this.number_of_dragons; d++) {
+      this.dragon2[d].weakness = this.compute_dragon_weakness_value(d);
+    }
+  },
   compute_strategic_sizes () {},
-  is_same_dragon () {},
+
+  /*
+ * Test whether two dragons are the same. Used by autohelpers and elsewhere.
+ */
+  is_same_dragon (d1, d2) {
+    if (d1 === NO_MOVE || d2 === NO_MOVE){
+      return (d1 === d2);
+    }
+
+    this.board.ASSERT_ON_BOARD1(d1);
+    this.board.ASSERT_ON_BOARD1(d2);
+
+    return this.dragon[d1].origin === this.dragon[d2].origin
+  },
   are_neighbor_dragons () {},
   mark_dragon () {},
   first_worm_in_dragon () {},
