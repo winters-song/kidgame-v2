@@ -953,7 +953,19 @@ export const Worm = {
   },
 
   change_attack_threat() {},
-  change_defense_threat() {},
+
+  /*
+   * change_defense_threat(str, move, dcode) is used to add and remove
+   * defense threat points. It can also be used to change the defense
+   * threat code. The meaning of the call is that the string (str) can
+   * threaten to be defended by (move) with defense threat code (dcode).
+   * If (dcode) is zero, the move is removed from the list of defense
+   * threat moves if it was previously listed.
+   */
+  change_defense_threat(str, move, dcode) {
+    str = this.worm[str].origin;
+    this.change_tactical_point(str, move, dcode, this.worm[str].defense_threat_points, this.worm[str].defense_threat_codes);
+  },
 
   attack_move_known(move, str) {
     return this.movelist_move_known(move, MAX_TACTICAL_POINTS,

@@ -11,18 +11,18 @@ const MAX_READING_CACHE_DEPTH = 5
 const MAX_READING_CACHE_SIZE = 100
 
 
-// const MAX_OWL_CACHE_DEPTH = 0
-// const MAX_OWL_CACHE_SIZE = 150
-//
-// const MAX_CONNECTION_CACHE_DEPTH = 5
-// const MAX_CONNECTION_CACHE_SIZE = 100
-//
-// const MAX_BREAKIN_CACHE_DEPTH = 1
-// const MAX_BREAKIN_CACHE_SIZE = 150
-//
-// const MAX_SEMEAI_CACHE_DEPTH = 0
-// const MAX_SEMEAI_CACHE_SIZE = 150
-//
+const MAX_OWL_CACHE_DEPTH = 0
+const MAX_OWL_CACHE_SIZE = 150
+
+const MAX_CONNECTION_CACHE_DEPTH = 5
+const MAX_CONNECTION_CACHE_SIZE = 100
+
+const MAX_BREAKIN_CACHE_DEPTH = 1
+const MAX_BREAKIN_CACHE_SIZE = 150
+
+const MAX_SEMEAI_CACHE_DEPTH = 0
+const MAX_SEMEAI_CACHE_SIZE = 150
+
 const MAX_CACHE_DEPTH = 	5
 
 
@@ -57,34 +57,50 @@ class PersistentCacheEntry {
 }
 
 class PersistentCache {
-  constructor(cfg) {
-    Object.assign(this, cfg)
+  max_size; /* Size of above array. */
+  max_stackp; /* Don't store positions with stackp > max_stackp. */
+  age_factor; /* Reduce value of old entries with this factor. */
+  name; /* For debugging purposes. */
+  compute_active_area;
+  table; /* Array of actual results. */
+  current_size; /* Current number of entries. */
+  last_purge_position_number;
 
-    this.table = []
+  constructor(arr) {
+    this.max_size = arr[0]
+    this.max_stackp = arr[1]
+    this.age_factor = arr[2]
+    this.name = arr[3]
+    this.compute_active_area = arr[4]
+    this.table = arr[5]
+    this.current_size = arr[6]
+
+    this.last_purge_position_number = arr[7]
   }
-  // const int max_size; /* Size of above array. */
-  // const int max_stackp; /* Don't store positions with stackp > max_stackp. */
-  // const float age_factor; /* Reduce value of old entries with this factor. */
-  // const char *name; /* For debugging purposes. */
-  // const compute_active_area_fn compute_active_area;
-  // struct persistent_cache_entry *table; /* Array of actual results. */
-  // int current_size; /* Current number of entries. */
-  // int last_purge_position_number;
 };
 
-
 export const Persistent = {
+
   persistent_cache_init() {
-    this.reading_cache = new PersistentCache({
-      max_size: MAX_READING_CACHE_SIZE,
-      max_stackp : MAX_READING_CACHE_DEPTH,
-      age_factor: 1.0,
-      name: "reading cache",
-      compute_active_area: this.compute_active_reading_area.bind(this),
-      // table : null,
-      current_size: 0,
-      last_purge_position_number: -1
-    })
+    this.reading_cache = new PersistentCache([
+      MAX_READING_CACHE_SIZE, MAX_READING_CACHE_DEPTH, 1.0,
+      "reading cache", this.compute_active_reading_area, [], 0, -1 ])
+
+    this.connection_cache = new PersistentCache([
+      MAX_CONNECTION_CACHE_SIZE, MAX_CONNECTION_CACHE_DEPTH, 1.0,
+        "connection cache", this.compute_active_connection_area, [], 0, -1 ]);
+
+    this.breakin_cache = new PersistentCache([
+      MAX_BREAKIN_CACHE_SIZE, MAX_BREAKIN_CACHE_DEPTH, 0.75,
+      "breakin cache", this.compute_active_breakin_area, [], 0, -1 ]);
+
+    this.owl_cache = new PersistentCache([
+      MAX_OWL_CACHE_SIZE, MAX_OWL_CACHE_DEPTH, 1.0,
+      "owl cache", this.compute_active_owl_area, [], 0, -1 ]);
+
+    this.semeai_cache = new PersistentCache([
+      MAX_SEMEAI_CACHE_SIZE, MAX_SEMEAI_CACHE_DEPTH, 0.75,
+      "semeai cache", this.compute_active_semeai_area, [], 0, -1 ])
   },
 
 
@@ -116,13 +132,14 @@ export const Persistent = {
 
   find_persistent_cache_entry(cache, routine, apos, bpos, cpos, color, goal_hash, node_limit) {
     for (let k = 0; k < cache.current_size; k++) {
-      let entry = cache.table + k;
-      if (entry.routine === routine && entry.apos === apos&& entry.bpos === bpos&& entry.cpos === cpos
+      let entry = cache.table[k];
+      if (entry.routine === routine && entry.apos === apos && entry.bpos === bpos && entry.cpos === cpos
         && entry.color === color && this.depth - this.board.stackp <= entry.remaining_depth
         && (entry.node_limit >= node_limit || entry.result_certain)
         && (goal_hash === null || HashData.is_equal(entry.goal_hash, goal_hash))
-        && this.verify_stored_board(entry.board))
+        && this.verify_stored_board(entry.board)){
           return entry;
+      }
     }
   },
 
@@ -136,14 +153,19 @@ export const Persistent = {
 
     /* Set return values. */
     result[0] = entry.result;
-    if (result2)
+    if (result2){
       result2[0] = entry.result2;
-    if (move)
+    }
+    if (move){
       move[0] = entry.move;
-    if (move2)
+    }
+    if (move2){
       move2[0] = entry.move2;
-    if (certain)
+    }
+    if (certain){
       certain[0] = entry.result_certain;
+    }
+
 
     /* Increase score for entry. */
     entry.score += entry.cost;
@@ -220,7 +242,7 @@ export const Persistent = {
     }
 
     /* Remains to set the board. */
-    cache.compute_active_area(cache.table[cache.current_size], goal, goal_color);
+    cache.compute_active_area.call(this, cache.table[cache.current_size], goal, goal_color);
     cache.current_size++;
 
     // if (debug & DEBUG_PERSISTENT_CACHE) {
@@ -254,8 +276,6 @@ export const Persistent = {
   compute_active_reading_area(entry, goal, dummy){
     const b = this.board
     const active = [];
-    // UNUSED(dummy);
-
     /* Remains to set the board. We let the active area be the contested
     * string and reading shadow + adjacent empty and strings +
     * neighbors of active area so far + one more expansion from empty
@@ -372,8 +392,16 @@ export const Persistent = {
   /* ================================================================ */
   /*                    Owl reading functions                         */
   /* ================================================================ */
-  search_persistent_owl_cache() {},
-  store_persistent_owl_cache() {},
+  search_persistent_owl_cache(routine, apos, bpos, cpos, result, move, move2, certain) {
+    return this.search_persistent_cache(this.owl_cache,
+      routine, apos, bpos, cpos, colors.EMPTY, null,
+      this.owl_node_limit, result, null, move, move2, certain);
+  },
+  store_persistent_owl_cache(routine, apos, bpos, cpos, result, move, move2, certain, tactical_nodes, goal, goal_color) {
+    this.store_persistent_cache(this.owl_cache, routine, apos, bpos, cpos, colors.EMPTY, null,
+      result, NO_MOVE, move, move2, certain, this.owl_node_limit,
+      tactical_nodes, goal, goal_color);
+  },
   compute_active_owl_type_area() {},
   compute_active_owl_area() {},
 

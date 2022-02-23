@@ -1,6 +1,7 @@
 import {dragon_status, EyeValue, HalfEyeData} from "./Liberty";
-import {colors, NO_MOVE, SURROUNDED, WEAKLY_SURROUNDED} from "./Constants";
+import {codes, colors, InterpolationData, NO_MOVE, SURROUNDED, WEAKLY_SURROUNDED} from "./Constants";
 import {initial_black_influence, initial_white_influence} from "./Influence";
+import {gg_interpolate} from "./GgUtils";
 
 /* A "dragon" is a union of strings of the same color which will be
  * treated as a unit. The dragons are generated anew at each
@@ -87,6 +88,13 @@ class DragonData2 {
 let dragon2_initialized;
 // let lively_white_dragons;
 // let lively_black_dragons;
+
+
+
+let moyo_value2weakness = new InterpolationData([ 5, 0.0, 15.0, [1.0, 0.65, 0.3, 0.15, 0.05, 0.0]])
+let escape_route2weakness = new InterpolationData([ 5, 0.0, 25.0, [1.0, 0.6, 0.3, 0.1, 0.05, 0.0]])
+let genus2weakness = new InterpolationData([  6, 0.0, 3.0, [1.0, 0.95, 0.8, 0.5, 0.2, 0.1, 0.0]])
+
 
 /* This basic function finds all dragons and collects some basic information
  * about them in the dragon array.
@@ -205,102 +213,100 @@ export const Dragon = {
       return;
     }
 
-    // /* Determine life and death status of each dragon using the owl code
-    //  * if necessary.
-    //  */
-    // // start_timer(2);
-    // for (let str = b.BOARDMIN; str < b.BOARDMAX; str++)
-    //   if (b.ON_BOARD(str)) {
-    //     let attack_point = NO_MOVE;
-    //     let defense_point = NO_MOVE;
-    //     let no_eyes;
-    //     this.set_eyevalue(no_eyes, 0, 0, 0, 0);
+    /* Determine life and death status of each dragon using the owl code
+     * if necessary.
+     */
+    // start_timer(2);
+    for (let str = b.BOARDMIN; str < b.BOARDMAX; str++)
+      if (b.ON_BOARD(str)) {
+        let attack_point = NO_MOVE;
+        let defense_point = NO_MOVE;
+        let no_eyes = new EyeValue();
 
-    //     if (b.board[str] === colors.EMPTY || this.dragon[str].origin !== str){
-    //       continue;
-    //     }
+        if (b.board[str] === colors.EMPTY || this.dragon[str].origin !== str){
+          continue;
+        }
 
-    //     /* Some dragons can be ignored but be extra careful with big dragons. */
-    //     if (crude_dragon_weakness(ALIVE, no_eyes, 0,
-    //       this.DRAGON2(str).moyo_territorial_value,
-    //       this.DRAGON2(str).escape_route - 10) <
-    //       0.00001 + Math.max(0.12, 0.32 - 0.01* this.dragon[str].effective_size)) {
-    //       this.DRAGON2(str).owl_status = dragon_status.UNCHECKED;
-    //       this.DRAGON2(str).owl_attack_point  = NO_MOVE;
-    //       this.DRAGON2(str).owl_defense_point = NO_MOVE;
-    //     }
-    //   else {
-    //       let acode = 0;
-    //       let dcode = 0;
-    //       let kworm = NO_MOVE;
-    //       let owl_nodes_before = this.get_owl_node_counter();
-    //       // start_timer(3);
-    //       acode = this.owl_attack(str, this.attack_point, this.DRAGON2(str).owl_attack_certain, this.kworm);
-    //       this.DRAGON2(str).owl_attack_node_count = this.get_owl_node_counter() - owl_nodes_before;
-    //       if (acode !== 0) {
-    //         this.DRAGON2(str).owl_attack_point = attack_point;
-    //         this.DRAGON2(str).owl_attack_code = acode;
-    //         this.DRAGON2(str).owl_attack_kworm = kworm;
-    //         if (attack_point !== NO_MOVE) {
-    //           kworm = NO_MOVE;
-    //           dcode = this.owl_defend(str, this.defense_point, this.DRAGON2(str).owl_defense_certain, this.kworm);
-    //           if (dcode !== 0) {
-    //             if (defense_point !== NO_MOVE) {
-    //               this.DRAGON2(str).owl_status = (acode === codes.GAIN ? dragon_status.ALIVE : dragon_status.CRITICAL);
-    //               this.DRAGON2(str).owl_defense_point = defense_point;
-    //               this.DRAGON2(str).owl_defense_code = dcode;
-    //               this.DRAGON2(str).owl_defense_kworm = kworm;
-    //             }
-    //             else {
-    //               /* Due to irregularities in the owl code, it may
-    //                * occasionally happen that a dragon is found to be
-    //                * attackable but also alive as it stands. In this case
-    //                * we still choose to say that the owl_status is
-    //                * CRITICAL, although we don't have any defense move to
-    //                * propose. Having the status right is important e.g.
-    //                * for connection moves to be properly valued.
-    //                */
-    //               this.DRAGON2(str).owl_status = (acode === codes.GAIN ? dragon_status.ALIVE : dragon_status.CRITICAL);
-    //               // DEBUG(DEBUG_OWL_PERFORMANCE,
-    //               //   "Inconsistent owl attack and defense results for %1m.\n",
-    //               //   str);
-    //               /* Let's see whether the attacking move might be the right
-    //                * defense:
-    //                */
-    //               dcode = this.owl_does_defend(this.DRAGON2(str).owl_attack_point, str, null);
-    //               if (dcode !== 0) {
-    //                 this.DRAGON2(str).owl_defense_point = this.DRAGON2(str).owl_attack_point;
-    //                 this.DRAGON2(str).owl_defense_code = dcode;
-    //               }
-    //             }
-    //           }
-    //         }
-    //         if (dcode === 0) {
-    //           this.DRAGON2(str).owl_status = dragon_status.DEAD;
-    //           this.DRAGON2(str).owl_defense_point = NO_MOVE;
-    //           this.DRAGON2(str).owl_defense_code = 0;
-    //         }
-    //       }
-    //       else {
-    //         if (!DRAGON2(str).owl_attack_certain) {
-    //           kworm = NO_MOVE;
-    //           dcode = this.owl_defend(str, this.defense_point,
-    //         this.DRAGON2(str).owl_defense_certain, this.kworm);
-    //           if (dcode !== 0) {
-    //             /* If the result of owl_attack was not certain, we may
-    //              * still want the result of owl_defend */
-    //             this.DRAGON2(str).owl_defense_point = defense_point;
-    //             this.DRAGON2(str).owl_defense_code = dcode;
-    //             this.DRAGON2(str).owl_defense_kworm = kworm;
-    //           }
-    //         }
-    //         this.DRAGON2(str).owl_status = dragon_status.ALIVE;
-    //         this.DRAGON2(str).owl_attack_point = NO_MOVE;
-    //         this.DRAGON2(str).owl_attack_code = 0;
+        /* Some dragons can be ignored but be extra careful with big dragons. */
+        if (this.crude_dragon_weakness(dragon_status.ALIVE, no_eyes, 0,
+          this.DRAGON2(str).moyo_territorial_value,
+          this.DRAGON2(str).escape_route - 10) <
+          0.00001 + Math.max(0.12, 0.32 - 0.01* this.dragon[str].effective_size)) {
+          this.DRAGON2(str).owl_status = dragon_status.UNCHECKED;
+          this.DRAGON2(str).owl_attack_point  = NO_MOVE;
+          this.DRAGON2(str).owl_defense_point = NO_MOVE;
+        }
+        else {
+          let acode = 0;
+          let dcode = 0;
+          let kworm = NO_MOVE;
+          let owl_nodes_before = this.get_owl_node_counter();
+          // start_timer(3);
+          acode = this.owl_attack(str, this.attack_point, this.DRAGON2(str).owl_attack_certain, this.kworm);
+          this.DRAGON2(str).owl_attack_node_count = this.get_owl_node_counter() - owl_nodes_before;
+          if (acode !== 0) {
+            this.DRAGON2(str).owl_attack_point = attack_point;
+            this.DRAGON2(str).owl_attack_code = acode;
+            this.DRAGON2(str).owl_attack_kworm = kworm;
+            if (attack_point !== NO_MOVE) {
+              kworm = NO_MOVE;
+              dcode = this.owl_defend(str, this.defense_point, this.DRAGON2(str).owl_defense_certain, this.kworm);
+              if (dcode !== 0) {
+                if (defense_point !== NO_MOVE) {
+                  this.DRAGON2(str).owl_status = (acode === codes.GAIN ? dragon_status.ALIVE : dragon_status.CRITICAL);
+                  this.DRAGON2(str).owl_defense_point = defense_point;
+                  this.DRAGON2(str).owl_defense_code = dcode;
+                  this.DRAGON2(str).owl_defense_kworm = kworm;
+                }
+                else {
+                  /* Due to irregularities in the owl code, it may
+                   * occasionally happen that a dragon is found to be
+                   * attackable but also alive as it stands. In this case
+                   * we still choose to say that the owl_status is
+                   * CRITICAL, although we don't have any defense move to
+                   * propose. Having the status right is important e.g.
+                   * for connection moves to be properly valued.
+                   */
+                  this.DRAGON2(str).owl_status = (acode === codes.GAIN ? dragon_status.ALIVE : dragon_status.CRITICAL);
+                  // DEBUG(DEBUG_OWL_PERFORMANCE,
+                  //   "Inconsistent owl attack and defense results for %1m.\n",
+                  //   str);
+                  /* Let's see whether the attacking move might be the right
+                   * defense:
+                   */
+                  dcode = this.owl_does_defend(this.DRAGON2(str).owl_attack_point, str, null);
+                  if (dcode !== 0) {
+                    this.DRAGON2(str).owl_defense_point = this.DRAGON2(str).owl_attack_point;
+                    this.DRAGON2(str).owl_defense_code = dcode;
+                  }
+                }
+              }
+            }
+            if (dcode === 0) {
+              this.DRAGON2(str).owl_status = dragon_status.DEAD;
+              this.DRAGON2(str).owl_defense_point = NO_MOVE;
+              this.DRAGON2(str).owl_defense_code = 0;
+            }
+          }
+          else {
+            if (!this.DRAGON2(str).owl_attack_certain) {
+              kworm = NO_MOVE;
+              dcode = this.owl_defend(str, this.defense_point, this.DRAGON2(str).owl_defense_certain, this.kworm);
+              if (dcode !== 0) {
+                /* If the result of owl_attack was not certain, we may
+                 * still want the result of owl_defend */
+                this.DRAGON2(str).owl_defense_point = defense_point;
+                this.DRAGON2(str).owl_defense_code = dcode;
+                this.DRAGON2(str).owl_defense_kworm = kworm;
+              }
+            }
+            this.DRAGON2(str).owl_status = dragon_status.ALIVE;
+            this.DRAGON2(str).owl_attack_point = NO_MOVE;
+            this.DRAGON2(str).owl_attack_code = 0;
 
-    //       }
-    //     }
-    //   }
+          }
+        }
+      }
     // // time_report(2, "  owl reading", NO_MOVE, 1.0);
 
     // /* Compute the status to be used by the matcher. We most trust the
@@ -500,7 +506,7 @@ export const Dragon = {
       }
 
       if (this.black_eye[str].color === colors.BLACK && this.black_eye[str].origin === str) {
-        let value = []
+        let value = new EyeValue()
         let attack_point = []
         let defense_point = []
 
@@ -511,7 +517,7 @@ export const Dragon = {
       }
 
       if (this.white_eye[str].color === colors.WHITE && this.white_eye[str].origin === str) {
-        let value = []
+        let value = new EyeValue()
         let attack_point = []
         let defense_point = []
 
@@ -602,7 +608,7 @@ export const Dragon = {
     /* Initialize the rest of the dragon2 data. */
     for (d = 0; d < this.number_of_dragons; d++) {
       this.dragon2[d] = new DragonData2({
-        genus: new EyeValue({a:0, b:0, c:0, d: 0})
+        genus: new EyeValue()
       })
     }
 
@@ -807,7 +813,7 @@ export const Dragon = {
     b.ASSERT1(b.IS_STONE(b.board[d]), d);
     b.ASSERT1(eye_to_exclude === NO_MOVE || b.ON_BOARD1(eye_to_exclude));
 
-    this.set_eyevalue(genus, 0, 0, 0, 0);
+    // this.set_eyevalue(genus, 0, 0, 0, 0);
 
     if (b.board[d] === colors.BLACK) {
       for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
@@ -1380,7 +1386,48 @@ export const Dragon = {
       }
     }
   },
-  crude_dragon_weakness () {},
+
+  crude_dragon_weakness (safety, genus, has_lunch, moyo_value, escape_route) {
+    /* FIXME: We lose information when constructing true_genus. This
+     * code can be improved.
+     */
+    let true_genus = 0.5 * (this.max_eyes(genus) + this.min_eyes(genus) + (has_lunch !== 0));
+    let weakness_value = [];
+    let weakness;
+
+    if (safety === dragon_status.INVINCIBLE || safety === dragon_status.INESSENTIAL){
+      return 0.0;
+    }
+    if (safety === dragon_status.TACTICALLY_DEAD || safety === dragon_status.DEAD || safety === dragon_status.CRITICAL){
+      return 1.0;
+    }
+
+    weakness_value[0] = gg_interpolate(moyo_value2weakness, moyo_value);
+    weakness_value[1] = gg_interpolate(escape_route2weakness, escape_route);
+    weakness_value[2] = gg_interpolate(genus2weakness, true_genus);
+
+    // DEBUG(DEBUG_DRAGONS, "  moyo value %f -> %f, escape %f -> %f, eyes %f -> %f\n",
+    //   moyo_value, weakness_value[0], escape_route, weakness_value[1], true_genus, weakness_value[2]);
+
+    for (let i = 0; i < 3; i++){
+      for (let j = i + 1; j < 3; j++){
+        if (weakness_value[j] < weakness_value[i]) {
+          let tmp = weakness_value[i];
+          weakness_value[i] = weakness_value[j];
+          weakness_value[j] = tmp;
+        }
+      }
+    }
+
+    /* The overall weakness is mostly, but not completely determined by the
+     * best value found so far:
+     */
+    weakness = Math.min(0.7 * weakness_value[0] + 0.3 * weakness_value[1], 1.3 * weakness_value[0]);
+
+    this.board.ASSERT1(weakness >= 0.0 && weakness <= 1.0);
+
+    return weakness;
+  },
 
   /* This function tries to guess a coefficient measuring the weakness of
    * a dragon. This coefficient * the effective size of the dragon can be

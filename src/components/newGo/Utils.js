@@ -39,14 +39,6 @@ const BREAKIN_DEPTH	     = 14
 
 export const Utils = {
 
-  increase_depth_values () {
-    this.modify_depth_values(1);
-  },
-
-  decrease_depth_values () {
-    this.modify_depth_values(-1);
-  },
-
   change_dragon_status() {},
   defend_against(){},
 
@@ -592,29 +584,135 @@ export const Utils = {
     this.depth_modification += n;
   },
 
-  start_timer(n) {
-    if(n >= 0 && n < NUMBER_OF_TIMERS){
-      if (!this.showtime)
-        return;
 
-      timers[n] = Date.now();
+  increase_depth_values () {
+    this.modify_depth_values(1);
+  },
+
+  decrease_depth_values () {
+    this.modify_depth_values(-1);
+  },
+
+  get_depth_modification() {
+    return this.depth_modification;
+  },
+
+  confirm_safety() {},
+  blunder_size() {},
+  detect_owl_blunder() {},
+  detect_tactical_blunder() {},
+  double_atari() {},
+  playing_into_snapback() {},
+
+  /* Add a new string to a superstring. Record stones, liberties, and
+   * adjacent strings as asked for.
+   */
+  superstring_add_string(str, num_my_stones, my_stones,
+    num_stones, stones, num_libs, libs, maxlibs,num_adj, adjs, liberty_cap, mx, ml, ma, do_add) {
+    const b = this.board
+
+    b.ASSERT1(mx[str] === 0, str);
+
+    /* Pick up the stones of the new string. */
+    let new_stones = b.findstones(str, b.board_size * b.board_size, my_stones);
+
+    b.mark_string(str, mx, 1);
+    if (stones) {
+      // gg_assert(num_stones);
+      for (let k = 0; k < new_stones; k++) {
+        if (do_add) {
+          stones[num_stones[0]] = my_stones[num_my_stones[0] + k];
+          num_stones[0]++;
+        }
+      }
+    }
+    num_my_stones[0] += new_stones;
+
+    /* Pick up the liberties of the new string. */
+    if (libs) {
+      // gg_assert(num_libs);
+      /* Get the liberties of the string. */
+      let my_libs = [];
+      let num_my_libs = b.findlib(str, b.MAXLIBS, my_libs);
+
+      /* Remove this string from the superstring if it has too many
+       * liberties.
+       */
+      if (liberty_cap > 0 && num_my_libs > liberty_cap){
+        num_my_stones[0] -= new_stones;
+      }
+
+      for (let k = 0; k < num_my_libs; k++) {
+        if (ml[my_libs[k]]){
+          continue;
+        }
+        ml[my_libs[k]] = 1;
+        if (do_add && (liberty_cap === 0 || num_my_libs <= liberty_cap)) {
+          libs[num_libs[0]] = my_libs[k];
+          num_libs[0]++;
+          if (num_libs[0] === maxlibs){
+            break;
+          }
+        }
+      }
+    }
+
+    /* Pick up adjacent strings to the new string. */
+    if (adjs) {
+      // gg_assert(num_adj);
+      let my_adjs = [];
+      let num_my_adj = b.chainlinks(str, my_adjs);
+      for (let k = 0; k < num_my_adj; k++) {
+        if (liberty_cap > 0 && b.countlib(my_adjs[k]) > liberty_cap){
+          continue;
+        }
+        if (ma[my_adjs[k]]){
+          continue;
+        }
+        ma[my_adjs[k]] = 1;
+        if (do_add) {
+          adjs[num_adj[0]] = my_adjs[k];
+          num_adj[0]++;
+        }
+      }
     }
   },
 
-  time_report(n, occupation, move, minTime){
-    if(n >= 0 && n < NUMBER_OF_TIMERS) {
-      if (!this.showtime) {
-        return 0.0;
-      }
+  find_superstring(str, num_stones, stones) {
+    this.do_find_superstring(str, num_stones, stones, null, null, 0, null, null, 0, 0, 1);
+  },
+  /* This is the same as find_superstring, except that connections of
+   * type 5 are omitted. This is used in semeai analysis.
+   */
+  find_superstring_conservative(str, num_stones, stones) {
+    this.do_find_superstring(str, num_stones, stones, null, null, 0, null, null, 0, 0, 0);
+  },
 
-      const now = Date.now();
-      const dt = now - timers[n];
-      if (dt > minTime) {
-        console.log(`${occupation}${move !== NO_MOVE?move: ''}: ${dt} ms`)
-      }
-      timers[n] = now;
-      return dt;
-    }
+  /* This function computes the superstring at (str) as described above,
+   * but omitting connections of type 5. Then it constructs a list of
+   * liberties of the superstring which are not already liberties of
+   * (str).
+   *
+   * If liberty_cap is nonzero, only liberties of substrings of the
+   * superstring which have fewer than liberty_cap liberties are
+   * generated.
+   */
+  // 找到强联络的大龙
+  // liberty_cap： 子串气数限制
+  find_superstring_liberties(str, num_libs, libs, liberty_cap) {
+    this.do_find_superstring(str, null, null, num_libs, libs, this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
+  },
+  find_proper_superstring_liberties(){},
+  find_superstring_stones_and_liberties() {},
+  superstring_chainlinks() {},
+
+  /* analogous to chainlinks, this function finds boundary chains of the
+   * superstring at (str), omitting those which are boundary chains of
+   * (str) itself. If liberty_cap != 0, only those boundary chains with
+   * <= liberty_cap liberties are reported.
+   */
+  proper_superstring_chainlinks(str, num_adj, adjs, liberty_cap) {
+    this.do_find_superstring(str, null, null, null, null, 0, num_adj, adjs, liberty_cap, 1, 2);
   },
 
   /* Find the stones of an extended string, where the extensions are
@@ -648,27 +746,7 @@ export const Utils = {
    *    called from reading.c, but included when the superstring code is
    *    called from owl.c
    */
-
-
-  /* This function computes the superstring at (str) as described above,
-   * but omitting connections of type 5. Then it constructs a list of
-   * liberties of the superstring which are not already liberties of
-   * (str).
-   *
-   * If liberty_cap is nonzero, only liberties of substrings of the
-   * superstring which have fewer than liberty_cap liberties are
-   * generated.
-   */
-  // 找到强联络的大龙
-  // liberty_cap： 子串气数限制
-  find_superstring_liberties(str, num_libs, libs, liberty_cap) {
-    this.do_find_superstring(str, null, null, num_libs, libs, this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
-  },
-  find_proper_superstring_liberties(){},
-  find_superstring_stones_and_liberties() {},
-  superstring_chainlinks() {},
-  proper_superstring_chainlinks() {},
-
+  // 超级串：强连接的多个棋串集（虎口、双、小尖）
   do_find_superstring(str, num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, proper, type) {
     const b = this.board
     const color = b.board[str];
@@ -725,31 +803,38 @@ export const Utils = {
         let gpos = pos + up;
         let unsafe_move;
 
-        if (!b.ON_BOARD(apos))
+        if (!b.ON_BOARD(apos)){
           continue;
+        }
 
         /* Case 1. Nothing to do since stones are added string by string. */
 
         /* Case 2. */
         if (b.board[apos] === colors.EMPTY) {
-          if (type === 2)
+          if (type === 2){
             unsafe_move = b.approxlib(apos, other, 2, null) < 2;
-          else
+          }
+          else {
             unsafe_move = b.is_self_atari(apos, other);
+          }
 
-          if (unsafe_move && type === 1 && b.is_ko(apos, other, null))
+          if (unsafe_move && type === 1 && b.is_ko(apos, other, null)){
             unsafe_move = 0;
+          }
 
           if (unsafe_move) {
-            if (b.board[bpos] === color && !mx[bpos])
+            if (b.board[bpos] === color && !mx[bpos]){
               this.superstring_add_string(bpos, num_my_stones, my_stones,
                 num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
-            if (b.board[cpos] === color && !mx[cpos])
+            }
+            if (b.board[cpos] === color && !mx[cpos]) {
               this.superstring_add_string(cpos, num_my_stones, my_stones,
                 num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
-            if (b.board[dpos] === color && !mx[dpos])
+            }
+            if (b.board[dpos] === color && !mx[dpos]) {
               this.superstring_add_string(dpos, num_my_stones, my_stones,
                 num_stones, stones, num_libs, libs, maxlibs, num_adj, adjs, liberty_cap, mx, ml, ma, 1);
+            }
           }
         }
 
@@ -820,73 +905,28 @@ export const Utils = {
     }
   },
 
-  /* Add a new string to a superstring. Record stones, liberties, and
-   * adjacent strings as asked for.
-   */
-  superstring_add_string(str, num_my_stones, my_stones,
-    num_stones, stones, num_libs, libs, maxlibs,num_adj, adjs, liberty_cap, mx, ml, ma, do_add) {
-    const b = this.board
+  start_timer(n) {
+    if(n >= 0 && n < NUMBER_OF_TIMERS){
+      if (!this.showtime)
+        return;
 
-    b.ASSERT1(mx[str] === 0, str);
-
-    /* Pick up the stones of the new string. */
-    let new_stones = b.findstones(str, b.board_size * b.board_size, my_stones);
-
-    b.mark_string(str, mx, 1);
-    if (stones) {
-      // gg_assert(num_stones);
-      for (let k = 0; k < new_stones; k++) {
-        if (do_add) {
-          stones[num_stones[0]] = my_stones[num_my_stones[0] + k];
-          num_stones[0]++;
-        }
-      }
+      timers[n] = Date.now();
     }
-    num_my_stones[0] += new_stones;
+  },
 
-    /* Pick up the liberties of the new string. */
-    if (libs) {
-      // gg_assert(num_libs);
-      /* Get the liberties of the string. */
-      let my_libs = [];
-      let num_my_libs = b.findlib(str, b.MAXLIBS, my_libs);
-
-      /* Remove this string from the superstring if it has too many
-       * liberties.
-       */
-      if (liberty_cap > 0 && num_my_libs > liberty_cap)
-        num_my_stones[0] -= new_stones;
-
-      for (let k = 0; k < num_my_libs; k++) {
-        if (ml[my_libs[k]])
-          continue;
-        ml[my_libs[k]] = 1;
-        if (do_add && (liberty_cap === 0 || num_my_libs <= liberty_cap)) {
-          libs[num_libs[0]] = my_libs[k];
-          num_libs[0]++;
-          if (num_libs[0] === maxlibs){
-            break;
-          }
-        }
+  time_report(n, occupation, move, minTime){
+    if(n >= 0 && n < NUMBER_OF_TIMERS) {
+      if (!this.showtime) {
+        return 0.0;
       }
-    }
 
-    /* Pick up adjacent strings to the new string. */
-    if (adjs) {
-      // gg_assert(num_adj);
-      let my_adjs = [];
-      let num_my_adj = b.chainlinks(str, my_adjs);
-      for (let k = 0; k < num_my_adj; k++) {
-        if (liberty_cap > 0 && b.countlib(my_adjs[k]) > liberty_cap)
-          continue;
-        if (ma[my_adjs[k]])
-          continue;
-        ma[my_adjs[k]] = 1;
-        if (do_add) {
-          adjs[num_adj[0]] = my_adjs[k];
-          num_adj[0]++;
-        }
+      const now = Date.now();
+      const dt = now - timers[n];
+      if (dt > minTime) {
+        console.log(`${occupation}${move !== NO_MOVE?move: ''}: ${dt} ms`)
       }
+      timers[n] = now;
+      return dt;
     }
-  }
+  },
 }

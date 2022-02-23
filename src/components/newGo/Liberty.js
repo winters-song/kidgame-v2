@@ -86,12 +86,21 @@ export function TRANSFORM2(x, y, tx, ty, trans) {
 
 
 export class EyeValue {
-  a; /* number of eyes if attacker plays first twice */
-  b; /* number of eyes if attacker plays first */
-  c; /* number of eyes if defender plays first */
-  d; /* number of eyes if defender plays first twice */
-  constructor(cfg) {
-    Object.assign(this, cfg)
+  a=0; /* number of eyes if attacker plays first twice */
+  b=0; /* number of eyes if attacker plays first */
+  c=0; /* number of eyes if defender plays first */
+  d=0; /* number of eyes if defender plays first twice */
+  constructor(arr) {
+    if(arr){
+      this.set(arr)
+    }
+  }
+
+  set(arr){
+    this.a = arr[0]
+    this.b = arr[1]
+    this.c = arr[2]
+    this.d = arr[3]
   }
 };
 

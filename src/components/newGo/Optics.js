@@ -482,13 +482,13 @@ export const Optics = {
      * eyespaces.
      */
     if (eye[pos].esize - 2*eye[pos].msize > 3){
-      this.set_eyevalue(value, 2, 2, 2, 2);
+      value.set([2, 2, 2, 2]);
     }
     else if (eye[pos].esize - 2*eye[pos].msize > 0){
-      this.set_eyevalue(value, 1, 1, 1, 1);
+      value.set([1, 1, 1, 1]);
     }
     else{
-      this.set_eyevalue(value, 0, 0, 0, 0);
+      value.set([0, 0, 0, 0]);
     }
   },
   compute_eyes_pessimistic () {},
@@ -1265,12 +1265,12 @@ export const Optics = {
   evaluate_diagonal_intersection () {},
   obvious_false_eye () {},
 
-  set_eyevalue (e, a, b, c, d) {
-    e.a = a
-    e.b = b
-    e.c = c
-    e.d = d
-  },
+  // set_eyevalue (e, a, b, c, d) {
+  //   e.a = a
+  //   e.b = b
+  //   e.c = c
+  //   e.d = d
+  // },
   min_eye_threat (e) {
     return e.a
   },

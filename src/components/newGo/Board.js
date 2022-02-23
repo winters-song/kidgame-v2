@@ -477,15 +477,15 @@ class Board {
     return captured
   }
 
-  // undo_move() {}
+  undo_move() {}
 
-  // get_last_opponent_move() {}
+  get_last_opponent_move() {}
 
-  // get_last_move() {}
+  get_last_move() {}
 
-  // get_last_player() {}
+  get_last_player() {}
 
-  // is_pass() {}
+  is_pass() {}
 
 
   /*
@@ -583,7 +583,7 @@ class Board {
     return 1;
   }
 
-  // is_illegal_ko_capture() {}
+  is_illegal_ko_capture() {}
 
   /*
    * is_allowed_move(int pos, int color) determines whether a move is
@@ -809,8 +809,8 @@ class Board {
     return 1;
   }
 
-  // get_komaster() {}
-  // get_kom_pos() {}
+  get_komaster() {}
+  get_kom_pos() {}
 
   is_edge_vertex(pos) {
     this.ASSERT_ON_BOARD1(pos);
@@ -837,7 +837,7 @@ class Board {
     return 0;
   }
   rotate1() {}
-  // are_neighbors() {}
+  are_neighbors() {}
 
   // 获得棋串气数
   countlib(str) {
@@ -1203,7 +1203,7 @@ class Board {
     return liberties;
   }
 
-  // clear_accuratelib_cache() {}
+  clear_accuratelib_cache() {}
 
   getAccurateLib(pos, color){
     if(!this.accuratelib_cache[pos]){
@@ -1473,7 +1473,7 @@ class Board {
     return commonlibs;
   }
 
-  // find_common_libs(){}
+  find_common_libs(){}
 
   /* Determine whether two strings have at least one common liberty.
    * If they do and lib != NULL, one common liberty is returned in *lib.
@@ -1924,7 +1924,7 @@ class Board {
     } while (pos !== str);
   }
 
-  // move_in_stack() {}
+  move_in_stack() {}
 
   get_move_from_stack(k, move, color) {
     move[0] = this.stack[k];

@@ -73,7 +73,7 @@ class EyeGraph {
     this.ends = arr[4]
     this.two_neighbors = arr[5]
     this.three_neighbors = arr[6]
-    this.value = new EyeValue({a: arr[7][0], b: arr[7][1], c: arr[7][2], d: arr[7][3] })
+    this.value = new EyeValue([arr[7][0], arr[7][1], arr[7][2], arr[7][3] ])
   }
 }
 

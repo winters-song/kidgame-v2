@@ -31,7 +31,6 @@ const TERR_DIAGONAL_DAMPING = cosmic_importance => (cosmic_importance * 2.5 + (1
 /* Smallest amount of influence that we care about distributing. */
 const INFLUENCE_CUTOFF = 0.02
 
-
 class IntrusionData {
   source_pos = 0; 	/* Stone from which intrusion originates.*/
   strength_pos = 0;     /* Position of the intrusion influence soure. */
