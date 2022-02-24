@@ -281,11 +281,31 @@ export const MoveReasons = {
   move_reason_known () {},
   attack_move_reason_known () {},
   defense_move_reason_known () {},
-  tactical_move_vs_whole_dragon_known () {},
+
+  /* Check whether a dragon consists of only one worm. If so, check
+ * whether we know of a tactical attack or defense move.
+ */
+  tactical_move_vs_whole_dragon_known (pos, what) {
+    return ((this.worm[what].size === this.dragon[what].size)
+      && (this.attack_move_reason_known(pos, what) || this.defense_move_reason_known(pos, what)));
+  },
   owl_attack_move_reason_known () {},
   owl_defense_move_reason_known () {},
-  owl_move_reason_known () {},
-  owl_move_vs_worm_known () {},
+  /*
+ * Check whether an owl attack/defense move reason is recorded for a move.
+ * A negative value for 'what' means only match 'type'.
+ */
+  owl_move_reason_known (pos, what) {
+    return (this.owl_attack_move_reason_known(pos, what) || this.owl_defense_move_reason_known(pos, what));
+  },
+
+  /*
+ * Check whether we have an owl attack/defense reason for a move that
+ * involves a specific worm.
+ */
+  owl_move_vs_worm_known (pos, what) {
+    return this.owl_move_reason_known(pos, this.dragon[what].origin);
+  },
   semeai_move_reason_known () {},
   concerns_inessential_worm () {},
   concerns_inessential_dragon () {},

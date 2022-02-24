@@ -402,8 +402,127 @@ export const Persistent = {
       result, NO_MOVE, move, move2, certain, this.owl_node_limit,
       tactical_nodes, goal, goal_color);
   },
-  compute_active_owl_type_area() {},
-  compute_active_owl_area() {},
+
+  compute_active_owl_type_area(goal, goal_color, active) {
+    const b = this.board
+    const other = b.OTHER_COLOR(goal_color);
+    let k, r;
+    let pos;
+
+    /* We let the active area be the goal +
+     * distance four expansion through empty intersections and own stones +
+     * adjacent opponent strings +
+     * liberties and neighbors of adjacent opponent strings with less than
+     * five liberties +
+     * liberties and neighbors of low liberty neighbors of adjacent opponent
+     * strings with less than five liberties.
+     */
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
+      if (b.ON_BOARD(pos) && goal[pos]){
+        active[pos] = 1;
+      }
+    }
+
+    /* Distance four expansion through empty intersections and own stones. */
+    for (k = 1; k < 5; k++) {
+      for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+        if (!b.ON_BOARD(pos) || b.board[pos] === other || active[pos] > 0)
+          continue;
+        if ((b.ON_BOARD(b.SOUTH(pos)) && active[b.SOUTH(pos)] === k)
+          || (b.ON_BOARD(b.WEST(pos)) && active[b.WEST(pos)] === k)
+          || (b.ON_BOARD(b.NORTH(pos)) && active[b.NORTH(pos)] === k)
+          || (b.ON_BOARD(b.EAST(pos)) && active[b.EAST(pos)] === k)) {
+          if (b.board[pos] === colors.EMPTY){
+            active[pos] = k + 1;
+          }
+          else{
+            b.mark_string(pos, active, (k + 1));
+          }
+        }
+      }
+    }
+
+    /* Adjacent opponent strings. */
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.board[pos] !== other || active[pos] !== 0){
+        continue;
+      }
+      for (r = 0; r < 4; r++) {
+        let pos2 = pos + b.delta[r];
+        if (b.ON_BOARD(pos2) && b.board[pos2] !== other && active[pos2] !== 0) {
+          b.mark_string(pos, active, 1);
+          break;
+        }
+      }
+    }
+
+    /* Liberties of adjacent opponent strings with less than five liberties +
+     * liberties of low liberty neighbors of adjacent opponent strings
+     * with less than five liberties.
+     */
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      if (b.board[pos] === other && active[pos] > 0 && b.countlib(pos) < 5) {
+        let libs = [];
+        let liberties = b.findlib(pos, 4, libs);
+        let adjs = [];
+        for (r = 0; r < liberties; r++){
+          active[libs[r]] = 1;
+        }
+
+        /* Also add liberties of neighbor strings if these are three
+         * or less.
+         */
+        let adj = b.chainlinks(pos, adjs);
+        for (r = 0; r < adj; r++) {
+          b.mark_string(adjs[r], active, -1);
+          if (b.countlib(adjs[r]) <= 3) {
+            let s;
+            let adjs2 = [];
+            liberties = b.findlib(adjs[r], 3, libs);
+            for (s = 0; s < liberties; s++)
+              active[libs[s]] = 1;
+            let adj2 = b.chainlinks(pos, adjs2);
+            for (s = 0; s < adj2; s++){
+              b.mark_string(adjs2[s], active, -1);
+            }
+          }
+        }
+      }
+    }
+  },
+
+  compute_active_owl_area(entry, goal, goal_color) {
+    const b = this.board
+    let pos;
+    let active = [];
+    // memset(active, 0, BOARDMAX);
+
+    /* Add critical moves to the active area. */
+    if (b.ON_BOARD1(entry.move)){
+      active[entry.move] = 1;
+    }
+
+    if (b.ON_BOARD1(entry.move2)){
+      active[entry.move2] = 1;
+    }
+
+    this.compute_active_owl_type_area(goal, goal_color, active);
+
+    for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      let value = b.board[pos];
+      if (!b.ON_BOARD(pos)){
+        continue;
+      }
+      if (!active[pos]){
+        value = colors.GRAY;
+      }
+      else if (b.IS_STONE(b.board[pos]) && b.countlib(pos) > 4 && active[pos] > 0){
+        value |= HIGH_LIBERTY_BIT;
+      }
+
+      entry.board[pos] = value;
+    }
+  },
 
 
   /* ================================================================ */

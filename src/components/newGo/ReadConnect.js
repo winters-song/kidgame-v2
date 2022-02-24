@@ -19,6 +19,18 @@ import {routine_id} from "./Liberty";
  * 2 - Fully turned on.
  */
 
+/* This heap contains a list of positions where we have delayed a
+ * decision whether to "spread a connection distance". The function
+ * helper() will be called when we finally need the decision. See
+ * push_connection_heap_entry() for organization of the heap.
+ */
+class HeapEntry {
+  distance;
+  coming_from;
+  target;
+  helper;
+};
+
 
 const FIXED_POINT_BASIS = 10000
 const FP = (x) => Math.floor(0.5 + FIXED_POINT_BASIS * x)
@@ -206,7 +218,45 @@ export const ReadConnect = {
 
     return 0;
   },
-  connected_one_move () {},
+
+  /* Returns WIN if str1 and str2 are connected in at most
+   * one move even if the opponent plays first.
+   * Verify that the strings are connectable in one move
+   * and find the only possible moves that can prevent
+   * using prevent_connection_one_move. If none of these
+   * moves works, the two strings are connected.
+   *
+   * This is the g1 game function.
+   */
+  connected_one_move (str1, str2) {
+    let r, res = 0;
+    let moves = [];
+    const b = this.board
+    // SGFTree *save_sgf_dumptree = sgf_dumptree;
+
+    /* turn off the sgf traces
+     */
+    // sgf_dumptree = NULL;
+
+    moves[0] = 0;
+    if (this.prevent_connection_one_move(moves, str1, str2)) {
+      this.order_connection_moves(moves, str1, str2, b.OTHER_COLOR(b.board[str1]), "connected_one_move");
+      res = codes.WIN;
+      for (r = 1; ((r < moves[0] + 1) && res); r++) {
+        if (b.trymove(moves[r], b.OTHER_COLOR(b.board[str1]), "connected_one_move", str1)) {
+          if (!this.connection_one_move(str1, str2)){
+            res = 0;
+          }
+          b.popgo();
+        }
+      }
+    }
+
+    /* Turn the sgf traces back on. */
+    // sgf_dumptree = save_sgf_dumptree;
+
+    return res;
+  },
 
   /* Find the moves that might be able to connect in less than three plies.
    * That is moves that can connect the strings if another move of the same
@@ -639,8 +689,85 @@ export const ReadConnect = {
     return 0;
   },
 
-  simply_connected_two_moves () {},
-  simple_connection_three_moves () {},
+  /*
+   * The simplest depth 4 connection:
+   *
+   * If there are forced moves to prevent connection in one move,
+   * try them, and verify that they all lead to a depth 1 or
+   * depth 3 connection.
+   *
+   * This is the g211 game function.
+   */
+
+  simply_connected_two_moves (str1, str2) {
+    const b = this.board
+    let r, res = 0;
+    let moves = [];
+    // SGFTree *save_sgf_dumptree = sgf_dumptree;
+
+    /* turn off the sgf traces
+     */
+    // sgf_dumptree = NULL;
+
+
+    /* If one string is missing we have already failed. */
+    if (b.board[str1] === colors.EMPTY || b.board[str2] === colors.EMPTY){
+      return 0;
+    }
+
+    moves[0] = 0;
+    if (this.prevent_connection_one_move(moves, str1, str2)) {
+      res = codes.WIN;
+      this.order_connection_moves(moves, str1, str2, b.OTHER_COLOR(b.board[str1]), "simply_connected_two_moves");
+      for (r = 1; ((r < moves[0] + 1) && res); r++) {
+        if (b.trymove(moves[r], b.OTHER_COLOR(b.board[str1]), "simply_connected_two_moves", str1)) {
+          if (!this.connection_one_move(str1, str2)){
+            if (!this.connection_two_moves(str1, str2)){
+              res = 0;
+            }
+          }
+          b.popgo();
+        }
+      }
+    }
+
+    // sgf_dumptree = save_sgf_dumptree;
+
+    return res;
+  },
+
+
+  /* Test if a move is a simple depth 5 connection.
+   *
+   * This is the gi311 game function.
+   */
+  simple_connection_three_moves (str1, str2) {
+    const b = this.board
+    let r, res = 0, moves = [];
+    // SGFTree *save_sgf_dumptree = sgf_dumptree;
+
+    /* turn off the sgf traces
+     */
+    // sgf_dumptree = NULL;
+
+    moves[0] = 0;
+    if (b.moves_to_connect_in_two_moves(moves, str1, str2)){
+      return codes.WIN;
+    }
+    b.order_connection_moves(moves, str1, str2, b.board[str1], "simple_connection_three_moves");
+    for (r = 1; ((r < moves[0] + 1) && !res); r++) {
+      if (b.trymove(moves[r], b.board[str1], "simple_connection_three_moves", str1)) {
+        if (this.simply_connected_two_moves(str1, str2)){
+          res = codes.WIN;
+        }
+        b.popgo();
+      }
+    }
+
+    // sgf_dumptree = save_sgf_dumptree;
+
+    return res;
+  },
 
   /* Find the forced moves that prevent a simple depth 5 connection.
    * Fills the array moves with the forced moves.
@@ -1900,8 +2027,66 @@ export const ReadConnect = {
   recursive_block() {},
   break_in() {},
   block_off() {},
-  push_connection_heap_entry() {},
-  pop_connection_heap_entry() {},
+
+  /* Store a possibly expensive decision for later evaluation. The
+ * data getting stored should be self-explanatory.
+ * The job of the helper function is to
+ * - decide whether the spreading step will be allowed (typically
+ *   depending on a latter)
+ * - add the relevant positions to the connection queue in case the test
+ *   was successful.
+ *
+ * Elements in the heap are kept sorted according to smallest distance.
+ */
+  push_connection_heap_entry(conn, distance, coming_from, target, helper) {
+    let k;
+    let parent;
+    let new_entry = new HeapEntry()
+    conn.heap_data[conn.heap_data_size] = new_entry;
+    const b = this.board
+
+    b.ASSERT1(conn.heap_data_size < 4 * b.BOARDMAX);
+    b.ASSERT1(conn.heap_size < b.BOARDMAX);
+
+    /* Create new heap entry. */
+    new_entry.distance	 = distance;
+    new_entry.coming_from = coming_from;
+    new_entry.target	 = target;
+    new_entry.helper	 = helper;
+
+    /* And insert it into the heap. */
+    conn.heap_data_size++;
+
+    for (k = conn.heap_size++; k > 0; k = parent) {
+      parent = (k - 1) / 2;
+      if (conn.heap[parent].distance <= distance){
+        break;
+      }
+
+      conn.heap[k] = conn.heap[parent];
+    }
+
+    conn.heap[k] = new_entry;
+  },
+
+  /* Delete the first entry from the heap. */
+  pop_connection_heap_entry(conn) {
+    let k;
+    let child;
+
+    conn.heap_size--;
+    for (k = 0; 2 * k + 1 < conn.heap_size; k = child) {
+      child = 2 * k + 1;
+      if (conn.heap[child].distance > conn.heap[child + 1].distance)
+      child++;
+      if (conn.heap[child].distance >= conn.heap[conn.heap_size].distance)
+      break;
+
+      conn.heap[k] = conn.heap[child];
+    }
+
+    conn.heap[k] = conn.heap[conn.heap_size];
+  },
 
 
   ENQUEUE (conn, from, pos, dist, delta, v1, v2) {
@@ -1933,9 +2118,67 @@ export const ReadConnect = {
       }
     }
   },
-  case_6_7_helper() {},
-  case_9_10_helper() {},
-  case_16_17_18_helper() {},
+  case_6_7_helper(conn, color) {
+    const data = conn.heap[0];
+    const b = this.board
+    const other = b.OTHER_COLOR(color);
+    let pos = data.coming_from;
+    let apos = data.target;
+
+    if (this.ladder_capturable(apos, other)){
+      this.ENQUEUE(conn, pos, apos, data.distance, FP(0.6), apos, NO_MOVE);
+    }
+    else {
+      let this_delta = FP(0.85) + FP(0.05) * Math.min(b.approxlib(apos, other, 5, null), 5);
+      this.ENQUEUE(conn, pos, apos, data.distance + this_delta - FP(0.6), this_delta, NO_MOVE, NO_MOVE);
+    }
+  },
+
+  case_9_10_helper(conn, color) {
+    const data = conn.heap[0];
+    let pos = data.coming_from;
+    let apos = data.target;
+
+    if (this.no_escape_from_ladder(apos)){
+      this.ENQUEUE_STONE(conn, pos, apos, data.distance, FP(0.3), NO_MOVE, NO_MOVE);
+    }
+    else {
+      if (conn.speculative) {
+        this.ENQUEUE_STONE(conn, pos, apos, data.distance + FP(0.7), FP(1.0), NO_MOVE, NO_MOVE);
+      }
+      else {
+        this.ENQUEUE_STONE(conn, pos, apos, data.distance + FP(0.8), FP(1.1), NO_MOVE, NO_MOVE);
+      }
+    }
+  },
+
+  case_16_17_18_helper(conn, color) {
+    const b = this.board
+    const other = b.OTHER_COLOR(color);
+    const data = conn.heap[0];
+    let pos = data.coming_from;
+    let bpos = data.target;
+    let apos = b.SOUTH(Math.min(pos, bpos));
+    let gpos = b.NORTH(Math.max(pos, bpos));
+
+    if (b.board[apos] === colors.EMPTY && this.does_secure_through_ladder(color, bpos, apos)){
+      this.ENQUEUE(conn, pos, bpos, data.distance, FP(1.0), apos, NO_MOVE);
+    }
+    else if (b.board[gpos] === colors.EMPTY && this.does_secure_through_ladder(color, bpos, gpos)){
+      this.ENQUEUE(conn, pos, bpos, data.distance, FP(1.0), gpos, NO_MOVE);
+    }
+    else if (conn.distances[bpos] > data.distance + FP(0.3)) {
+      if (b.board[apos] === colors.EMPTY && b.board[gpos] === other && b.countlib(gpos) <= 3){
+        this.ENQUEUE(conn, pos, bpos, data.distance + FP(0.3), FP(1.0), apos, NO_MOVE);
+      }
+      else if (b.board[gpos] === colors.EMPTY && b.board[apos] === other && b.countlib(apos) <= 3){
+        this.ENQUEUE(conn, pos, bpos, data.distance + FP(0.3), FP(1.0), gpos, NO_MOVE);
+      }
+      else{
+        this.ENQUEUE(conn, pos, bpos, data.distance + FP(0.6), FP(0.9), NO_MOVE, NO_MOVE);
+      }
+    }
+  },
 
 
   /* Do the real work of computing connection distances.
@@ -2444,7 +2687,26 @@ export const ReadConnect = {
   },
   sort_connection_queue_tail() {},
   expand_connection_queue() {},
-  clear_connection_data() {},
+
+  /* Initialize distance and delta values so that the former are
+ * everywhere huge and the latter everywhere zero.
+ */
+  clear_connection_data(conn) {
+    const b = this.board
+
+    conn.queue_start = 0;
+    conn.queue_end = 0;
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
+      conn.distances[pos] = HUGE_CONNECTION_DISTANCE;
+      conn.deltas[pos] = FP(0.0);
+      conn.coming_from[pos] = NO_MOVE;
+      conn.vulnerable1[pos] = NO_MOVE;
+      conn.vulnerable2[pos] = NO_MOVE;
+    }
+
+    conn.heap_data_size = 0;
+    conn.heap_size = 0;
+  },
 
   /* Compute the connection distances from string (str) to nearby
    * vertices, until we reach target or the distance gets too high.
@@ -2503,7 +2765,23 @@ export const ReadConnect = {
 
     return result;
   },
-  does_secure_through_ladder() {},
+
+  /* True if a move by color makes an opponent move at pos a self atari
+   * or possible to capture in a ladder.
+   */
+  does_secure_through_ladder(color, move, pos) {
+    const b = this.board
+    let result = 0;
+
+    if (b.trymove(move, color, null, NO_MOVE)) {
+      if (this.ladder_capturable(pos, b.OTHER_COLOR(color))){
+        result = 1;
+      }
+      b.popgo();
+    }
+
+    return result;
+  },
 
   /* Test whether the string str can be immediately taken off the board
    * or captured in a ladder. If so the capturing move is returned in
@@ -2538,11 +2816,170 @@ export const ReadConnect = {
 
     return result;
   },
-  ladder_capturable() {},
-  no_escape_from_atari() {},
-  no_escape_from_ladder() {},
-  check_self_atari() {},
-  common_vulnerabilities() {},
-  common_vulnerability() {},
+
+  /* Test whether a move at pos by color can be captured in a ladder. */
+  ladder_capturable(pos, color) {
+    const b = this.board
+    let result = 0;
+
+    if (b.trymove(pos, color, null, NO_MOVE)) {
+      let liberties = b.countlib(pos);
+      if (liberties === 1 && this.attack(pos, null) === codes.WIN){
+        result = 1;
+      }
+      else if (liberties === 2 && this.simple_ladder(pos, null) === codes.WIN){
+        result = 1;
+      }
+      b.popgo();
+    }
+    else{
+      result = 1;
+    }
+
+    return result;
+  },
+
+  /* Test whether the string str with one liberty is stuck with at most
+   * one liberty. This function trivially returns false if the string
+   * has more than one liberty to start with.
+   */
+  no_escape_from_atari (str) {
+    const b = this.board
+    let lib = [];
+    let adj = [];
+
+    if (b.findlib(str, 1, lib) > 1){
+      return 0;
+    }
+
+    if (b.accuratelib(lib, b.board[str], 2, null) > 1){
+      return 0;
+    }
+
+    /* FIXME: Should exclude snapback. */
+    if (b.chainlinks2(str, adj, 1) > 0){
+      return 0;
+    }
+
+    return 1;
+  },
+
+  /* Test whether the string str with one liberty is captured in a
+   * ladder. This function trivially returns false if the string has
+   * more than one liberty to start with, except for one special case.
+   * FIXME: Needs a simple_ladder_defense().
+   */
+  no_escape_from_ladder(str) {
+    const b = this.board
+    let result = 0;
+    // SGFTree *save_sgf_dumptree = sgf_dumptree;
+    // let save_count_variations = count_variations;
+    let adj = [];
+    let libs = [];
+
+    /* We turn off the sgf traces here to avoid cluttering them up with
+     * tactical reading moves.
+     */
+    // sgf_dumptree = NULL;
+    // count_variations = 0;
+
+    if (b.countlib(str) === 1 && this.find_defense(str, null) === 0){
+      result = 1;
+    }
+
+    if (b.countlib(str) === 2
+      && b.chainlinks2(str, adj, 1) === 0
+      && b.findlib(str, 2, libs) === 2
+      && b.approxlib(libs[0], b.board[str], 2, null) === 1
+      && b.approxlib(libs[1], b.board[str], 2, null) === 1
+      && this.ladder_capture(str, null)
+      && !this.find_defense(str, null)){
+      result = 1;
+    }
+
+
+    /* Turn the sgf traces back on. */
+    // sgf_dumptree = save_sgf_dumptree;
+    // count_variations = save_count_variations;
+
+    return result;
+  },
+
+  /* We usually don't want to spend time with moves which are
+   * self-atari, unless the stone is involved in a ko.
+   */
+  check_self_atari(pos, color_to_move) {
+    const b = this.board
+    let lib = [];
+
+    if (!b.is_self_atari(pos, color_to_move)){
+      return 1;
+    }
+
+    if (b.is_ko(pos, color_to_move, null)){
+      return 1;
+    }
+
+    /* FIXME: At some time I added this exceptional case but I can no
+     * longer see how it would be useful. It might still be, however, so
+     * I leave the code in for a while. /gf
+     *
+     * Code reactivated, see nando:31. /nn
+     *
+     * Added requirement that no additional stones are sacrificed in the
+     * self atari. /gf
+     *
+     * FIXME: Add a function in board.c to check how big the string
+     *        becomes when playing a move and use for the isolated stone
+     *        test below.
+     */
+    if (b.approxlib(pos, color_to_move, 1, lib) >= 1
+      && b.approxlib(lib[0], b.OTHER_COLOR(color_to_move), 3, null) <= 2
+      && this.ladder_capturable(lib[0], b.OTHER_COLOR(color_to_move))) {
+      let k;
+      for (k = 0; k < 4; k++) {
+        if (b.board[pos + b.delta[k]] === color_to_move){
+          break;
+        }
+      }
+      if (k === 4){
+        return 1;
+      }
+    }
+
+    return 0;
+  },
+
+  /* Check for overlap between (a1, a2) and (b1, b2). */
+  common_vulnerabilities(a1, a2, b1, b2, color) {
+    return this.common_vulnerability(a1, b1, color)
+      || this.common_vulnerability(a1, b2, color)
+      || this.common_vulnerability(a2, b1, color)
+      || this.common_vulnerability(a2, b2, color);
+  },
+
+  /* Check if apos and bpos are the same or if they are both liberties
+   * of a string of the given color with at most three liberties.
+   */
+  common_vulnerability(apos, bpos, color) {
+    const b = this.board
+    if (apos === NO_MOVE || bpos === NO_MOVE){
+      return 0;
+    }
+
+    if (apos === bpos){
+      return 1;
+    }
+
+    for (let k = 0; k < 4; k++){
+      if (b.board[apos + b.delta[k]] === color
+        && b.countlib(apos + b.delta[k]) <= 3
+        && b.liberty_of_string(bpos, apos + b.delta[k])){
+        return 1;
+      }
+    }
+
+    return 0;
+  },
   
 }
