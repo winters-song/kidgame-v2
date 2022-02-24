@@ -91,6 +91,18 @@ export const Cache = {
     // return (value);
   },
 
+  READ_RETURN_SEMEAI () {},
+
+  READ_RETURN_CONN (routine, str1, str2, remaining_depth, point, move, value) {
+    this.tt_update(ttable, routine, str1, str2, remaining_depth, null, value, 0, move);
+    if (value !== 0 && point) {
+      point[0] = move[0];
+    };
+    return value;
+  },
+  READ_RETURN_HASH () {},
+  READ_RETURN2 () {},
+
   calculate_hashval_for_tt(hashdata, routine, target1, target2, extra_hash){
     const b = this.board
     hashdata.hashval = b.board_hash.hashval;                /* from globals.c */

@@ -342,8 +342,155 @@ export const Reading = {
     return result;
   },
 
-  attack_and_defend() {},
-  attack_either() {},
+  /* attack_and_defend(str, &acode, &attack_point,
+   *                        &dcode, &defense_point)
+   * is a frontend to the attack() and find_defense() functions, which
+   * guarantees a consistent result. If a string cannot be attacked, 0
+   * is returned and acode is 0. If a string can be attacked and
+   * defended, WIN is returned, acode and dcode are both non-zero, and
+   * (attack_point), (defense_point) both point to vertices on the board.
+   * If a string can be attacked but not defended, 0 is again returned,
+   * acode is non-zero, dcode is 0, and (attack_point) points to a vertex
+   * on the board.
+   *
+   * This function in particular guarantees that if there is an attack,
+   * it will never return (defense_point) = NO_MOVE, which means the string is
+   * safe without defense. Separate calls to attack() and find_defense()
+   * may occasionally give this result, due to irregularities introduced
+   * by the persistent reading cache.
+   */
+  attack_and_defend(str, attack_code, attack_point, defend_code, defense_point) {
+    const b = this.board
+    let acode = 0;
+    let apos = [NO_MOVE];
+    let dcode = 0;
+    let dpos = [NO_MOVE];
+
+    acode = this.attack(str, apos);
+    if (acode !== 0){
+      dcode = this.find_defense(str, dpos);
+    }
+
+    b.ASSERT1(!(acode !== 0 && dcode === codes.WIN && dpos === NO_MOVE), str);
+
+    if (attack_code){
+      attack_code[0] = acode;
+    }
+    if (attack_point){
+      attack_point[0] = apos[0];
+    }
+    if (defend_code){
+      defend_code[0] = dcode;
+    }
+    if (defense_point){
+      defense_point[0] = dpos[0];
+    }
+
+    return acode !== 0 && dcode !== 0;
+  },
+
+  /*
+   * attack_either(astr, bstr) returns true if there is a move which
+   * guarantees that at least one of the strings (astr) and (bstr)
+   * can be captured. A typical application for this is in connection
+   * patterns, where after a cut it suffices to capture one of the cutting
+   * stones.
+   *
+   * FIXME: The current implementation only looks for uncoordinated
+   *        attacks. This is insufficient to find double ataris or
+   *        moves such as 'a' in positions like
+   *
+   *        XOOOOOOOX
+   *        XOXXOXXOX
+   *        XX..a..XX
+   *        ---------
+   *
+   *        where neither of the threatened X stones can be captured right
+   *        out. Still either can be captured by a move down to a.
+   */
+  attack_either(astr, bstr) {
+    const b = this.board
+    let asuccess = 0;
+    let bsuccess = 0;
+    let color = b.board[astr];
+    b.ASSERT1(b.IS_STONE(color) , astr);
+    b.ASSERT1(color === b.board[bstr], bstr);
+
+    /* Start by attacking the string with the fewest liberties. On
+     * average this seems to be slightly more efficient.
+     */
+    if (b.countlib(astr) > b.countlib(bstr)) {
+      let t = astr;
+      astr = bstr;
+      bstr = t;
+    }
+
+    asuccess = this.attack(astr, null);
+    if (asuccess == codes.WIN){
+      return asuccess;
+    }
+
+    bsuccess = this.attack(bstr, null);
+    if (asuccess || bsuccess) {
+      return (asuccess > bsuccess) ? asuccess : bsuccess;
+    }
+
+    /* Try (a little) harder */
+    {
+      let alibs = [];
+      let blibs = [];
+      let alib = b.findlib(astr, 2, alibs);
+      let defended0 = codes.WIN;
+      let defended1 = codes.WIN;
+      const other = b.OTHER_COLOR(color);
+      /* Let's just try the case where the group with the fewest liberties
+       * has only 2, and try each atari in turn.
+       */
+      if (alib === 2) {
+        if (b.trymove(alibs[0], other, "attack_either-A", astr)) {
+          defended0 = this.defend_both(astr, bstr);
+          b.popgo();
+        }
+        if (defended0
+          && b.trymove(alibs[1], other, "attack_either-B", astr)) {
+          defended1 = this.defend_both(astr, bstr);
+          b.popgo();
+        }
+      }
+      /* The second string is possibly also short in liberties.
+       * Let's try to improve the result.
+       */
+      if (defended0 > 0 && defended1 > 0
+        && b.findlib(bstr, 2, blibs) === 2) {
+        defended0 = Math.min(defended0, defended1);
+        defended1 = defended0;
+
+        /* We may get here even if alib==1, in case there is a snapback.
+         * To avoid referencing uninitialized memory in this case we
+         * explicitly set alibs[1] to NO_MOVE.
+         */
+        if (alib === 1){
+          alibs[1] = NO_MOVE;
+        }
+
+        if (blibs[0] !== alibs[0] && blibs[0] !== alibs[1]
+          && b.trymove(blibs[0], other, "attack_either-C", bstr)) {
+          let defended = this.defend_both(astr, bstr);
+          defended0 = Math.min(defended0, defended);
+          b.popgo();
+        }
+        if (defended0
+          && blibs[1] !== alibs[0] && blibs[1] !== alibs[1]
+          && b.trymove(blibs[1], other, "attack_either-D", bstr)) {
+          let defended = this.defend_both(astr, bstr);
+          defended1 = Math.min(defended1, defended);
+          b.popgo();
+        }
+      }
+      return REVERSE_RESULT(Math.min(defended0, defended1));
+    }
+
+  },
 
 
   /*
@@ -736,7 +883,129 @@ export const Reading = {
    * FIXME: Shall we report upgrades, like we can capture in ko but
    *        have a threat to capture unconditionally?
    */
-  attack_threats() {},
+  attack_threats(str, max_points, moves, codes) {
+    const b = this.board
+    let num_threats;
+    let libs = []
+    let num_adj;
+    let adjs = []
+    let k;
+    let l;
+    let r;
+
+    b.ASSERT1(b.IS_STONE(b.board[str]), str);
+    const other = b.OTHER_COLOR(b.board[str]);
+
+    /* Only handle strings with no way to capture immediately.
+     * For now, we treat ko the same as unconditionally. */
+    if (this.attack(str, null) !== 0){
+      return 0;
+    }
+
+    /* This test would seem to be unnecessary since we only threaten
+     * strings with attack_code == 0, but it turns out that single
+     * stones with one liberty that can be captured, but come to
+     * live again in a snap-back get attack_code == 0.
+     *
+     * The test against 6 liberties is just an optimization.
+     */
+    let liberties = b.findlib(str, b.MAXLIBS, libs);
+    if (liberties > 1 && liberties < 6) {
+      for (k = 0; k < liberties; k++) {
+        let aa = libs[k];
+
+        /* Try to threaten on the liberty. */
+        if (b.trymove(aa, other, "attack_threats-A", str)) {
+          let acode = this.attack(str, null);
+          if (acode !== 0){
+            this.movelist_change_point(aa, acode, max_points, moves, codes);
+          }
+          b.popgo();
+        }
+
+        /* Try to threaten on second order liberties. */
+        for (l = 0; l < 4; l++) {
+          let bb = libs[k] + b.delta[l];
+
+          if (!b.ON_BOARD(bb) || b.IS_STONE(b.board[bb]) || b.liberty_of_string(bb, str)){
+            continue;
+          }
+
+          if (b.trymove(bb, other, "attack_threats-B", str)) {
+            let acode = this.attack(str, null);
+            if (acode !== 0){
+              this.movelist_change_point(bb, acode, max_points, moves, codes);
+            }
+            b.popgo();
+          }
+        }
+      }
+    }
+
+    /* Threaten to attack by saving weak neighbors. */
+    num_adj = b.chainlinks(str, adjs);
+    for (k = 0; k < num_adj; k++) {
+      let bb = [];
+      let dd = [];  /* Defense point of weak neighbor. */
+      let acode = [];
+      let dcode = [];
+
+      this.attack_and_defend(adjs[k], acode, null, dcode, dd);
+      if (acode[0] === 0 || dcode[0] === 0){
+        continue;
+      }
+
+      /* The strange code using r == -1 below is only avoid duplication
+       * of the code starting with "if (trymove..)" below.
+       * If r == -1 and stackp == 0 then use the defense point what we got from
+       * attack_and_defend above. Otherwise step through all defense points.
+       */
+      for (r = -1; r < max_points; r++) {
+        if (b.stackp === 0) {
+          if (r === -1){
+            continue;
+          }
+          if (this.worm[adjs[k]].defense_codes[r] === 0){
+            break;
+          }
+          bb = this.worm[adjs[k]].defense_points[r];
+        }
+        else {
+          if (r === -1){
+            bb = dd;
+          }
+          else{
+            break;
+          }
+        }
+
+        /* Test the move and see if it is a threat. */
+        if (b.trymove(bb, other, "attack_threats-C", str)) {
+          if (b.board[str] === colors.EMPTY){
+            acode = codes.WIN;
+          }
+          else{
+            acode = this.attack(str, null);
+          }
+          if (acode !== 0){
+            this.movelist_change_point(bb, acode, max_points, moves, codes);
+          }
+          b.popgo();
+        }
+      }
+    }
+
+    /* Return actual number of threats found regardless of attack code. */
+    if (codes[max_points - 1] > 0){
+      return max_points;
+    }
+    for (num_threats = 0; num_threats < max_points; num_threats++){
+      if (codes[num_threats] === 0){
+        break;
+      }
+    }
+    return num_threats;
+  },
 
   /* ================================================================ */
   /*                       Defensive functions                        */
@@ -3391,8 +3660,110 @@ export const Reading = {
     }
   },
 
-  defend_secondary_chain1_moves() {},
-  defend_secondary_chain2_moves() {},
+  /* defend_secondary_chain1_moves() tries to break a chain by defending
+   * "secondary chain", that is, own strings surrounding a given
+   * opponent string (which is in turn a chainlink for another own
+   * string, phew... :).  It only defends own strings in atari.
+   *
+   * When defending is done by stretching, it is required that the defending
+   * stone played gets at least `min_liberties', or one less if it is
+   * adjacent to the opponent chainlink.
+   *
+   * Returns true if there where any secondary strings that needed defence
+   * (which does not imply they actually where defended).
+   */
+  defend_secondary_chain1_moves(str, moves, min_liberties) {
+    const b = this.board
+    let color = b.OTHER_COLOR(b.board[str]);
+    let xpos = [];
+    let adjs = [];
+    let adjs2 = [];
+
+    /* Find links in atari. */
+    let adj = b.chainlinks2(str, adjs, 1);
+
+    for (let r = 0; r < adj; r++) {
+      /* Stretch out. */
+      b.findlib(adjs[r], 1, xpos);
+      if (b.approxlib(xpos, color, min_liberties, null)
+        + b.neighbor_of_string(xpos[0], str) >= min_liberties){
+        this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "defend_secondary_chain1-A");
+      }
+
+      /* Capture adjacent stones in atari, if any. */
+      let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
+      for (let s = 0; s < adj2; s++) {
+        b.findlib(adjs2[s], 1, xpos);
+        if (!b.is_self_atari(xpos[0], color)){
+          this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "defend_secondary_chain1-B");
+        }
+      }
+    }
+
+    return adj;
+  },
+
+  /* defend_secondary_chain2_moves() tries to break a chain by defending
+   * "secondary chain", that is, own strings surrounding a given
+   * opponent string (which is in turn a chainlink for another own
+   * string, phew... :).  It only defends own strings in
+   * with two liberties.
+   *
+   * When defending is done by stretching, it is required that the defending
+   * stone played gets at least `min_liberties', or one less if it is
+   * adjacent to the opponent chainlink. Defence can also be done by capturing
+   * opponent stones or trying to capture them with an atari.
+   */
+  defend_secondary_chain2_moves(str, moves, min_liberties) {
+    const b = this.board
+    const color = b.OTHER_COLOR(b.board[str]);
+    let s, t;
+    let xpos = [];
+    let adjs = [];
+    let adjs2 = [];
+    let libs = []
+
+    /* Find links with two liberties. */
+    let adj = b.chainlinks2(str, adjs, 2);
+
+    for (let r = 0; r < adj; r++) {
+      if (!b.have_common_lib(str, adjs[r], null)){
+        continue;
+      }
+
+      /* Stretch out. */
+      b.findlib(adjs[r], 2, libs);
+      for (t = 0; t < 2; t++) {
+        xpos = libs[t];
+        if (b.approxlib(xpos, color, min_liberties, null)
+          + b.neighbor_of_string(xpos, str) >= min_liberties){
+          this.ADD_CANDIDATE_MOVE(xpos, 0, moves, "defend_secondary_chain2-A");
+        }
+      }
+
+      /* Capture adjacent stones in atari, if any. */
+      let adj2 = b.chainlinks2(adjs[r], adjs2, 1);
+      for (s = 0; s < adj2; s++) {
+        b.findlib(adjs2[s], 1, xpos);
+        if (!b.is_self_atari(xpos, color)){
+          this.ADD_CANDIDATE_MOVE(xpos[0], 0, moves, "defend_secondary_chain2-B");
+        }
+      }
+
+      /* Look for neighbours we can atari. */
+      adj2 = b.chainlinks2(adjs[r], adjs2, 2);
+      for (s = 0; s < adj2; s++) {
+        b.findlib(adjs2[s], 2, libs);
+        for (t = 0; t < 2; t++) {
+          /* Only atari if target has no easy escape with his other liberty. */
+          if (b.approxlib(libs[1-t], b.OTHER_COLOR(color), 3, null) < 3
+            && !b.is_self_atari(libs[t], color)) {
+            this.ADD_CANDIDATE_MOVE(libs[t], 0, moves, "defend_secondary_chain2-C");
+          }
+        }
+      }
+    }
+  },
 
   /*
    * Find moves which immediately capture chain links with 2
