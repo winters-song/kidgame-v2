@@ -34,6 +34,13 @@ const EXAMINE_ALL = 99
 
 
 export default class Genmove {
+
+  TRACE (msg) {
+    if(this.verbose){
+      console.log(msg)
+    }
+  }
+
   constructor(board) {
     this.board = board
     Object.assign(this, Globals, Utils, Helpers, Test,

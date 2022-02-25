@@ -3,12 +3,12 @@ import {colors} from "./Constants";
 /* Incremental string data. */
 // string_data
 export class StringData {
-  color = null
+  color;
   size = 0
-  origin = null
+  origin;
   liberties = 0
   neighbors = 0
-  mark = null
+  mark;
 
   constructor(cfg) {
     Object.assign(this, cfg)

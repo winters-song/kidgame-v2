@@ -728,7 +728,14 @@ export const Influence = {
   },
 
   followup_influence_callback(){},
-  influence_mark_non_territory(){},
+
+  /* Called from actions for t patterns. Marks (pos) as not being
+   * territory for (color).
+   */
+  influence_mark_non_territory(pos, color){
+    // DEBUG(DEBUG_INFLUENCE, "  non-territory for %C at %1m\n", color, pos);
+    current_influence.non_territory[pos] |= color;
+  },
   influence_erase_territory(){},
 
   /* Match the patterns in influence.db and barriers.db in order to add:
@@ -1229,7 +1236,31 @@ export const Influence = {
   retrieve_delta_territory_cache () {},
   store_delta_territory_cache () {},
   influence_delta_territory () {},
-  influence_score () {},
+
+  /* Estimate the score. A positive value means white is ahead. The
+   * score is estimated influence data *q, which must have been
+   * computed in advance.
+   */
+  influence_score (q, use_chinese_rules) {
+    const b = this.board
+    let score = 0.0;
+
+    for (let i = b.BOARDMIN; i < b.BOARDMAX; i++){
+      if (b.ON_BOARD(i)){
+        score += q.territory_value[i];
+      }
+    }
+
+    if (use_chinese_rules){
+      score += b.stones_on_board(colors.WHITE) - b.stones_on_board(colors.BLACK) + b.komi + b.handicap;
+    }
+    else{
+      score += b.black_captured - b.white_captured + b.komi;
+    }
+
+    return score;
+  },
+
   game_status () {},
   debug_influence_move () {},
   get_influence () {},

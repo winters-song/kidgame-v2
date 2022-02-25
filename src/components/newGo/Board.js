@@ -152,6 +152,7 @@ class Board {
 
     this.position_number = 0
     this.stackp = 0
+    this.count_variations = 0
 
     // trymove
     this.stack = []
@@ -262,11 +263,24 @@ class Board {
   /* ================================================================ */
 
   trymove(pos, color, message) {
-    return this.do_trymove(pos, color, 0)
+    if(!this.do_trymove(pos, color, 0)) {
+      return 0
+    }
+    if (this.count_variations){
+      this.count_variations++;
+    }
+    return 1
   }
 
   tryko(pos, color, message) {
-    return this.do_trymove(pos, color, 1)
+    if(!this.do_trymove(pos, color, 1)) {
+      return 0
+    }
+
+    if (this.count_variations){
+      this.count_variations++;
+    }
+    return 1
   }
 
   // stack压栈，存储hash

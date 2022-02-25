@@ -39,6 +39,10 @@ const BREAKIN_DEPTH	     = 14
 
 export const Utils = {
 
+  gg_assert(x) {
+    this.board.ASSERT1(x, NO_MOVE)
+  },
+
   change_dragon_status() {},
   defend_against(){},
 

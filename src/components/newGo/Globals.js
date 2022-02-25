@@ -76,7 +76,7 @@ class Data {
   /* compute owl threats */
   // int owl_threats = OWL_THREATS;
   /* use experimental owl extension (GAIN/LOSS) */
-  // int experimental_owl_ext = EXPERIMENTAL_OWL_EXT;
+  experimental_owl_ext = 0 //EXPERIMENTAL_OWL_EXT;
   /* use experimental territory break-in module */
   // int experimental_break_in = USE_BREAK_IN;
   /* use central oriented influence */

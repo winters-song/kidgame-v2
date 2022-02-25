@@ -56,6 +56,16 @@ export const MAX_CLOSE_WORMS  = 4
 
 export const MAX_TACTICAL_POINTS = 10
 
+
+export const ATTACK_STRING = 1
+export const DEFEND_STRING = 2
+
+/* These values are used to communicate whether stones are safe or
+ * have been saved, when computing influence.
+ */
+export const INFLUENCE_SAFE_STONE	= 1
+export const INFLUENCE_SAVED_STONE	= 2
+
 // [0 - 1368]
 // (19+18)*2 = 1369 绝对位置
 

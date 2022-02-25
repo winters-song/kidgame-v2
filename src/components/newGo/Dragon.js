@@ -1,4 +1,4 @@
-import {dragon_status, EyeValue, HalfEyeData} from "./Liberty";
+import {DEFAULT_STRENGTH, dragon_status, EyeValue, HalfEyeData, INFLUENCE_SAFE_STONE} from "./Liberty";
 import {codes, colors, InterpolationData, NO_MOVE, SURROUNDED, WEAKLY_SURROUNDED} from "./Constants";
 import {initial_black_influence, initial_white_influence} from "./Influence";
 import {gg_interpolate} from "./GgUtils";
@@ -94,6 +94,20 @@ let dragon2_initialized;
 let moyo_value2weakness = new InterpolationData([ 5, 0.0, 15.0, [1.0, 0.65, 0.3, 0.15, 0.05, 0.0]])
 let escape_route2weakness = new InterpolationData([ 5, 0.0, 25.0, [1.0, 0.6, 0.3, 0.1, 0.05, 0.0]])
 let genus2weakness = new InterpolationData([  6, 0.0, 3.0, [1.0, 0.95, 0.8, 0.5, 0.2, 0.1, 0.0]])
+
+
+let new_dragon_origins = []
+
+
+// struct cut_data {
+//   int apos;
+//   int bpos;
+//   int move;
+// };
+
+let num_cuts = 0;
+let cut_list = []
+
 
 
 /* This basic function finds all dragons and collects some basic information
@@ -796,11 +810,69 @@ export const Dragon = {
 
   dragon_invincible () {},
   dragon_looks_inessential () {},
-  get_alive_stones () {},
+
+  /* Report which stones are alive if it's (color)'s turn to move. I.e.
+   * critical stones belonging to (color) are considered alive.
+   * A stone is dead resp. critical if the tactical reading code _or_ the
+   * owl code thinks so.
+   */
+  get_alive_stones (color, safe_stones) {
+    const b= this.board
+    this.get_lively_stones(color, safe_stones);
+    for (let d = 0; d < this.number_of_dragons; d++) {
+      if (this.dragon2[d].safety === dragon_status.DEAD
+        || (this.dragon2[d].safety === dragon_status.CRITICAL
+          && b.board[this.dragon2[d].origin] === b.OTHER_COLOR(color))) {
+        this.mark_dragon(this.dragon2[d].origin, safe_stones, 0);
+      }
+    }
+  },
+
   identify_thrashing_dragons () {},
-  set_dragon_strengths () {},
-  mark_inessential_stones () {},
-  set_strength_data () {},
+
+  set_dragon_strengths (safe_stones, strength) {
+    const b = this.board
+    for (let i = b.BOARDMIN; i < b.BOARDMAX; i++){
+      if (b.ON_BOARD(i)) {
+        if (safe_stones[i]) {
+          b.ASSERT1(b.IS_STONE(b.board[i]), i);
+          strength[i] = DEFAULT_STRENGTH * (1.0 - 0.3 * this.DRAGON2(i).weakness_pre_owl);
+        }
+        else{
+          strength[i] = 0.0;
+        }
+      }
+    }
+  },
+
+  /* Marks all inessential stones with INFLUENCE_SAFE_STONE, leaves
+   * everything else unchanged.
+   */
+  mark_inessential_stones (color, safe_stones) {
+    const b = this.board
+    for (let i = b.BOARDMIN; i < b.BOARDMAX; i++)
+      if (b.IS_STONE(b.board[i])
+        && (this.DRAGON2(i).safety === dragon_status.INESSENTIAL
+          || (this.worm[i].inessential
+            /* FIXME: Why is the check below needed?
+             * Why does it use .safety, not .status? /ab
+             */
+            && ((this.DRAGON2(i).safety !== dragon_status.DEAD
+              && this.DRAGON2(i).safety !== dragon_status.TACTICALLY_DEAD
+              && this.DRAGON2(i).safety !== dragon_status.CRITICAL)
+              || (this.DRAGON2(i).safety === dragon_status.CRITICAL && b.board[i] === color))))){
+        safe_stones[i] = INFLUENCE_SAFE_STONE;
+      }
+  },
+
+  set_strength_data (color, safe_stones, strength) {
+    this.gg_assert(this.board.IS_STONE(color) || color === colors.EMPTY);
+
+    this.get_alive_stones(color, safe_stones);
+    this.set_dragon_strengths(safe_stones, strength);
+    this.mark_inessential_stones(color, safe_stones);
+  },
+
   compute_dragon_influence () {},
 
   /* Compute dragon's genus, possibly excluding one given eye.  To
@@ -967,11 +1039,118 @@ export const Dragon = {
       }
     }
   },
-  connected_to_eye () {},
-  connected_to_eye_recurse () {},
+
+  /*
+ * This function (implicitly) finds the connected set of strings of a
+ * dragon, starting from (str) which is next to the analyzed halfeye
+ * at (pos). Strings are for this purpose considered connected if and
+ * only if they have a common liberty, which is not allowed to be the
+ * half eye itself or one of its diagonal neighbors. For these strings
+ * it is examined whether their liberties are parts of eyespaces worth
+ * at least two halfeyes (again not counting the eyespace at (pos)).
+ *
+ * The real work is done by the recursive function
+ * connected_to_eye_recurse() below.
+ */
+  connected_to_eye (pos, str, color, eye_color, eye) {
+    let mx= [];
+    let me= [];
+    let halfeyes = [0];
+    const b= this.board
+
+    /* mx marks strings and liberties which have already been investigated.
+     * me marks the origins of eyespaces which have already been counted.
+     * Start by marking (pos) and the surrounding vertices in mx.
+     */
+    mx[pos] = 1;
+    for (let k = 0; k < 8; k++){
+      if (b.ON_BOARD(pos + b.delta[k])){
+        mx[pos + b.delta[k]] = 1;
+      }
+    }
+
+    this.connected_to_eye_recurse(pos, str, color, eye_color, eye, mx, me, halfeyes);
+
+    if (halfeyes[0] >= 2){
+      return 1;
+    }
+
+    return 0;
+  },
+
+  /* Recursive helper for connected_to_eye(). Stop searching when we
+   * have found at least two halfeyes.
+   */
+  connected_to_eye_recurse (pos, str, color, eye_color, eye, mx, me, halfeyes) {
+    const b = this.board
+    let liberties;
+    let libs = [];
+    let r;
+    let k;
+
+    b.mark_string(str, mx, 1);
+    liberties = b.findlib(str, b.MAXLIBS, libs);
+
+    /* Search the liberties of (str) for eyespaces. */
+    for (r = 0; r < liberties; r++) {
+      if (eye[libs[r]].color === eye_color && libs[r] !== pos && !me[eye[libs[r]].origin]) {
+        me[eye[libs[r]].origin] = 1;
+        halfeyes[0] += (this.min_eyes(eye[libs[r]].value) + this.max_eyes(eye[libs[r]].value));
+      }
+    }
+
+    if (halfeyes[0] >= 2){
+      return;
+    }
+
+    /* Search for new strings in the same dragon with a liberty in
+     * common with (str), and recurse.
+     */
+    for (r = 0; r < liberties; r++) {
+      if (mx[libs[r]]){
+        continue;
+      }
+      mx[libs[r]] = 1;
+      for (k = 0; k < 4; k++) {
+        if (b.ON_BOARD(libs[r] + b.delta[k])
+          && b.board[libs[r] + b.delta[k]] === color
+          && this.is_same_dragon(str, libs[r] + b.delta[k])
+          && !mx[libs[r] + b.delta[k]]){
+          this.connected_to_eye_recurse(pos, libs[r] + b.delta[k], color, eye_color, eye, mx, me, halfeyes);
+        }
+        if (halfeyes[0] >= 2){
+          return;
+        }
+      }
+    }
+  },
+
   show_dragons () {},
   compute_new_dragons () {},
-  join_new_dragons () {},
+
+  /* This gets called if we are trying to compute dragons outside of
+ * make_dragons(), typically after a move has been made.
+ */
+  join_new_dragons (d1, d2) {
+    const b = this.board
+    /* Normalize dragon coordinates. */
+    d1 = new_dragon_origins[d1];
+    d2 = new_dragon_origins[d2];
+
+    /* If d1 and d2 are the same dragon, we do nothing. */
+    if (d1 === d2){
+      return;
+    }
+
+    b.ASSERT1(b.board[d1] === b.board[d2], d1);
+    b.ASSERT1(b.IS_STONE(b.board[d1]), d1);
+
+    /* Don't bother to do anything fancy with dragon origins. */
+    for (let pos = b.BOARDMIN; pos < b.BOARDMAX; pos++)
+      if (b.ON_BOARD(pos) && new_dragon_origins[pos] === d2){
+        new_dragon_origins[pos] = d1;
+      }
+  },
 
   /*
    * join_dragons amalgamates the dragon at (d1) to the
@@ -1511,18 +1690,112 @@ export const Dragon = {
 
     return this.dragon[d1].origin === this.dragon[d2].origin
   },
-  are_neighbor_dragons () {},
-  mark_dragon () {},
-  first_worm_in_dragon () {},
-  next_worm_in_dragon () {},
-  crude_status () {},
+
+  /* Test whether two dragons are neighbors. */
+  are_neighbor_dragons (d1, d2) {
+    let k;
+    d1 = this.dragon[d1].origin;
+    d2 = this.dragon[d2].origin;
+
+    for (k = 0; k < this.DRAGON2(d1).neighbors; k++){
+      if (this.dragon2[this.DRAGON2(d1).adjacent[k]].origin === d2){
+        return 1;
+      }
+    }
+
+    /* Just to be make sure that this function is always symmetric, we
+     * do it the other way round too.
+     */
+    for (k = 0; k < this.DRAGON2(d2).neighbors; k++){
+      if (this.dragon2[this.DRAGON2(d2).adjacent[k]].origin === d1){
+        return 1;
+      }
+    }
+
+    return 0;
+  },
+
+  mark_dragon (pos, mx, mark) {
+    for (let w = this.first_worm_in_dragon(this.dragon[pos].origin); w != NO_MOVE; w = this.next_worm_in_dragon(w)){
+      this.board.mark_string(w, mx, mark);
+    }
+  },
+
+  /* The following two functions allow to traverse all worms in a dragon:
+   * for (ii = first_worm_in_dragon(pos); ii != NO_MOVE;
+   *      ii = next_worm_in_dragon(ii);)
+   *   ...
+   * At the moment first_worm_in_dragon(pos) will always be the origin
+   * of the dragon, but you should not rely on that.
+   */
+  first_worm_in_dragon (d) {
+    return this.dragon[d].origin;
+  },
+
+  next_worm_in_dragon (w) {
+    this.board.ASSERT1(this.worm[w].origin === w, w);
+    return this.next_worm_list[w];
+  },
+
+
+  /* ================================================================ */
+  /*                       A few status functions                     */
+  /* ================================================================ */
+
+  /*
+   * These functions are only here because then we don't need to expose
+   * the dragon structure to the external program.
+   */
+  crude_status (pos) {
+    return this.dragon[pos].crude_status;
+  },
   dragon_status () {},
   lively_dragon_exists () {},
   dragon_weak () {},
   size_of_biggest_critical_dragon () {},
   clear_cut_list () {},
-  add_cut () {},
-  cut_reasons () {},
+
+
+  /* Store in the list that (move) disconnects the two strings at
+   * apos and bpos.
+   */
+  add_cut (apos, bpos, move) {
+    const b = this.board
+    this.gg_assert(b.board[apos] === b.board[bpos]);
+    // MAX_CUTS = 3 * MAX_BOARD * MAX_BOARD
+    if (this.num_cuts === 3 * b.MAX_BOARD * b.MAX_BOARD){
+      return;
+    }
+    if (apos > bpos) {
+      let tmp = apos;
+      apos = bpos;
+      bpos = tmp;
+    }
+    if (move === NO_MOVE){
+      return;
+    }
+    this.cut_list[num_cuts].apos = apos;
+    this.cut_list[num_cuts].bpos = bpos;
+    this.cut_list[num_cuts].move = move;
+    this.num_cuts++;
+    // if (0)
+    //   gprintf("Added %d-th cut at %1m between %1m and %1m.\n", num_cuts, move, apos, bpos);
+  },
+
+  /* For every move in the cut list disconnecting two of opponent's strings,
+   * test whether the two strings can be connected at all. If so, add a
+   * CUT_MOVE reason.
+   */
+  cut_reasons (color) {
+    const b = this.board
+    for (let k = 0; k < num_cuts; k++){
+      if (b.board[cut_list[k].apos] === b.OTHER_COLOR(color)
+        && !this.is_same_dragon(this.cut_list[k].apos, this.cut_list[k].bpos)
+        && this.string_connect(this.cut_list[k].apos, this.cut_list[k].bpos, null) === codes.WIN){
+        this.add_cut_move(this.cut_list[k].move, this.cut_list[k].apos, this.cut_list[k].bpos);
+      }
+    }
+  },
   ascii_report_dragon () {},
   report_dragon () {},
 }
