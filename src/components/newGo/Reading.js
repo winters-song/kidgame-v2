@@ -426,7 +426,7 @@ export const Reading = {
     }
 
     asuccess = this.attack(astr, null);
-    if (asuccess == codes.WIN){
+    if (asuccess === codes.WIN){
       return asuccess;
     }
 
