@@ -405,7 +405,7 @@ export const Unconditional = {
 
     b.ASSERT1(color === colors.BLACK || color === colors.WHITE);
 
-    if (color == colors.BLACK){
+    if (color === colors.BLACK){
       meaningless_moves = meaningless_black_moves;
     } else {
       meaningless_moves = meaningless_white_moves;

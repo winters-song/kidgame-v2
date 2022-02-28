@@ -472,7 +472,7 @@ export const Surround = {
           let right = b.delta[(k + 1) % 4];
           if (b.board[dpos + up] === colors.EMPTY
             && b.board[dpos + 2*up] === color
-            && mn[dpos + 2*up] != 1
+            && mn[dpos + 2*up] !== 1
             && b.ON_BOARD(dpos + up + right)
             && b.board[dpos + up + right] !== other
             && b.ON_BOARD(dpos + up - right)
