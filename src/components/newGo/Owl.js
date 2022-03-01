@@ -1,6 +1,7 @@
 import {codes, colors, NO_MOVE} from "./Constants";
 import {AFFINE_TRANSFORM, dragon_status, EyeValue, REVERSE_RESULT, routine_id} from "./Liberty";
 import {ATT_O} from "./patterns/Patterns";
+import {owl_attackpat_db} from "./patterns/owl_attackpat";
 
 /*
  * The code in this file implements "Optics With Limit-negotiation (OWL)."
@@ -723,8 +724,90 @@ export const Owl = {
   },
 
   owl_threaten_attack () {},
-  owl_defend () {},
-  do_owl_defend () {},
+
+
+  /* Returns true if a move can be found to defend the dragon
+   * at (target), in which case (*defense_point) is the recommended move.
+   * (defense_point) can be a null pointer if the result is not needed.
+   *
+   * The array goal marks the extent of the dragon. This must
+   * be maintained during reading. Call this function only when
+   * stackp==0; otherwise you can call do_owl_attack but you must
+   * set up the goal and boundary arrays by hand first.
+   *
+   * Returns KO_A or KO_B if the position is ko:
+   *
+   * - Returns KO_A if the defendse succeeds provided the defender is willing to
+   *   ignore any ko threat (the defender makes the first ko capture).
+   * - Returns KO_B if the defense succeeds provided the defender has a ko threat
+   *   which must be answered (the attacker makes the first ko capture).
+   *
+   * If GNU Go is compiled with `configure --enable-experimental-owl-ext'
+   * then a return codes of GAIN is also possible.
+   *
+   * - Returns LOSS if the defense succeeds but another worm of the
+   *   defender's is captured in during the defense. The location
+   *   of the killed worm is returned through the *kworm field.
+   *
+   * The array goal marks the extent of the dragon. This must
+   * be maintained during reading.
+   */
+  owl_defend (target, defense_point, certain, kworm) {
+    const b = this.board
+    let result = [];
+    let owl = new LocalOwlData()
+    let reading_nodes_when_called = this.get_reading_node_counter();
+    let start = 0.0;
+    let tactical_nodes;
+    let move = [NO_MOVE];
+    let wpos = [NO_MOVE];
+    let wid = [MAX_GOAL_WORMS];
+
+    result_certain = 1;
+    if (this.worm[target].unconditional_status === dragon_status.DEAD){
+      return 0;
+    }
+
+    if (this.search_persistent_owl_cache(routine_id.OWL_DEFEND, target, 0, 0, result, defense_point, kworm, certain)){
+      return result;
+    }
+
+    // if (debug & DEBUG_OWL_PERFORMANCE)
+    //   start = gg_cputime();
+
+    // TRACE("owl_defend %1m\n", target);
+    this.init_owl(owl, target, NO_MOVE, NO_MOVE, 1, null);
+    this.owl_make_domains(owl, null);
+    this.prepare_goal_list(target, owl, owl_goal_worm, goal_worms_computed, kworm, 1);
+    result = this.do_owl_defend(target, move, wid, owl, 0);
+    this.finish_goal_list(goal_worms_computed, wpos, owl_goal_worm, wid);
+    tactical_nodes = this.get_reading_node_counter() - reading_nodes_when_called;
+
+    // DEBUG(DEBUG_OWL_PERFORMANCE,
+    //   "owl_defend %1m, result %d %1m (%d, %d nodes, %f seconds)\n",
+    //   target, result, move, local_owl_node_counter,
+    //   tactical_nodes, gg_cputime() - start);
+
+    this.store_persistent_owl_cache(routine_id.OWL_DEFEND, target, 0, 0, result, move, wpos,
+      result_certain, tactical_nodes, owl.goal, b.board[target]);
+
+    if (defense_point){
+      defense_point[0] = move;
+    }
+    if (kworm){
+      kworm[0] = wpos;
+    }
+    if (certain){
+      certain[0] = result_certain;
+    }
+
+    return result;
+  },
+
+  /* Static function containing the main recursive code for owl_defend. */
+  do_owl_defend (str, move, wormid, owl, escape) {
+
+  },
   owl_threaten_defense () {},
   owl_estimate_life () {},
   owl_determine_life () {},

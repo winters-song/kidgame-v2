@@ -54,6 +54,38 @@ export const HAVE_ACTION     = 2
 export const INFLUENCE_CALLBACK =1
 export const FOLLOWUP_INFLUENCE_CALLBACK =2
 
+
+export const attributeType = {
+  MIN_VALUE: 0,
+  MAX_VALUE: 1,
+  MIN_TERRITORY: 2,
+  MAX_TERRITORY: 3,
+  SHAPE: 4,
+  FOLLOWUP: 5,
+  REVERSE_FOLLOWUP: 6,
+
+  /* For `mkpat'. */
+  FIRST_OFFSET_ATTRIBUTE: 7,
+
+  THREATENS_TO_CAPTURE : 7,
+  THREATENS_EYE: 8,
+  REVERSE_SENTE: 9,
+
+  NUM_ATTRIBUTES: 10,
+  LAST_ATTRIBUTE : 10
+};
+
+export class PatternAttribute {
+  type;
+  value;
+  offset;
+  constructor(arr) {
+    this.type = arr[0]
+    this.value = arr[1]
+    this.offset = arr[2]
+  }
+};
+
 /**
  * patn: 额外限定条件数组
  * patlen: 数组元素个数

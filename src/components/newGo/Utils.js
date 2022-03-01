@@ -102,12 +102,21 @@ export const Utils = {
   * satisfies board[pos]==color. Here num_moves is the
   * number of moves. If check_alive is true, the dragon is not allowed
   * to be dead. This check is only valid if stackp==0.
+  *
+  *
+  * 判断list中元素颜色都是color
+  * check_alive为true时，list中所属大龙不能是死子
+  * va_list 可变参数， 这里用单个数组代替
   */
-  //  va_list 可变参数， 这里用单个数组代替
   somewhere(color, check_alive, num_moves, list) {
     // gg_assert(stackp == 0 || !check_alive);
     for (let k = 0; k < num_moves; k++) {
-      const pos = list[k]
+      let pos
+      if(num_moves === 1 && typeof list !== 'object'){
+        pos = list
+      }else{
+        pos = list[k]
+      }
 
       if (this.board.board[pos] === color && 
         (!check_alive || this.dragon[pos].status !== dragon_status.DEAD)) {
@@ -234,25 +243,23 @@ export const Utils = {
   * A typical use for these functions is to set up a ladder in an
   * autohelper and see whether it works or not.
   * 
-  * 一系列交替落子
+  * 一系列交替落子试下后， 看zpos是否进攻或防守成功（为空代表被提，进攻为成功，防守为失败），返回结果
   */
   play_attack_defend_n(color, do_attack, num_moves, list){
     const b = this.board
     let mcolor = color;
     let success = 0;
-    let i;
     let played_moves = 0;
-    let apos;
-  
+
     /* Do all the moves with alternating colors. */
-    for (i = 0; i < num_moves; i++) {
-      apos = list[i]
+    for (let i = 0; i < num_moves; i++) {
+      let apos = list[i]
 
       if (apos !== NO_MOVE
         && (b.trymove(apos, mcolor, "play_attack_defend_n", NO_MOVE)
         || b.tryko(apos, mcolor, "play_attack_defend_n"))){
-          played_moves++;
-        }
+        played_moves++;
+      }
       mcolor = b.OTHER_COLOR(mcolor);
     }
 
@@ -291,7 +298,7 @@ export const Utils = {
 
     
     /* Pop all the moves we could successfully play. */
-    for (i = 0; i < played_moves; i++){
+    for (let i = 0; i < played_moves; i++){
       b.popgo();
     }
 
