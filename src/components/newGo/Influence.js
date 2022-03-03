@@ -76,7 +76,7 @@ export const initial_black_influence = new InfluenceData()
 export const initial_white_influence = new InfluenceData()
 
 
-const move_influence = new InfluenceData()
+// const move_influence = new InfluenceData()
 const followup_influence = new InfluenceData()
 
 /* Influence used for estimation of escape potential. */
@@ -127,11 +127,12 @@ const PRINTMOYO_ATTENUATION       = 0x100
 let pattern_counter = 0
 
 const code1 = function (arg_di, arg_dj, arg, arg_d , {ii, q, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}) {
+  const bd = this.board
   if (!q.safe[arg] && (arg_di * delta_i + arg_dj * delta_j > 0 || queue_start === 1)) {
     let contribution;
     let permeability = permeability_array[ii];
     if (arg_d) {
-      permeability *= Math.max(permeability_array[ii + b.DELTA(arg_di, 0)], permeability_array[ii + b.DELTA(0, arg_dj)]);
+      permeability *= Math.max(permeability_array[ii + bd.DELTA(arg_di, 0)], permeability_array[ii + bd.DELTA(0, arg_dj)]);
       if (permeability === 0.0) {
         return
       }
@@ -162,12 +163,12 @@ export const Influence = {
   },
 
   accumulate_influence(q, pos, color) {
-    const b = this.board
+    const bd = this.board
     let ii;
-    let m = b.I(pos);
-    let n = b.J(pos);
+    let m = bd.I(pos);
+    let n = bd.J(pos);
     let k;
-    let bb;
+    let b;
     let inv_attenuation;
     let inv_diagonal_damping;
     let permeability_array;
@@ -180,7 +181,7 @@ export const Influence = {
     let working_area_initialized = 0;
 
     if (!working_area_initialized) {
-      for (ii = 0; ii < b.BOARDMAX; ii++){
+      for (ii = 0; ii < bd.BOARDMAX; ii++){
         working[ii] = 0.0;
       }
       working_area_initialized = 1;
@@ -225,45 +226,45 @@ export const Influence = {
       let delta_i, delta_j;
 
       ii = q.queue[queue_start];
-      delta_i = b.I(ii) - m;
-      delta_j = b.J(ii) - n;
+      delta_i = bd.I(ii) - m;
+      delta_j = bd.J(ii) - n;
       queue_start++;
       if (permeability_array[ii] === 0.0){
         continue;
       }
 
       if (queue_start === 1){
-        bb = 1.0;
+        b = 1.0;
       }
       else {
-        bb = 1.0 / ((delta_i) * (delta_i) + (delta_j) * (delta_j));
+        b = 1.0 / ((delta_i) * (delta_i) + (delta_j) * (delta_j));
       }
 
       current_strength = working[ii] * inv_attenuation;
 
       const params = {q, ii, delta_i, delta_j, queue_start, queue_end,  permeability_array, b, current_strength, working}
 
-      if (b.ON_BOARD(ii + b.delta[0]))
-        code1(b.deltai[0], b.deltaj[0], ii + b.delta[0], 0, params);
-      if (b.ON_BOARD(ii + b.delta[1]))
-        code1(b.deltai[1], b.deltaj[1], ii + b.delta[1], 0, params);
-      if (b.ON_BOARD(ii + b.delta[2]))
-        code1(b.deltai[2], b.deltaj[2], ii + b.delta[2], 0, params);
-      if (b.ON_BOARD(ii + b.delta[3]))
-        code1(b.deltai[3], b.deltaj[3], ii + b.delta[3], 0, params);
+      if (bd.ON_BOARD(ii + bd.delta[0]))
+        code1.call(this, bd.deltai[0], bd.deltaj[0], ii + bd.delta[0], 0, params);
+      if (bd.ON_BOARD(ii + bd.delta[1]))
+        code1.call(this, bd.deltai[1], bd.deltaj[1], ii + bd.delta[1], 0, params);
+      if (bd.ON_BOARD(ii + bd.delta[2]))
+        code1.call(this, bd.deltai[2], bd.deltaj[2], ii + bd.delta[2], 0, params);
+      if (bd.ON_BOARD(ii + bd.delta[3]))
+        code1.call(this, bd.deltai[3], bd.deltaj[3], ii + bd.delta[3], 0, params);
 
       /* Update factors for diagonal movement. */
-      bb *= 0.5;
+      b *= 0.5;
       current_strength *= inv_diagonal_damping;
 
-      if (b.ON_BOARD(ii + b.delta[4]))
-        code1(b.deltai[4], b.deltaj[4], ii + b.delta[4], 1, params);
-      if (b.ON_BOARD(ii + b.delta[5]))
-        code1(b.deltai[5], b.deltaj[5], ii + b.delta[5], 1, params);
-      if (b.ON_BOARD(ii + b.delta[6]))
-        code1(b.deltai[6], b.deltaj[6], ii + b.delta[6], 1, params);
-      if (b.ON_BOARD(ii + b.delta[7]))
-        code1(b.deltai[7], b.deltaj[7], ii + b.delta[7], 1, params);
+      if (bd.ON_BOARD(ii + bd.delta[4]))
+        code1.call(this, bd.deltai[4], bd.deltaj[4], ii + bd.delta[4], 1, params);
+      if (bd.ON_BOARD(ii + bd.delta[5]))
+        code1.call(this, bd.deltai[5], bd.deltaj[5], ii + bd.delta[5], 1, params);
+      if (bd.ON_BOARD(ii + bd.delta[6]))
+        code1.call(this, bd.deltai[6], bd.deltaj[6], ii + bd.delta[6], 1, params);
+      if (bd.ON_BOARD(ii + bd.delta[7]))
+        code1.call(this, bd.deltai[7], bd.deltaj[7], ii + bd.delta[7], 1, params);
     }
 
     /* Add the values in the working area to the accumulated influence
@@ -753,7 +754,7 @@ export const Influence = {
       this.matchpat(this.influence_callback, q.color_to_move, barrierspat_db, q, null);
     }
 
-    // console.log("influence pattern total:", pattern_counter)
+    console.log("influence pattern total:", pattern_counter)
 
     if (q.is_territorial_influence){
       this.add_marked_intrusions(q);

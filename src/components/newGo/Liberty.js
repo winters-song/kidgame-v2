@@ -3,6 +3,24 @@ import {
 } from './Constants'
 import {transformation, transformation2} from "./patterns/transform";
 
+
+// memcopy
+export class Entity{
+  // 将target属性复制过来
+  copy(target){
+    Object.keys(target).forEach(item => {
+      const type = typeof target[item]
+      if(type !== 'undefined' && type !=='function' && type !== 'object'){
+        this[item] = target[item]
+      }else if(Object.prototype.toString.call(target[item]) === '[object Array]'){
+        // 基本类型数组的复制
+        this[item] = target[item].slice()
+      }
+    })
+    return this
+  }
+}
+
 export const FALSE_EYE = 1
 export const HALF_EYE = 1
 /* Routine names used by persistent and non-persistent caching schemes. */
@@ -115,7 +133,7 @@ export class EyeValue {
 };
 
 
-export class HalfEyeData {
+export class HalfEyeData extends Entity{
   value;          /* Topological eye value. */
   type;   /* HALF_EYE or FALSE_EYE; */
   num_attacks;      /* number of attacking points */
@@ -123,6 +141,7 @@ export class HalfEyeData {
   num_defenses;     /* number of defending points */
   defense_point = []; /* the moves to defend a topological halfeye */
   constructor(cfg) {
+    super()
     Object.assign(this, cfg)
   }
 }
@@ -130,7 +149,7 @@ export class HalfEyeData {
 
 export const MAX_EYE_ATTACKS = 3
 
-export class EyeData {
+export class EyeData extends Entity{
   color;             /* BLACK, WHITE, or GRAY                     */
   esize;             /* size of the eyespace                      */
   msize;             /* number of marginal vertices               */

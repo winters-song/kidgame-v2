@@ -124,9 +124,11 @@ export class Hash{
   goal_to_hashvalue(board, goal){
     const return_value = { hashval: 0}
 
-    for (let pos = this.BOARDMIN; pos < this.BOARDMAX; pos++)
-      if (board.ON_BOARD(pos) && goal[pos])
+    for (let pos = this.BOARDMIN; pos < this.BOARDMAX; pos++){
+      if (board.ON_BOARD(pos) && goal[pos]){
         HashData.xor(return_value, this.goal_hash[pos]);
+      }
+    }
 
     return return_value;
   }

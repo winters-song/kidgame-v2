@@ -99,7 +99,7 @@ export default class Genmove {
   }
 
   examine_position(how_much, aftermath_play) {
-    let save_verbose = this.verbose;
+    // let save_verbose = this.verbose;
 
     // 清除缓存
     // purge_persistent_caches();
@@ -184,7 +184,7 @@ export default class Genmove {
   do_genmove(color, pure_threat_value, allowed_moves, value) {
     const b = this.board
     let average_score, pessimistic_score, optimistic_score;
-    let save_verbose;
+    // let save_verbose;
     let save_depth;
     let move;
     let dummy_value;

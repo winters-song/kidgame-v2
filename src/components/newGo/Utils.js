@@ -2,7 +2,7 @@ import {
   colors,codes,
   NO_MOVE, OWL_NODE_LIMIT, PASS_MOVE, SEMEAI_NODE_LIMIT
 } from './Constants'
-import {dragon_status} from "./Liberty";
+import {dragon_status, REVERSE_RESULT} from "./Liberty";
 
 
 
@@ -55,7 +55,55 @@ export const Utils = {
     return (this.cutting_points[pos] & this.board.OTHER_COLOR(color)) !== 0;
   },
 
-  does_attack() {},
+  /*
+   * does_attack(move, str) returns the result code for an attack on the
+   * string 'str' by the move 'move'. However, if the move does not
+   * improve the attack result compared to tenuki, 0 is returned. In
+   * particular if the string is already captured, does_attack() always
+   * returns 0.
+   */
+  does_attack(move, str) {
+    const b = this.board
+    const color = b.board[str];
+    const other = b.OTHER_COLOR(color);
+    let result = 0;
+    let acode = [0];
+    let dcode = [0];
+    let spos = [NO_MOVE];
+
+    this.attack_and_defend(str, acode, null, dcode, spos);
+    if (acode[0] !== 0 && dcode[0] === 0){
+      return 0;
+    }
+
+    if (b.trymove(move, other, "does_attack-A", str)) {
+      if (!b.board[str]){
+        result = codes.WIN;
+      }
+      else{
+        result = REVERSE_RESULT(this.find_defense(str, null));
+      }
+      if (result !== 0) {
+        this.increase_depth_values();
+        if (spos[0] !== NO_MOVE && b.trymove(spos[0], color, "does_attack-B", str)) {
+          if (b.board[str]) {
+            let new_result = this.attack(str, null);
+            if (new_result < result)
+              result = new_result;
+          }
+          b.popgo();
+        }
+        this.decrease_depth_values();
+      }
+      b.popgo();
+    }
+
+    if (result < acode[0]){
+      result = 0;
+    }
+
+    return result;
+  },
 
   /*
   * does_defend(move, str) returns true if the move at (move)
@@ -185,23 +233,22 @@ export const Utils = {
   * Like break_through(), this function returns 1 if the attempt to
   * break through was succesful and 2 if it only managed to cut
   * through.
+  *
+  * 突破： 通过交替落子后，看最后3个坐标是否能被提子
   */
-  // 按照list顺序交替落子num_moves步
   play_break_through_n(color, num_moves, list) {
+    const b = this.board
     let mcolor = color;
     let success = 0;
-    let i;
     let played_moves = 0;
-    let apos;
     let xpos = list[num_moves];
     let ypos = list[num_moves+1];
     let zpos = list[num_moves+2];
-    const b = this.board
-    
+
 
     /* Do all the moves with alternating colors. */
-    for (i = 0; i < num_moves; i++) {
-      apos = list[i]
+    for (let i = 0; i < num_moves; i++) {
+      let apos = list[i]
 
       if (apos !== NO_MOVE
         && (b.trymove(apos, mcolor, "play_break_through_n", NO_MOVE) || b.tryko(apos, mcolor, "play_break_through_n"))) {
@@ -221,9 +268,8 @@ export const Utils = {
       success = this.break_through(xpos, ypos, zpos);
     }
 
-    
     /* Pop all the moves we could successfully play. */
-    for (i = 0; i < played_moves; i++){
+    for (let i = 0; i < played_moves; i++){
       b.popgo();
     }
 
@@ -243,7 +289,7 @@ export const Utils = {
   * A typical use for these functions is to set up a ladder in an
   * autohelper and see whether it works or not.
   * 
-  * 一系列交替落子试下后， 看zpos是否进攻或防守成功（为空代表被提，进攻为成功，防守为失败），返回结果
+  * 一系列交替落子试下后， 看最后一个位置zpos是否进攻或防守成功（为空代表被提，进攻为成功，防守为失败），返回结果
   */
   play_attack_defend_n(color, do_attack, num_moves, list){
     const b = this.board
@@ -318,26 +364,27 @@ export const Utils = {
   * A typical use for these functions is to set up a crosscut in an
   * autohelper and see whether at least one cutting stone can be
   * captured.
+  *
+  * 与play_attack_defend_n类似，最后2个位置ypos和zpos看是否进攻或防守成功
+  * 常用于分断后看被断的2块棋能不能吃掉其中一块
   */
   play_attack_defend2_n(color, do_attack, num_moves, list) {
     const b = this.board
     let mcolor = color;
     let success = 0;
-    let i;
     let played_moves = 0;
-    let apos;
     let ypos;
     let zpos;
 
     /* Do all the moves with alternating colors. */
-    for (i = 0; i < num_moves; i++) {
-      apos = list[i]
+    for (let i = 0; i < num_moves; i++) {
+      let apos = list[i]
 
       if (apos !== NO_MOVE
         && (b.trymove(apos, mcolor, "play_attack_defend_n", NO_MOVE)
         || b.tryko(apos, mcolor, "play_attack_defend_n"))){
-          played_moves++;
-        }
+        played_moves++;
+      }
       mcolor = b.OTHER_COLOR(mcolor);
     }
 
@@ -364,7 +411,7 @@ export const Utils = {
     }
     
     /* Pop all the moves we could successfully play. */
-    for (i = 0; i < played_moves; i++){
+    for (let i = 0; i < played_moves; i++){
       b.popgo();
     }
 
@@ -380,19 +427,19 @@ export const Utils = {
    * more of the moves to play turns out to be illegal for some reason,
    * the rest of the sequence is played anyway, and connection/disconnection
    * is tested as if nothing special happened.
+   *
+   * 交替落子，看最后2个坐标是否连接或分断成功
    */
-
   play_connect_n(color, do_connect, num_moves, list) {
     const b = this.board
     let mcolor = color;
     let success = 0;
-    let i;
     let played_moves = 0;
     let ypos = list[num_moves];
     let zpos = list[num_moves+1];
 
     /* Do all the moves with alternating colors. */
-    for (i = 0; i < num_moves; i++) {
+    for (let i = 0; i < num_moves; i++) {
       let apos = list[i];
 
       if (apos !== NO_MOVE
@@ -422,14 +469,58 @@ export const Utils = {
     }
 
     /* Pop all the moves we could successfully play. */
-    for (i = 0; i < played_moves; i++){
+    for (let i = 0; i < played_moves; i++){
       b.popgo();
     }
 
     return success;
   },
 
-  play_lib_n() {},
+  /* The function play_lib_n() plays a sequence of moves, alternating
+   * between the players and starting with color. After having played
+   * through the sequence, the last coordinate gives a target for liberty
+   * counting. The number of liberties is returned.
+   *
+   * If only one move is to be played and that stone is the target,
+   * accuratelib (or approxlib if appropriate) is more efficient.
+   */
+  play_lib_n(color, num_moves, list) {
+    const b = this.board
+    let mcolor = color;
+    let libs = 0;
+    let i;
+    let played_moves = 0;
+    let apos;
+    let ypos = list[num_moves];
+
+    /* Do all the moves with alternating colors. */
+    for (i = 0; i < num_moves; i++) {
+      apos = list[i]
+
+      if (apos !== NO_MOVE
+        && (b.trymove(apos, mcolor, "play_connect_n", NO_MOVE)
+          || b.tryko(apos, mcolor, "play_connect_n"))){
+        played_moves++;
+      }
+      mcolor = b.OTHER_COLOR(mcolor);
+    }
+
+    /* Now do the real work. */
+    if (b.board[ypos] === colors.EMPTY){
+      libs = 0;
+    }
+    else{
+      libs = b.countlib(ypos);
+    }
+
+    /* Pop all the moves we could successfully play. */
+    for (i = 0; i < played_moves; i++){
+      b.popgo();
+    }
+
+    return libs;
+  },
+
   /* Set the various reading depth parameters. If mandated_depth_value
    * is not -1 that value is used; otherwise the depth values are
    * set as a function of level. The parameter mandated_depth_value
@@ -714,7 +805,23 @@ export const Utils = {
     this.do_find_superstring(str, null, null, num_libs, libs, this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
   },
   find_proper_superstring_liberties(){},
-  find_superstring_stones_and_liberties() {},
+
+  /* This function computes the superstring at (str) as described above,
+   * but omitting connections of type 5. Then it constructs a list of
+   * liberties of the superstring which are not already liberties of
+   * (str).
+   *
+   * If liberty_cap is nonzero, only liberties of substrings of the
+   * superstring which have fewer than liberty_cap liberties are
+   * generated.
+
+   * pointers: num_stones, stones, num_libs, libs
+   */
+  find_superstring_stones_and_liberties(str, num_stones, stones, num_libs, libs, liberty_cap) {
+    this.do_find_superstring(str, num_stones, stones, num_libs, libs,
+      this.board.MAX_LIBERTIES, null, null, liberty_cap, 0, 0);
+  },
+
   superstring_chainlinks() {},
 
   /* analogous to chainlinks, this function finds boundary chains of the

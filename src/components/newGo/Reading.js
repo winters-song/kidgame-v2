@@ -436,59 +436,57 @@ export const Reading = {
     }
 
     /* Try (a little) harder */
-    {
-      let alibs = [];
-      let blibs = [];
-      let alib = b.findlib(astr, 2, alibs);
-      let defended0 = codes.WIN;
-      let defended1 = codes.WIN;
-      const other = b.OTHER_COLOR(color);
-      /* Let's just try the case where the group with the fewest liberties
-       * has only 2, and try each atari in turn.
-       */
-      if (alib === 2) {
-        if (b.trymove(alibs[0], other, "attack_either-A", astr)) {
-          defended0 = this.defend_both(astr, bstr);
-          b.popgo();
-        }
-        if (defended0
-          && b.trymove(alibs[1], other, "attack_either-B", astr)) {
-          defended1 = this.defend_both(astr, bstr);
-          b.popgo();
-        }
+    let alibs = [];
+    let blibs = [];
+    let alib = b.findlib(astr, 2, alibs);
+    let defended0 = codes.WIN;
+    let defended1 = codes.WIN;
+    const other = b.OTHER_COLOR(color);
+    /* Let's just try the case where the group with the fewest liberties
+     * has only 2, and try each atari in turn.
+     */
+    if (alib === 2) {
+      if (b.trymove(alibs[0], other, "attack_either-A", astr)) {
+        defended0 = this.defend_both(astr, bstr);
+        b.popgo();
       }
-      /* The second string is possibly also short in liberties.
-       * Let's try to improve the result.
-       */
-      if (defended0 > 0 && defended1 > 0
-        && b.findlib(bstr, 2, blibs) === 2) {
-        defended0 = Math.min(defended0, defended1);
-        defended1 = defended0;
-
-        /* We may get here even if alib==1, in case there is a snapback.
-         * To avoid referencing uninitialized memory in this case we
-         * explicitly set alibs[1] to NO_MOVE.
-         */
-        if (alib === 1){
-          alibs[1] = NO_MOVE;
-        }
-
-        if (blibs[0] !== alibs[0] && blibs[0] !== alibs[1]
-          && b.trymove(blibs[0], other, "attack_either-C", bstr)) {
-          let defended = this.defend_both(astr, bstr);
-          defended0 = Math.min(defended0, defended);
-          b.popgo();
-        }
-        if (defended0
-          && blibs[1] !== alibs[0] && blibs[1] !== alibs[1]
-          && b.trymove(blibs[1], other, "attack_either-D", bstr)) {
-          let defended = this.defend_both(astr, bstr);
-          defended1 = Math.min(defended1, defended);
-          b.popgo();
-        }
+      if (defended0
+        && b.trymove(alibs[1], other, "attack_either-B", astr)) {
+        defended1 = this.defend_both(astr, bstr);
+        b.popgo();
       }
-      return REVERSE_RESULT(Math.min(defended0, defended1));
     }
+    /* The second string is possibly also short in liberties.
+     * Let's try to improve the result.
+     */
+    if (defended0 > 0 && defended1 > 0
+      && b.findlib(bstr, 2, blibs) === 2) {
+      defended0 = Math.min(defended0, defended1);
+      defended1 = defended0;
+
+      /* We may get here even if alib==1, in case there is a snapback.
+       * To avoid referencing uninitialized memory in this case we
+       * explicitly set alibs[1] to NO_MOVE.
+       */
+      if (alib === 1){
+        alibs[1] = NO_MOVE;
+      }
+
+      if (blibs[0] !== alibs[0] && blibs[0] !== alibs[1]
+        && b.trymove(blibs[0], other, "attack_either-C", bstr)) {
+        let defended = this.defend_both(astr, bstr);
+        defended0 = Math.min(defended0, defended);
+        b.popgo();
+      }
+      if (defended0
+        && blibs[1] !== alibs[0] && blibs[1] !== alibs[1]
+        && b.trymove(blibs[1], other, "attack_either-D", bstr)) {
+        let defended = this.defend_both(astr, bstr);
+        defended1 = Math.min(defended1, defended);
+        b.popgo();
+      }
+    }
+    return REVERSE_RESULT(Math.min(defended0, defended1));
 
   },
 

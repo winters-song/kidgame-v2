@@ -992,7 +992,7 @@ export const Optics = {
             }
 
             /* See comment to the same code for attack points. */
-            if (score == 0){
+            if (score === 0){
               score += 2;
             }
 

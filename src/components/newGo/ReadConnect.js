@@ -33,10 +33,10 @@ class HeapEntry {
 
 
 const FIXED_POINT_BASIS = 10000
-const FP = (x) => Math.floor(0.5 + FIXED_POINT_BASIS * x)
+export const FP = (x) => Math.floor(0.5 + FIXED_POINT_BASIS * x)
 const FIXED_TO_FLOAT = (x) => (x / FIXED_POINT_BASIS)
 
-const HUGE_CONNECTION_DISTANCE = FP(100.0)
+export const HUGE_CONNECTION_DISTANCE = FP(100.0)
 
 
 const MAX_MOVES =362
@@ -969,7 +969,7 @@ export const ReadConnect = {
     }
 
     this.order_connection_moves(Moves, str1, str2, b.board[str1], "recursive_connect");
-    for (i = 1; ((i < Moves[0] + 1) && (res == 0)); i++) {
+    for (i = 1; ((i < Moves[0] + 1) && (res === 0)); i++) {
       if (b.trymove(Moves[i], b.board[str1], "recursive_connect", str1)) {
         if (!this.recursive_disconnect(str1, str2, move)) {
           move[0] = Moves[i];
@@ -994,7 +994,6 @@ export const ReadConnect = {
   */
   disconnect(str1, str2, move){
     const b = this.board
-    let i;
     let res = codes.WIN;
     let Moves = [];
     let dummy_move;
@@ -2382,7 +2381,7 @@ export const ReadConnect = {
               if (b.countlib(pos) === 2) {
                 for (let i = 0; i < 4; i++) {
                   if (b.board[lib + b.delta[i]] === colors.EMPTY
-                    && lib[0] + b.delta[i] != apos
+                    && lib[0] + b.delta[i] !== apos
                     && b.trymove(lib[0] + b.delta[i], other, "compute_connection_distances", pos)) {
                     if (this.ladder_capture(pos, null)) {
                       vulnerable2 = lib[0] + b.delta[i];

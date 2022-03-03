@@ -651,11 +651,9 @@ export const Dragon = {
    * we can look for immediate adjacencies.
    */
   find_neighbor_dragons () {
-    let m, n;
     let pos;
     let pos2;
     let i, j;
-    // let d;
     let dragons = [];
     let distances = [];
     let dist;
@@ -1716,7 +1714,7 @@ export const Dragon = {
   },
 
   mark_dragon (pos, mx, mark) {
-    for (let w = this.first_worm_in_dragon(this.dragon[pos].origin); w != NO_MOVE; w = this.next_worm_in_dragon(w)){
+    for (let w = this.first_worm_in_dragon(this.dragon[pos].origin); w !== NO_MOVE; w = this.next_worm_in_dragon(w)){
       this.board.mark_string(w, mx, mark);
     }
   },

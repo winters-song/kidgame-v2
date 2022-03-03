@@ -1,3 +1,12 @@
+
+export const gg_normalize_float = function(x, a) {
+  return a * parseInt(0.5 + x / a);
+}
+
+export const gg_normalize_float2int = function(x, a) {
+  return parseInt(0.5 + x / a);
+}
+
 // 插值
 export const gg_interpolate = function (f, x) {
   if (x < f.range_lowerbound){

@@ -41,12 +41,12 @@ const STRATEGIC_DEFEND_MOVE =   46
 
 const MY_ATARI_ATARI_MOVE =     50
 const YOUR_ATARI_ATARI_MOVE =   52
-const VITAL_EYE_MOVE =          54
+// const VITAL_EYE_MOVE =          54
 
 const OWL_ATTACK_MOVE_GAIN =    60
 const OWL_DEFEND_MOVE_LOSS =    62
-const POTENTIAL_SEMEAI_ATTACK =	64
-const POTENTIAL_SEMEAI_DEFENSE = 66
+// const POTENTIAL_SEMEAI_ATTACK =	64
+// const POTENTIAL_SEMEAI_DEFENSE = 66
 
 const ANTISUJI_MOVE =           70
 
@@ -59,19 +59,19 @@ const ACTIVE =                  0
 const TERRITORY_REDUNDANT =     1
 const STRATEGICALLY_REDUNDANT = 2
 const REDUNDANT =               (TERRITORY_REDUNDANT | STRATEGICALLY_REDUNDANT)
-const SECONDARY =               4
+// const SECONDARY =               4
 
 const MAX_REASONS = 120
 
-const MAX_TRACE_LENGTH =  160
+// const MAX_TRACE_LENGTH =  160
 
 const HUGE_MOVE_VALUE = 10.0*19*19
 
-class MoveReason {
-  type;   /* e.g. attack, defend, or connect */
-  what;   /* pointer into list of strings, list of pair of dragons, or similar */
-  status; /* This is a bitmap to mark redundant or secondary move reasons. */
-};
+// class MoveReason {
+//   type;   /* e.g. attack, defend, or connect */
+//   what;   /* pointer into list of strings, list of pair of dragons, or similar */
+//   status; /* This is a bitmap to mark redundant or secondary move reasons. */
+// };
 
 
 class MoveData {
@@ -107,10 +107,10 @@ class MoveData {
 
 const MAX_MOVE_REASONS =	1000
 const MAX_WORMS =		2*19*19/3
-const MAX_DRAGONS =		MAX_WORMS
+// const MAX_DRAGONS =		MAX_WORMS
 const MAX_CONNECTIONS = 	4*MAX_WORMS
-const MAX_POTENTIAL_SEMEAI =	50
-const MAX_EYES =		19*19/2
+// const MAX_POTENTIAL_SEMEAI =	50
+// const MAX_EYES =		19*19/2
 const MAX_LUNCHES =		MAX_WORMS
 const MAX_EITHER =		100
 const MAX_ALL = 		100
@@ -120,12 +120,12 @@ const MAX_ATTACK_THREATS =	6
 
 /* Helper functions to check conditions in discard rules. */
 
-class DiscardRule {
-  reason_type = [];
-  condition;
-  flags;
-  trace_message = [];
-};
+// class DiscardRule {
+//   reason_type = [];
+//   condition;
+//   flags;
+//   trace_message = [];
+// };
 
 
 export const MoveReasons = {
