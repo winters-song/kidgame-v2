@@ -49,6 +49,11 @@ let gg;
 const MAX_SURROUND  = 10
 
 
+class SurroundData {
+  dragon_number;                  /* number of the (surrounded) beast */
+  surround_map = []; /* surround map                     */
+};
+
 export const Surround = {
   compute_surroundings(pos, apos, showboard, surround_size) {
     let i, j;
@@ -489,6 +494,9 @@ export const Surround = {
     }
 
     if (!apos && surrounded && this.surround_pointer < MAX_SURROUND) {
+      if(!this.surroundings[this.surround_pointer]){
+        this.surroundings[this.surround_pointer] = new SurroundData()
+      }
       this.surroundings[this.surround_pointer].surround_map = mn.slice()
       this.surroundings[this.surround_pointer].dragon_number = this.dragon[pos].id;
       this.surround_pointer++;
@@ -512,13 +520,14 @@ export const Surround = {
    * - ascending order is done clock-wise (WEST, NORTH, EAST)
    */
   compare_angles(a, b) {
+    const bd = this.board
     let aa = a*1
     let bb = b*1
 
-    let di_a = b.I(aa) - b.I(gg);
-    let dj_a = b.J(aa) - b.J(gg);
-    let di_b = b.I(bb) - b.I(gg);
-    let dj_b = b.J(bb) - b.J(gg);
+    let di_a = bd.I(aa) - bd.I(gg);
+    let dj_a = bd.J(aa) - bd.J(gg);
+    let di_b = bd.I(bb) - bd.I(gg);
+    let dj_b = bd.J(bb) - bd.J(gg);
 
     let sin_a, sin_b;
 

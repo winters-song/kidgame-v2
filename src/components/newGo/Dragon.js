@@ -91,9 +91,9 @@ let dragon2_initialized;
 
 
 
-let moyo_value2weakness = new InterpolationData([ 5, 0.0, 15.0, [1.0, 0.65, 0.3, 0.15, 0.05, 0.0]])
-let escape_route2weakness = new InterpolationData([ 5, 0.0, 25.0, [1.0, 0.6, 0.3, 0.1, 0.05, 0.0]])
-let genus2weakness = new InterpolationData([  6, 0.0, 3.0, [1.0, 0.95, 0.8, 0.5, 0.2, 0.1, 0.0]])
+let moyo_value2weakness = new InterpolationData( 5, 0.0, 15.0, [1.0, 0.65, 0.3, 0.15, 0.05, 0.0])
+let escape_route2weakness = new InterpolationData( 5, 0.0, 25.0, [1.0, 0.6, 0.3, 0.1, 0.05, 0.0])
+let genus2weakness = new InterpolationData( 6, 0.0, 3.0, [1.0, 0.95, 0.8, 0.5, 0.2, 0.1, 0.0])
 
 
 let new_dragon_origins = []
@@ -519,7 +519,7 @@ export const Dragon = {
         continue;
       }
 
-      if (this.black_eye[str].color === colors.BLACK && this.black_eye[str].origin === str) {
+      if (this.black_eye[str] && this.black_eye[str].color === colors.BLACK && this.black_eye[str].origin === str) {
         let value = new EyeValue()
         let attack_point = []
         let defense_point = []
@@ -530,7 +530,7 @@ export const Dragon = {
         this.propagate_eye(str, this.black_eye);
       }
 
-      if (this.white_eye[str].color === colors.WHITE && this.white_eye[str].origin === str) {
+      if (this.white_eye[str] && this.white_eye[str].color === colors.WHITE && this.white_eye[str].origin === str) {
         let value = new EyeValue()
         let attack_point = []
         let defense_point = []
@@ -891,7 +891,7 @@ export const Dragon = {
           continue;
         }
 
-        if (this.black_eye[pos].color === colors.BLACK && this.black_eye[pos].origin === pos
+        if (this.black_eye[pos] && this.black_eye[pos].color === colors.BLACK && this.black_eye[pos].origin === pos
           && (eye_to_exclude === NO_MOVE || this.black_eye[eye_to_exclude].origin !== pos)
           && this.find_eye_dragons(pos, this.black_eye, colors.BLACK, dr, 1) === 1
           && this.is_same_dragon(dr, d)) {
@@ -913,7 +913,7 @@ export const Dragon = {
           continue;
         }
 
-        if (this.white_eye[pos].color === colors.WHITE && this.white_eye[pos].origin === pos
+        if (this.white_eye[pos] && this.white_eye[pos].color === colors.WHITE && this.white_eye[pos].origin === pos
           && (eye_to_exclude === NO_MOVE || this.white_eye[eye_to_exclude].origin !== pos)
           && this.find_eye_dragons(pos, this.white_eye, colors.WHITE, dr, 1) === 1
           && this.is_same_dragon(dr, d)) {
@@ -1673,7 +1673,7 @@ export const Dragon = {
       this.dragon2[d].weakness = this.compute_dragon_weakness_value(d);
     }
   },
-  compute_strategic_sizes () {},
+  compute_strategic_gg_interpolatesizes () {},
 
   /*
  * Test whether two dragons are the same. Used by autohelpers and elsewhere.
@@ -1714,7 +1714,7 @@ export const Dragon = {
   },
 
   mark_dragon (pos, mx, mark) {
-    for (let w = this.first_worm_in_dragon(this.dragon[pos].origin); w !== NO_MOVE; w = this.next_worm_in_dragon(w)){
+    for (let w = this.first_worm_in_dragon(this.dragon[pos].origin); !!w; w = this.next_worm_in_dragon(w)){
       this.board.mark_string(w, mx, mark);
     }
   },

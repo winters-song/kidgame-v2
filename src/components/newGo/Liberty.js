@@ -154,7 +154,7 @@ export class EyeData extends Entity{
   esize;             /* size of the eyespace                      */
   msize;             /* number of marginal vertices               */
   origin;            /* The origin                                */
-  value; /* Number of eyes.                           */
+  value = new EyeValue(); /* eyevalue: Number of eyes.                           */
 
   /* The above fields are constant on the whole eyespace.             */
   /* ---------------------------------------------------------------- */

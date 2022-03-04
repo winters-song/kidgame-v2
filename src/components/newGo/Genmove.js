@@ -117,7 +117,7 @@ export default class Genmove {
       this.compute_worm_influence();
     }
     if (this.NEEDS_UPDATE(this.dragons_examined)) {
-      // this.make_dragons(0);
+      this.make_dragons(0);
       // compute_scores(chinese_rules || aftermath_play);
       /* We have automatically done a partial dragon analysis as well. */
       this.dragons_examined_without_owl = this.position_number;

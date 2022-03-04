@@ -237,6 +237,7 @@ export const Utils = {
 
   ASSERT1(x, pos){
     if(!x) {
+      debugger;
       throw new Error(pos)
     }
   }

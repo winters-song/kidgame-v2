@@ -1227,6 +1227,9 @@ export const Influence = {
       /* Save the computed values in the cache. */
       for (ii = b.BOARDMIN; ii < b.BOARDMAX; ii++){
         if (b.ON_BOARD(ii)){
+          if(!escape_values[ii]){
+            escape_values[ii] = []
+          }
           escape_values[ii][cache_number] = escape_value[ii];
         }
       }

@@ -1,6 +1,7 @@
 import {codes, colors, NO_MOVE} from "./Constants";
 import {EyeData, EyeValue, FALSE_EYE, HALF_EYE, MAX_EYE_ATTACKS} from "./Liberty";
 import {CAN_BE_EMPTY, CAN_CONTAIN_STONE, EYE_ATTACK_POINT, EYE_DEFENSE_POINT, graphs} from "./patterns/eyes";
+import {gg_normalize_float2int} from "./GgUtils";
 
 const MAXEYE = 20
 
@@ -37,10 +38,14 @@ export const Optics = {
 
     // 清空数组
     if (b_eye) {
-      b_eye.splice(0, b_eye.length)
+      for(let i=0; i<b.BOARDMAX; i++){
+        b_eye[i] = new EyeData()
+      }
     }
     if (w_eye){
-      w_eye.splice(0, w_eye.length)
+      for(let i=0; i<b.BOARDMAX; i++){
+        w_eye[i] = new EyeData()
+      }
     }
 
     /* Initialize eye data and compute the lively array. */
@@ -62,9 +67,6 @@ export const Optics = {
       if (!b.ON_BOARD(pos)){
         continue;
       }
-
-      w_eye[pos] = new EyeData()
-      b_eye[pos] = new EyeData()
 
       if (b.board[pos] === colors.EMPTY || !lively[pos]) {
         if (this.black_domain[pos] === 0 && this.white_domain[pos] === 0) {
@@ -143,6 +145,9 @@ export const Optics = {
 
     for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++){
       if (b.ON_BOARD(pos)){
+        if(!eye[pos]){
+          eye[pos] = new EyeData()
+        }
         eye[pos].origin = NO_MOVE;
       }
     }
@@ -370,7 +375,86 @@ export const Optics = {
         && (this.worm[pos].attack_codes[0] === 0 || this.worm[pos].defense_codes[0] !== 0);
     }
   },
-  false_margin () {},
+
+  /* In the following situation, we do not wish the vertex at 'a'
+   * included in the O eye space:
+   *
+   * OOOOXX
+   * OXaX..
+   * ------
+   *
+   * This eyespace should parse as (X), not (X!). Thus the vertex
+   * should not be included in the eyespace if it is adjacent to
+   * an X stone which is alive, yet X cannot play safely at a.
+   * The function returns 1 if this situation is found at
+   * (pos) for color O.
+   *
+   * The condition above is true, curiously enough, also for the
+   * following case:
+   *   A group has two eyes, one of size 1 and one which is critical 1/2.
+   *   It also has to have less than 4 external liberties, since the
+   *   reading has to be able to capture the group tactically. In that
+   *   case, the eye of size one will be treated as a false marginal.
+   * Thus we have to exclude this case, which is done by requiring (pos)
+   * to be adjacent to both white and black stones. Since this test is
+   * least expensive, we start with it.
+   *
+   * As a second optimization we require that one of the other colored
+   * neighbors is not lively. This should cut down on the number of
+   * calls to attack() and safe_move().
+   */
+  false_margin (pos, color, lively) {
+    const b = this.board
+    const other = b.OTHER_COLOR(color);
+    let neighbors = 0;
+    let k;
+    let all_lively;
+    let potential_false_margin;
+
+    /* Require neighbors of both colors. */
+    for (k = 0; k < 4; k++){
+      if (b.ON_BOARD(pos + b.delta[k])){
+        neighbors |= b.board[pos + b.delta[k]];
+      }
+    }
+
+    if (neighbors !==(colors.WHITE | colors.BLACK)){
+      return 0;
+    }
+
+    /* At least one opponent neighbor should be not lively. */
+    all_lively = 1;
+    for (k = 0; k < 4; k++){
+      if (b.board[pos + b.delta[k]] ===other && !lively[pos + b.delta[k]]){
+        all_lively = 0;
+      }
+    }
+
+    if (all_lively){
+      return 0;
+    }
+
+    potential_false_margin = 0;
+    for (k = 0; k < 4; k++) {
+      let apos = pos + b.delta[k];
+      if (b.board[apos] !==other || !lively[apos]){
+        continue;
+      }
+
+      if (b.stackp === 0 && this.worm[apos].attack_codes[0] === 0)
+        potential_false_margin = 1;
+
+      if (b.stackp > 0 && !this.attack(apos, null))
+        potential_false_margin = 1;
+    }
+
+    if (potential_false_margin && this.safe_move(pos, other) === 0) {
+      // DEBUG(DEBUG_EYES, "False margin for %C at %1m.\n", color, pos);
+      return 1;
+    }
+
+    return 0;
+  },
 
   /*
    * originate_eye(pos, pos, *esize, *msize, eye) creates an eyeshape
@@ -454,9 +538,9 @@ export const Optics = {
    * min are different, then vital points of attack and defense are also
    * generated.
    *
-   * If add_moves == 1, this function may add a move_reason for (color) at
-   * a vital point which is found by the function. If add_moves == 0,
-   * set color == EMPTY.
+   * If add_moves ===1, this function may add a move_reason for (color) at
+   * a vital point which is found by the function. If add_moves ===0,
+   * set color ===EMPTY.
    */
   compute_eyes (pos, value, attack_point, defense_point, eye, heye, add_moves) {
     if (attack_point) {
@@ -491,8 +575,232 @@ export const Optics = {
       value.set([0, 0, 0, 0]);
     }
   },
-  compute_eyes_pessimistic () {},
-  guess_eye_space () {},
+
+  /*
+   * This function works like compute_eyes(), except that it also gives
+   * a pessimistic view of the chances to make eyes. Since it is intended
+   * to be used from the owl code, the option to add move reasons has
+   * been removed.
+   */
+  compute_eyes_pessimistic (pos, value, pessimistic_min, attack_point, defense_point, eye, heye) {
+    const b = this.board
+    let bulk_coefficients = [-1, -1, 1, 4, 12];
+
+    let pos2;
+    let margins = 0;
+    let halfeyes = 0;
+    let margins_adjacent_to_margin = 0;
+    let effective_eyesize;
+    let bulk_score = 0;
+    let chainlinks = [];
+
+    /* Stones inside eyespace which do not coincide with a false eye or
+     * a halfeye.
+     */
+    let interior_stones = 0;
+
+    // memset(chainlinks, 0, BOARDMAX);
+
+    for (pos2 = b.BOARDMIN; pos2 < b.BOARDMAX; pos2++) {
+      let k;
+
+      if (!b.ON_BOARD(pos2) || eye[pos2].origin !==pos){
+        continue;
+      }
+
+      if (eye[pos2].marginal || this.is_halfeye(heye, pos2)) {
+        margins++;
+        if (eye[pos2].marginal && eye[pos2].marginal_neighbors > 0){
+          margins_adjacent_to_margin++;
+        }
+        if (this.is_halfeye(heye, pos2)){
+          halfeyes++;
+        }
+      }
+      else if (b.IS_STONE(b.board[pos2])){
+        interior_stones++;
+      }
+
+      bulk_score += bulk_coefficients[eye[pos2].neighbors];
+
+      for (k = 0; k < 4; k++) {
+        let neighbor = pos2 + b.delta[k];
+
+        if (b.board[neighbor] ===eye[pos].color) {
+          if (!b.chainlinks[neighbor]) {
+            bulk_score += 4;
+            b.mark_string(neighbor, chainlinks, 1);
+          }
+        }
+        else if (!b.ON_BOARD(neighbor)){
+          bulk_score += 2;
+        }
+      }
+    }
+
+    /* This is a measure based on the simplified assumption that both
+     * players only cares about playing the marginal eye spaces. It is
+     * used later to guess the eye value for unidentified eye shapes.
+     */
+    effective_eyesize = (eye[pos].esize + halfeyes - 2*margins
+      - margins_adjacent_to_margin);
+
+    if (attack_point){
+      attack_point[0] = NO_MOVE;
+    }
+    if (defense_point){
+      defense_point[0] = NO_MOVE;
+    }
+
+    // if (debug & DEBUG_EYES) {
+    //   print_eye(eye, heye, pos);
+    //   DEBUG(DEBUG_EYES, "\n");
+    // }
+
+    /* Look up the eye space in the graphs database. */
+    if (this.read_eye(pos, attack_point, defense_point, value, eye, heye, 0)) {
+      pessimistic_min[0] = this.min_eyes(value) - margins;
+
+      /* A single point eye which is part of a ko can't be trusted. */
+      if (eye[pos].esize === 1 && b.is_ko(pos, b.OTHER_COLOR(eye[pos].color), null)){
+        pessimistic_min[0] = 0;
+      }
+      // DEBUG(DEBUG_EYES, "  graph matching - %s, pessimistic_min=%d\n",
+      //   eyevalue_to_string(value), *pessimistic_min);
+    }
+
+    /* Ideally any eye space that hasn't been matched yet should be two
+     * secure eyes. Until the database becomes more complete we have
+     * some additional heuristics to guess the values of unknown
+     * eyespaces.
+     */
+    else {
+      this.guess_eye_space(pos, effective_eyesize, margins, bulk_score, eye, value, pessimistic_min);
+      // DEBUG(DEBUG_EYES, "  guess_eye - %s, pessimistic_min=%d\n",
+      //   eyevalue_to_string(value), *pessimistic_min);
+    }
+
+    if (pessimistic_min[0] < 0) {
+      pessimistic_min[0] = 0;
+      // DEBUG(DEBUG_EYES, "  pessimistic min revised to 0\n");
+    }
+
+    /* An eyespace with at least two interior stones is assumed to be
+     * worth at least one eye, regardless of previous considerations.
+     */
+    if (pessimistic_min[0] < 1 && interior_stones >= 2) {
+      pessimistic_min[0] = 1;
+      // DEBUG(DEBUG_EYES, "  pessimistic min revised to 1 (interior stones)\n");
+    }
+
+    if (attack_point && attack_point[0] === NO_MOVE && this.max_eyes(value) !== pessimistic_min[0]) {
+      /* Find one marginal vertex and set as attack and defense point.
+       *
+       * We make some effort to find the best marginal vertex by giving
+       * priority to ones with more than one neighbor in the eyespace.
+       * We prefer non-halfeye margins and ones which are not self-atari
+       * for the opponent. Margins not on the edge are also favored.
+       */
+      let best_attack_point = NO_MOVE;
+      let best_defense_point = NO_MOVE;
+      let score = 0.0;
+
+      for (pos2 = b.BOARDMIN; pos2 < b.BOARDMAX; pos2++) {
+        if (b.ON_BOARD(pos2) && eye[pos2].origin ===pos) {
+          let this_score = 0.0;
+          let this_attack_point = NO_MOVE;
+          let this_defense_point = NO_MOVE;
+          if (eye[pos2].marginal && b.board[pos2] === colors.EMPTY) {
+            this_score = eye[pos2].neighbors;
+            this_attack_point = pos2;
+            this_defense_point = pos2;
+
+            if (b.is_self_atari(pos2, b.OTHER_COLOR(eye[pos].color))){
+              this_score -= 0.5;
+            }
+
+            if (b.is_edge_vertex(pos2)){
+              this_score -= 0.1;
+            }
+          }
+          else if (this.is_halfeye(heye, pos2)) {
+            this_score = 0.75;
+            this_defense_point = heye[pos2].defense_point[0];
+            this_attack_point = heye[pos2].attack_point[0];
+          }
+          else{
+            continue;
+          }
+
+          if (gg_normalize_float2int(this_score, 0.01) > gg_normalize_float2int(score, 0.01)) {
+            best_attack_point = this_attack_point;
+            best_defense_point = this_defense_point;
+            score = this_score;
+          }
+        }
+      }
+
+      if (score > 0.0) {
+        if (defense_point){
+          defense_point[0] = best_defense_point;
+        }
+        if (attack_point){
+          attack_point[0] = best_attack_point;
+        }
+      }
+    }
+
+    if (defense_point && defense_point[0] !== NO_MOVE) {
+      b.ASSERT_ON_BOARD1(defense_point[0]);
+    }
+    if (attack_point && attack_point[0] !== NO_MOVE) {
+      b.ASSERT_ON_BOARD1(attack_point[0]);
+    }
+  },
+
+  //pointers: pessimistic_min
+  guess_eye_space (pos, effective_eyesize, margins, bulk_score, eye, value, pessimistic_min) {
+    if (effective_eyesize > 3) {
+      value.set(2, 2, 2, 2)
+      pessimistic_min[0] = 1;
+
+      if ((margins === 0 && effective_eyesize > 7) || (margins > 0 && effective_eyesize > 9)) {
+        let eyes = 2 + (effective_eyesize - 2 * (margins > 0) - 8) / 2;
+        let threshold = (4 * (eye[pos].esize - 2) + (effective_eyesize - 8) * (effective_eyesize - 9));
+
+        // DEBUG(DEBUG_EYES, "size: %d(%d), threshold: %d, bulk score: %d\n",
+        //   eye[pos].esize, effective_eyesize, threshold, bulk_score);
+
+        if (bulk_score > threshold && effective_eyesize < 15){
+          eyes = Math.max(2, eyes - ((bulk_score - threshold) / eye[pos].esize));
+        }
+
+        if (bulk_score < threshold + eye[pos].esize || effective_eyesize >= 15){
+          pessimistic_min[0] = eyes;
+        }
+
+        value.set([eyes, eyes, eyes, eyes])
+      }
+    }
+    else if (effective_eyesize > 0) {
+      value.set([1,1,1,1])
+      if (margins > 0){
+        pessimistic_min[0] = 0;
+      }
+      else{
+        pessimistic_min[0] = 1;
+      }
+    }
+    else {
+      if (eye[pos].esize - margins > 2){
+        value.set([0, 0, 1, 1]);
+      }
+      else{
+        value.set([0, 0, 0, 0]);
+      }
+      pessimistic_min[0] = 0;
+    }
+  },
 
 
   /* This function does some minor reading to improve the results of
@@ -530,9 +838,9 @@ export const Optics = {
    * The heuristics used here might need improvements since they are
    * based on a single game position.
    *
-   * If add_moves != 0, this function may add move reasons for (color)
+   * If add_moves !==0, this function may add move reasons for (color)
    * at the vital points which are found by recognize_eye(). If add_moves
-   * == 0, set color to be EMPTY.
+   * ===0, set color to be EMPTY.
    */
   read_eye (pos, attack_point, defense_point, value, eye, heye, add_moves) {
     let eye_color;
@@ -703,7 +1011,7 @@ export const Optics = {
    * (*attack_point) is set to its location, or NO_MOVE if there is none.
    * Similarly (*defense_point) is the location of a vital defense point.
    * *value is set according to the pattern found. Vital attack/defense points
-   * exist if and only if min_eyes(value) != max_eyes(value).
+   * exist if and only if min_eyes(value) !==max_eyes(value).
    */
   recognize_eye (pos, attack_point, defense_point, value, eye, heye, vp) {
     let pos2;
@@ -784,12 +1092,12 @@ export const Optics = {
       }
 
       this.reset_map(eye_size);
-      let q = 0;
-      this.first_map(map[0]);
+      let q = [0];
+      this.first_map(map, 0);
 
       while (1) {
-        let gv = graphs[graph].vertex[q];
-        let mv = map[q];
+        let gv = graphs[graph].vertex[q[0]];
+        let mv = map[q[0]];
         let ok = 1;
 
         if (neighbors[mv] !== gv.neighbors || marginal[mv] !== gv.marginal || edge[mv] < gv.edge){
@@ -838,12 +1146,12 @@ export const Optics = {
           }
         }
         else {
-          q++;
-          if (q === eye_size){
+          q[0]++;
+          if (q[0] === eye_size){
             break;			/* A match! */
           }
 
-          this.first_map(map[q]);
+          this.first_map(map, q[0]);
         }
       }
 
@@ -1014,9 +1322,58 @@ export const Optics = {
 
     return 0;
   },
-  reset_map () {},
-  first_map () {},
-  next_map () {},
+
+  /* a MAP is a map of the integers 0,1,2, ... ,q into
+   * 0,1, ... , esize-1 where q < esize. This determines a
+   * bijection of the first q+1 elements of the graph into the
+   * eyespace. The following three functions work with maps.
+   */
+
+    /* Reset internal data structure used by first_map() and
+     * next_map() functions.
+     */
+  reset_map (size) {
+    map_size = size;
+    used_index = []
+  },
+
+  /* The function first_map finds the smallest valid
+   * value of a map element.
+   */
+  first_map (map_value, index) {
+    let k = 0;
+
+    while (used_index[k]){
+      k++;
+    }
+
+    used_index[k] = 1;
+    map_value[index] = k;
+  },
+
+  /* The function next_map produces the next map in lexicographical
+   * order. If no next map can be found, q is decremented, then we
+   * try again. If the entire map is lexicographically last, the
+   * function returns false.
+   */
+  next_map (q, map) {
+    let k;
+
+    do {
+      used_index[map[q[0]]] = 0;
+      for (k = map[q[0]]; ++k < map_size;) {
+        if (!used_index[k]) {
+          used_index[k] = 1;
+          map[q[0]] = k;
+          return 1;
+        }
+      }
+
+      q[0]--;
+    } while (q[0] >= 0);
+
+    return 0;
+  },
 
   /* add_false_eye() turns a proper eyespace into a margin. */
   add_false_eye (pos, eye, heye) {
@@ -1038,12 +1395,48 @@ export const Optics = {
     this.propagate_eye(eye[pos].origin, eye);
   },
 
-  is_eye_space () {},
-  is_proper_eye_space () {},
-  max_eye_value () {},
-  is_marginal_eye_space () {},
-  is_halfeye () {},
-  is_false_eye () {},
+  /* These functions are used from constraints to identify eye spaces,
+   * primarily for late endgame moves.
+   */
+  is_eye_space (pos) {
+    return (this.white_eye[pos].color === colors.WHITE || this.black_eye[pos].color === colors.BLACK);
+  },
+
+  is_proper_eye_space (pos) {
+    return ((this.white_eye[pos].color === colors.WHITE && !this.white_eye[pos].marginal)
+      || (this.black_eye[pos].color === colors.BLACK && !this.black_eye[pos].marginal));
+  },
+  /* Return the maximum number of eyes that can be obtained from the
+   * eyespace at (i, j). This is most useful in order to determine
+   * whether the eyespace can be assumed to produce any territory at
+   * all.
+   */
+  max_eye_value (pos) {
+    let max_white = 0;
+    let max_black = 0;
+
+    if (this.white_eye[pos].color === colors.WHITE){
+      max_white = this.max_eyes(this.white_eye[pos].value);
+    }
+
+    if (this.black_eye[pos].color === colors.BLACK){
+      max_black = this.max_eyes(this.black_eye[pos].value);
+    }
+
+    return Math.max(max_white, max_black);
+  },
+
+  is_marginal_eye_space (pos) {
+    return (this.white_eye[pos].marginal || this.black_eye[pos].marginal);
+  },
+
+  is_halfeye (heye, pos) {
+    return heye[pos].type === HALF_EYE;
+  },
+
+  is_false_eye (heye, pos) {
+    return heye[pos].type === FALSE_EYE;
+  },
 
   /* Find topological half eyes and false eyes by analyzing the
    * diagonal intersections, as described in the Texinfo
@@ -1060,6 +1453,9 @@ export const Optics = {
       }
 
       /* skip every vertex which can't be a false or half eye */
+      if (!eye[pos]) {
+        continue;
+      }
       if (eye[pos].color !== eye_color || eye[pos].marginal || eye[pos].neighbors > 1) {
         continue;
       }
@@ -1262,8 +1658,267 @@ export const Optics = {
     return sum;
   },
 
-  evaluate_diagonal_intersection () {},
-  obvious_false_eye () {},
+  /* Evaluate an intersection (m, n) which is diagonal to an eye space,
+   * as described in the Texinfo documentation (Eyes/Eye Topology).
+   *
+   * Returns:
+   *
+   * 0 if both coordinates are off the board
+   * 1 if one coordinate is off the board
+   *
+   * 0    if (color) has control over the vertex
+   * a    if (color) can take control over the vertex unconditionally and
+   *      the opponent can take control by winning a ko.
+   * 1    if both (color) and the opponent can take control of the vertex
+   *      unconditionally
+   * b    if (color) can take control over the vertex by winning a ko and
+   *      the opponent can take control unconditionally.
+   * 2    if the opponent has control over the vertex
+   *
+   * The values a and b are discussed in the documentation. We are
+   * currently using a = 0.75 and b = 1.25.
+   *
+   * Notice that it's necessary to pass the coordinates separately
+   * instead of as a 1D coordinate. The reason is that the 1D mapping
+   * can't uniquely identify "off the corner" points.
+   *
+   * my_eye has to be the eye_data with respect to color.
+   */
+  evaluate_diagonal_intersection (m, n, color, attack_point, defense_point, my_eye) {
+    const bd = this.board
+    let value = 0;
+    let other = bd.OTHER_COLOR(color);
+    let pos = b.POS(m, n);
+    let acode = [0];
+    let apos = [NO_MOVE];
+    let dcode = [0];
+    let dpos = [NO_MOVE];
+    let off_edge = 0;
+    const a = 0.75;
+    const b = 2 - a;
+
+    attack_point[0] = NO_MOVE;
+    defense_point[0] = NO_MOVE;
+
+    /* Check whether intersection is off the board. We must do this for
+     * each board coordinate separately because points "off the corner"
+     * are special cases.
+     */
+    if (m < 0 || m >= bd.board_size){
+      off_edge++;
+    }
+
+    if (n < 0 || n >= bd.board_size){
+      off_edge++;
+    }
+
+    /* Must return 0 if both coordinates out of bounds. */
+    if (off_edge > 0){
+      return off_edge % 2;
+    }
+
+    /* Discard points within own eyespace, unless marginal or ko point.
+     *
+     * Comment: For some time discardment of points within own eyespace
+     * was contingent on this being the same eyespace as that of the
+     * examined vertex. This caused problems, e.g. in this position,
+     *
+     * |........
+     * |XXXXX...
+     * |OOOOX...
+     * |aO.OX...
+     * |OXXOX...
+     * |.XXOX...
+     * +--------
+     *
+     * where the empty vertex at a was evaluated as a false eye and the
+     * whole group as dead (instead of living in seki).
+     *
+     * The reason for the requirement of less than two marginal
+     * neighbors is this position:
+     *
+     * |.XXXX...
+     * |.OOOX...
+     * |O..OX...
+     * |aOO.X...
+     * |O..XX...
+     * |..O.X...
+     * |.X..X...
+     * |..XXX...
+     *
+     * where the empty vertex at a should not count as a solid eye.
+     * (The eyespace diagonally below a looks like this:
+     *   .!
+     *   !
+     * so we can clearly see why having two marginal vertices makes a
+     * difference.)
+     */
+    if (my_eye[pos].color === color
+      && !my_eye[pos].marginal
+      && my_eye[pos].marginal_neighbors < 2
+      && !(b.board[pos] === colors.EMPTY && this.does_capture_something(pos, other))){
+      return 0.0;
+    }
+
+    if (b.board[pos] === colors.EMPTY) {
+      let your_safety = this.safe_move(pos, other);
+
+      apos[0] = pos;
+      dpos[0] = pos;
+
+      /* We should normally have a safe move, but occasionally it may
+       * happen that it's not safe. There are complications, however,
+       * with a position like this:
+       *
+       * .XXXX|
+       * XXOO.|
+       * XO.O.|
+       * XXO.O|
+       * -----+
+       *
+       * Therefore we ignore our own safety if opponent's safety depends
+       * on ko.
+       */
+      if (your_safety === 0){
+        value = 0.0;
+      }
+      else if (your_safety !== codes.WIN){
+        value = a;
+      }
+      else {                           /* So your_safety ===WIN. */
+        let our_safety = this.safe_move(pos, color);
+
+        if (our_safety === 0) {
+          let k;
+
+          value = 2.0;
+
+          /* This check is intended to fix a certain special case, but might
+           * be helpful in other situations as well. Consider this position,
+           * happened in owl reading deep enough:
+           *
+           * |XXXXX
+           * |XOOXX
+           * |O.OOX
+           * |.OXX.
+           * +-----
+           *
+           * Without this check, the corner eye is considered false, not half-
+           * eye. Thus, owl thinks that the capture gains at most one eye and
+           * gives up.
+           */
+          for (k = 4; k < 8; k++) {
+            let diagonal = pos + b.delta[k];
+            let lib = [];
+
+            if (b.board[diagonal] === other && b.findlib(diagonal, 1, lib) === 1) {
+              if (lib !== pos && this.does_secure(color, lib, pos)) {
+                value = 1.0;
+                apos[0] = lib;
+                break;
+              }
+            }
+          }
+        }
+        else if (our_safety === codes.WIN){
+          value = 1.0;
+        }
+        else {
+          /* our_safety depends on ko. */
+          value = b;
+        }
+      }
+    }
+    else if (b.board[pos] === color) {
+      /* This stone had better be safe, otherwise we wouldn't have an
+       * eyespace in the first place.
+       */
+      value = 0.0;
+    }
+    else if (b.board[pos] === other) {
+      if (b.stackp === 0) {
+        acode[0] = this.worm[pos].attack_codes[0];
+        apos[0]  = this.worm[pos].attack_points[0];
+        dcode[0] = this.worm[pos].defense_codes[0];
+        dpos[0]  = this.worm[pos].defense_points[0];
+      }
+      else{
+        this.attack_and_defend(pos, acode, apos, dcode, dpos);
+      }
+
+      /* Must test acode first since dcode only is reliable if acode is
+       * non-zero.
+       */
+      if (acode[0] === 0){
+        value = 2.0;
+      }
+      else if (dcode[0] === 0){
+        value = 0.0;
+      }
+      else if (acode[0] === codes.WIN && dcode[0] === codes.WIN){
+        value = 1.0;
+      }
+      else if (acode[0] === codes.WIN && dcode[0] !== codes.WIN){
+        value = a;
+      }
+      else if (acode[0] !== codes.WIN && dcode[0] === codes.WIN){
+        value = b;
+      }
+      else if (acode[0] !== codes.WIN && dcode[0] !== codes.WIN){
+        value = 1.0; /* Both contingent on ko. Probably can't happen. */
+      }
+    }
+
+    if (value > 0.0 && value < 2.0) {
+      /* FIXME:
+       * Usually there are several attack and defense moves that would
+       * be equally valid. It's not good that we make an arbitrary
+       * choice at this point.
+       */
+      b.ASSERT_ON_BOARD1(apos[0]);
+      b.ASSERT_ON_BOARD1(dpos[0]);
+      /* Notice:
+       * The point to ATTACK the half eye is the point which DEFENDS
+       * the stones on the diagonal intersection and vice versa. Thus
+       * we must switch attack and defense points here.
+       * If the vertex is empty, dpos ===apos and it doesn't matter
+       * whether we switch.
+       */
+      attack_point[0] = dpos[0];
+      defense_point[0] = apos[0];
+    }
+
+    return value;
+  },
+  /* Conservative relative of topological_eye(). Essentially the same
+   * algorithm is used, but only tactically safe opponent strings on
+   * diagonals are considered. This may underestimate the false/half eye
+   * status, but it should never be overestimated.
+   */
+  obvious_false_eye (pos, color) {
+    const b = this.board
+    let i = b.I(pos);
+    let j = b.J(pos);
+    let diagonal_sum = 0;
+
+    for (let k = 4; k < 8; k++) {
+      let di = b.deltai[k];
+      let dj = b.deltaj[k];
+
+      if (!b.ON_BOARD2(i+di, j) && !b.ON_BOARD2(i, j+dj)){
+        diagonal_sum--;
+      }
+
+      if (!b.ON_BOARD2(i+di, j+dj)){
+        diagonal_sum++;
+      }
+      else if (b.BOARD(i+di, j+dj) ===b.OTHER_COLOR(color) && !this.attack(b.POS(i+di, j+dj), null)){
+        diagonal_sum += 2;
+      }
+    }
+
+    return diagonal_sum >= 4;
+  },
 
   // set_eyevalue (e, a, b, c, d) {
   //   e.a = a

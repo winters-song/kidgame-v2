@@ -280,7 +280,7 @@ const owl_vital_apat58 = [
 ]
 
 
-const autohelperowl_vital_apat0 = (trans, move, color, action) => {
+const autohelperowl_vital_apat0 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(646, trans, move);
   let c = AFFINE_TRANSFORM(682, trans, move);
@@ -290,51 +290,53 @@ const autohelperowl_vital_apat0 = (trans, move, color, action) => {
   return  this.board.countlib(a)>2 && this.owl_topological_eye(b, this.board.board[A]) === 2 && this.owl_topological_eye(c, this.board.board[A]) === 2 && this.play_attack_defend_n(color, 1, 1, [move, d]);
 }
 
-const autohelperowl_vital_apat1 = (trans, move, color, action) => {
+const autohelperowl_vital_apat1 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(610, trans, move);
   let B = AFFINE_TRANSFORM(687, trans, move);
 
   return this.board.countlib(A) === 2 && this.board.countlib(B) === 2;
 }
 
-const autohelperowl_vital_apat5 = (trans, move, color, action) => {
+const autohelperowl_vital_apat5 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(832, trans, move);
 
   return this.board.countlib(a) === 2;
 }
 
-const autohelperowl_vital_apat7 = (trans, move, color, action) => {
+const autohelperowl_vital_apat7 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return this.board.countlib(A) === 2 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1;
 }
 
-const autohelperowl_vital_apat8 = (trans, move, color, action) => {
+const autohelperowl_vital_apat8 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(683, trans, move);
-
-  return this.board.countlib(A) === 2 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1 && this.owl_big_eyespace(move)&& (this.owl_eye_size(move) <= 8 || !this.play_attack_defend_n(color, 1, 1, [move, move]));
+  const b = this.board
+  return b.countlib(A) === 2 && b.accuratelib(move, color, b.MAX_LIBERTIES, null)>1
+    && this.owl_big_eyespace(move)
+    && (this.owl_eye_size(move) <= 8 || !this.play_attack_defend_n(color, 1, 1, [move, move]));
 }
 
-const autohelperowl_vital_apat9 = (trans, move, color, action) => {
+const autohelperowl_vital_apat9 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A) === 2 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null) === 1 && this.owl_big_eyespace(move) && this.play_attack_defend_n(color, 1, 1, [move, move]) !== codes.WIN;
 }
 
-const autohelperowl_vital_apat10 = (trans, move, color, action) => {
+const autohelperowl_vital_apat10 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(609, trans, move);
 
   return ATTACK_MACRO.call(this,a) && !DEFEND_MACRO.call(this,a);
 }
 
-const autohelperowl_vital_apat12 = (trans, move, color, action) => {
+const autohelperowl_vital_apat12 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(649, trans, move);
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)<=3 && this.play_attack_defend_n(color, 1, 1, [a, a]);
 }
 
-const autohelperowl_vital_apat13 = (trans, move, color, action) => {
+const autohelperowl_vital_apat13 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(757, trans, move);
   let b = AFFINE_TRANSFORM(719, trans, move);
   let c = AFFINE_TRANSFORM(758, trans, move);
@@ -343,7 +345,7 @@ const autohelperowl_vital_apat13 = (trans, move, color, action) => {
   return this.board.countlib(b)>1 && this.board.countlib(c)>1 && this.owl_eyespace(a) && !ATTACK_MACRO.call(this,D);
 }
 
-const autohelperowl_vital_apat14 = (trans, move, color, action) => {
+const autohelperowl_vital_apat14 = function(trans, move, color, action) {
   let b = AFFINE_TRANSFORM(720, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
   let d = AFFINE_TRANSFORM(722, trans, move);
@@ -352,31 +354,31 @@ const autohelperowl_vital_apat14 = (trans, move, color, action) => {
   return this.board.countlib(A)  ===  2 && this.board.countlib(b) > 1 && !this.play_attack_defend_n(color, 1, 3, [move, c, d, d]);
 }
 
-const autohelperowl_vital_apat15 = (trans, move, color, action) => {
+const autohelperowl_vital_apat15 = function(trans, move, color, action) {
   
 
   return this.owl_eyespace(move);
 }
 
-const autohelperowl_vital_apat16 = (trans, move, color, action) => {
+const autohelperowl_vital_apat16 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(682, trans, move);
 
   return  this.play_attack_defend_n(color, 1, 2, [move, a, a]);
 }
 
-const autohelperowl_vital_apat17 = (trans, move, color, action) => {
+const autohelperowl_vital_apat17 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(646, trans, move);
 
   return  this.play_attack_defend_n(color, 1, 2, [move, a, a]);
 }
 
-const autohelperowl_vital_apat18 = (trans, move, color, action) => {
+const autohelperowl_vital_apat18 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(610, trans, move);
 
   return this.board.countlib(A) === 2 && this.owl_big_eyespace(move);
 }
 
-const autohelperowl_vital_apat19 = (trans, move, color, action) => {
+const autohelperowl_vital_apat19 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let C = AFFINE_TRANSFORM(721, trans, move);
@@ -384,20 +386,20 @@ const autohelperowl_vital_apat19 = (trans, move, color, action) => {
   return  this.owl_topological_eye(a, this.board.board[C])  ===  2 && this.owl_topological_eye(b, this.board.board[C])  ===  2;
 }
 
-const autohelperowl_vital_apat20 = (trans, move, color, action) => {
+const autohelperowl_vital_apat20 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(685, trans, move);
 
   return this.owl_big_eyespace(a);
 }
 
-const autohelperowl_vital_apat21 = (trans, move, color, action) => {
+const autohelperowl_vital_apat21 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return this.owl_big_eyespace(move) && this.play_attack_defend_n(color, 1, 2, [move, a, B]);
 }
 
-const autohelperowl_vital_apat22 = (trans, move, color, action) => {
+const autohelperowl_vital_apat22 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -405,27 +407,27 @@ const autohelperowl_vital_apat22 = (trans, move, color, action) => {
   return this.owl_big_eyespace(move) && this.play_attack_defend_n(color, 1, 4, [move, a, b, c, a]);
 }
 
-const autohelperowl_vital_apat23 = (trans, move, color, action) => {
+const autohelperowl_vital_apat23 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A) === 1 && this.owl_eyespace(move) && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null) > 1;
 }
 
-const autohelperowl_vital_apat27 = (trans, move, color, action) => {
+const autohelperowl_vital_apat27 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(759, trans, move);
 
   return this.somewhere(this.board.OTHER_COLOR(color), 0, 2, [A, B]);
 }
 
-const autohelperowl_vital_apat28 = (trans, move, color, action) => {
+const autohelperowl_vital_apat28 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(757, trans, move);
   let B = AFFINE_TRANSFORM(795, trans, move);
 
   return this.somewhere(this.board.OTHER_COLOR(color), 0, 2, [A, B]);
 }
 
-const autohelperowl_vital_apat30 = (trans, move, color, action) => {
+const autohelperowl_vital_apat30 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
   let C = AFFINE_TRANSFORM(720, trans, move);
@@ -433,65 +435,65 @@ const autohelperowl_vital_apat30 = (trans, move, color, action) => {
   return this.board.countlib(C) === 2 && this.owl_eyespace(a) && this.play_attack_defend_n(color, 1, 3, [move, a, b, b]) !== codes.WIN;
 }
 
-const autohelperowl_vital_apat31 = (trans, move, color, action) => {
+const autohelperowl_vital_apat31 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(795, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
 
   return !this.play_attack_defend_n(color, 1, 3, [a, NO_MOVE, b, a]);
 }
 
-const autohelperowl_vital_apat32 = (trans, move, color, action) => {
+const autohelperowl_vital_apat32 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(687, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
 
   return this.board.countlib(a)>1 || !this.play_attack_defend_n(color, 1, 3, [move, NO_MOVE, b, move]) === codes.WIN;
 }
 
-const autohelperowl_vital_apat34 = (trans, move, color, action) => {
+const autohelperowl_vital_apat34 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(758, trans, move);
 
   return  this.play_attack_defend2_n(color, 0, 1, [move, A, move]);
 }
 
-const autohelperowl_vital_apat35 = (trans, move, color, action) => {
+const autohelperowl_vital_apat35 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return  this.board.accuratelib(A, this.board.OTHER_COLOR(color), this.board.MAX_LIBERTIES, null) === 2;
 }
 
-const autohelperowl_vital_apat37 = (trans, move, color, action) => {
+const autohelperowl_vital_apat37 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(536, trans, move);
 
   return this.board.countlib(A) > 2;
 }
 
-const autohelperowl_vital_apat38 = (trans, move, color, action) => {
+const autohelperowl_vital_apat38 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.owl_big_eyespace(move) && !this.play_attack_defend_n(color, 0, 1, [move, A]);
 }
 
-const autohelperowl_vital_apat39 = (trans, move, color, action) => {
+const autohelperowl_vital_apat39 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(719, trans, move);
   let b = AFFINE_TRANSFORM(757, trans, move);
 
   return this.owl_eyespace(a) && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1 && this.board.countlib(b)>1;
 }
 
-const autohelperowl_vital_apat40 = (trans, move, color, action) => {
+const autohelperowl_vital_apat40 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(682, trans, move);
 
   return  this.board.countlib(A)  ===  3;
 }
 
-const autohelperowl_vital_apat41 = (trans, move, color, action) => {
+const autohelperowl_vital_apat41 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)  === 2 || this.board.countlib(B)  ===  2;
 }
 
-const autohelperowl_vital_apat42 = (trans, move, color, action) => {
+const autohelperowl_vital_apat42 = function(trans, move, color, action) {
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
   let D = AFFINE_TRANSFORM(724, trans, move);
@@ -499,14 +501,14 @@ const autohelperowl_vital_apat42 = (trans, move, color, action) => {
   return !ATTACK_MACRO.call(this,D) && this.play_attack_defend_n(color, 1, 1, [move, b]) && this.play_attack_defend_n(color, 1, 1, [move, c]);
 }
 
-const autohelperowl_vital_apat43 = (trans, move, color, action) => {
+const autohelperowl_vital_apat43 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
 
   return  !this.play_attack_defend_n(color, 1, 3, [move, a, b, b]) && !this.play_attack_defend_n(color, 1, 3, [move, b, a, a]);
 }
 
-const autohelperowl_vital_apat44 = (trans, move, color, action) => {
+const autohelperowl_vital_apat44 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(685, trans, move);
@@ -514,13 +516,13 @@ const autohelperowl_vital_apat44 = (trans, move, color, action) => {
   return  this.owl_proper_eye(move) && (this.owl_proper_eye(a) + this.owl_proper_eye(b) + this.owl_proper_eye(c) > 2) && this.safe_move(move, this.board.OTHER_COLOR(color)) && ((this.owl_eye_size(move) <= 8 && this.owl_maxeye(move)>1) || !this.play_attack_defend_n(color, 1, 1, [move, move]));
 }
 
-const autohelperowl_vital_apat45 = (trans, move, color, action) => {
+const autohelperowl_vital_apat45 = function(trans, move, color, action) {
   
 
   return  !this.board.is_ko_point(move)
 }
 
-const autohelperowl_vital_apat46 = (trans, move, color, action) => {
+const autohelperowl_vital_apat46 = function(trans, move, color, action) {
   let b = AFFINE_TRANSFORM(572, trans, move);
   let A = AFFINE_TRANSFORM(610, trans, move);
   let C = AFFINE_TRANSFORM(535, trans, move);
@@ -528,34 +530,34 @@ const autohelperowl_vital_apat46 = (trans, move, color, action) => {
   return  this.board.accuratelib(A, this.board.OTHER_COLOR(color), this.board.MAX_LIBERTIES, null)  ===  1 && this.board.accuratelib(A, color, this.board.MAX_LIBERTIES, null)  ===  1 && this.owl_topological_eye(b, this.board.board[C]) < 4 && this.owl_topological_eye(b, this.board.board[C]) > 0;
 }
 
-const autohelperowl_vital_apat47 = (trans, move, color, action) => {
+const autohelperowl_vital_apat47 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
 
   return this.vital_chain(a) && this.vital_chain(b) && !this.board.is_ko_point(move)
 }
 
-const autohelperowl_vital_apat48 = (trans, move, color, action) => {
+const autohelperowl_vital_apat48 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
 
   return this.vital_chain(a) && this.vital_chain(b) && this.board.is_ko_point(move)
 }
 
-const autohelperowl_vital_apat50 = (trans, move, color, action) => {
+const autohelperowl_vital_apat50 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(648, trans, move);
   let B = AFFINE_TRANSFORM(685, trans, move);
 
   return  this.board.countlib(B) <= 2 && this.owl_eyespace(A);
 }
 
-const autohelperowl_vital_apat55 = (trans, move, color, action) => {
+const autohelperowl_vital_apat55 = function(trans, move, color, action) {
   let A = AFFINE_TRANSFORM(681, trans, move);
 
   return this.board.countlib(A) === 2;
 }
 
-const autohelperowl_vital_apat56 = (trans, move, color, action) => {
+const autohelperowl_vital_apat56 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(720, trans, move);
   let B = AFFINE_TRANSFORM(721, trans, move);
 
@@ -563,7 +565,7 @@ const autohelperowl_vital_apat56 = (trans, move, color, action) => {
     && this.owl_proper_eye(move) && this.owl_maxeye(a)>0;
 }
 
-const autohelperowl_vital_apat57 = (trans, move, color, action) => {
+const autohelperowl_vital_apat57 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
 
@@ -571,7 +573,7 @@ const autohelperowl_vital_apat57 = (trans, move, color, action) => {
     && this.play_lib_n(color, 3, [move, a, b, b])>1;
 }
 
-const autohelperowl_vital_apat58 = (trans, move, color, action) => {
+const autohelperowl_vital_apat58 = function(trans, move, color, action) {
   let a = AFFINE_TRANSFORM(609, trans, move);
 
   return this.owl_mineye(a) === 1;

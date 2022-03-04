@@ -274,9 +274,9 @@ export const Reading = {
     let origin = b.find_origin(str);
     if (this.search_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move)) {
       if (move){
-        move[0] = the_move;
+        move[0] = the_move[0];
       }
-      return result;
+      return result[0];
     }
 
     b.shadow = []
@@ -289,7 +289,7 @@ export const Reading = {
       move[0] = the_move[0];
     }
 
-    return result;
+    return result[0];
   },
 
 
@@ -326,7 +326,7 @@ export const Reading = {
       if (move){
         move[0] = the_move[0];
       }
-      return result;
+      return result[0];
     }
 
     b.shadow = []
@@ -339,7 +339,7 @@ export const Reading = {
       move[0] = the_move[0];
     }
 
-    return result;
+    return result[0];
   },
 
   /* attack_and_defend(str, &acode, &attack_point,
@@ -371,7 +371,7 @@ export const Reading = {
       dcode = this.find_defense(str, dpos);
     }
 
-    b.ASSERT1(!(acode !== 0 && dcode === codes.WIN && dpos === NO_MOVE), str);
+    b.ASSERT1(!(acode !== 0 && dcode === codes.WIN && dpos[0] === NO_MOVE), str);
 
     if (attack_code){
       attack_code[0] = acode;

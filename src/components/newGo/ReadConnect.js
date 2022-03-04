@@ -1389,7 +1389,7 @@ export const ReadConnect = {
           /* if the move works with ko we save it, then look for something
            * better.
            */
-          this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, xpos[0]);
+          this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, xpos);
         }
         else {
           if (this.recursive_disconnect2(str1, str2, null, has_passed) !== codes.WIN) {

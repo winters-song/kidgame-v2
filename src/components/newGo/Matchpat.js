@@ -307,6 +307,7 @@ export const Matchpat = {
           // 元素pattern.patn[k][0]以anchor为基准点，变换ll下的绝对位置
           let pos = AFFINE_TRANSFORM(pattern.patn[k][0], ll, anchor);
 
+          // 有问题模式："A231"， "D208"， "D306"
           b.ASSERT_ON_BOARD1(pos);
 
           /* ...and check that board[pos] matches (see above). */

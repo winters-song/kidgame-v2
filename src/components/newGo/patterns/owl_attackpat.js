@@ -1682,86 +1682,86 @@ const owl_attackpat396 = [
 ]
 
 
-const autohelperowl_attackpat0 = (trans, move, color, action)=>{
+const autohelperowl_attackpat0 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(721, trans, move);
   return  this.board.countlib(A)<4;
 }
 
-const autohelperowl_attackpat6 = (trans, move, color, action)=>{
+const autohelperowl_attackpat6 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   return  this.board.countlib(a)>2;
 }
 
-const autohelperowl_attackpat11 = (trans, move, color, action)=>{
+const autohelperowl_attackpat11 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   return  (this.somewhere(color, 0, 1, a) || !this.somewhere(color, 0, 1, b));
 }
 
-const autohelperowl_attackpat14 = (trans, move, color, action)=>{
+const autohelperowl_attackpat14 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(722, trans, move);
   return  this.board.countlib(A)>2;
 }
 
-const autohelperowl_attackpat17 = (trans, move, color, action)=>{
+const autohelperowl_attackpat17 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(609, trans, move);
   let b = AFFINE_TRANSFORM(610, trans, move);
   return this.somewhere(color, 0, 2, [a, b]);
 }
 
-const autohelperowl_attackpat18 = (trans, move, color, action)=>{
+const autohelperowl_attackpat18 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
   let c = AFFINE_TRANSFORM(756, trans, move);
   return  this.play_attack_defend_n(color, 1, 2, [move, a, a]) || !this.play_attack_defend_n(color, 1, 4, [move, a, b, c, move]);
 }
 
-const autohelperowl_attackpat27 = (trans, move, color, action)=>{
+const autohelperowl_attackpat27 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   return !this.somewhere(this.board.OTHER_COLOR(color), 0, 1, a) || ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat28 = (trans, move, color, action)=>{
+const autohelperowl_attackpat28 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   return !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat32 = (trans, move, color, action)=>{
+const autohelperowl_attackpat32 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   return !this.play_attack_defend_n(color, 1, 2, [move, a, move]);
 }
 
-const autohelperowl_attackpat33 = (trans, move, color, action)=>{
+const autohelperowl_attackpat33 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   return this.play_attack_defend_n(color, 1, 2, [move, a, a]);
 }
 
-const autohelperowl_attackpat34 = (trans, move, color, action)=>{
+const autohelperowl_attackpat34 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   return this.board.countlib(a)>2;
 }
 
-const autohelperowl_attackpat35 = (trans, move, color, action)=>{
+const autohelperowl_attackpat35 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   return this.owl_escape_value(a)>0;
 }
 
-const autohelperowl_attackpat37 = (trans, move, color, action)=>{
+const autohelperowl_attackpat37 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
   return this.board.countlib(A)>1;
 }
 
-const autohelperowl_attackpat40 = (trans, move, color, action)=>{
+const autohelperowl_attackpat40 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   return !this.play_attack_defend_n(color, 1, 2, [move, a, move]);
 }
 
-const autohelperowl_attackpat42 = (trans, move, color, action)=>{
+const autohelperowl_attackpat42 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   return this.board.countlib(a)===2;
 }
 
-const autohelperowl_attackpat43 = (trans, move, color, action)=>{
+const autohelperowl_attackpat43 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(646, trans, move);
@@ -1769,7 +1769,7 @@ const autohelperowl_attackpat43 = (trans, move, color, action)=>{
   return !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, b, c, a, b]);
 }
 
-const autohelperowl_attackpat45 = (trans, move, color, action)=>{
+const autohelperowl_attackpat45 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(645, trans, move);
   let b = AFFINE_TRANSFORM(608, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
@@ -1784,7 +1784,7 @@ const autohelperowl_attackpat45 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(color, 0, 4, [move, c, a, e, move]);
 }
 
-const autohelperowl_attackpat46 = (trans, move, color, action)=>{
+const autohelperowl_attackpat46 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
   let c = AFFINE_TRANSFORM(719, trans, move);
@@ -1793,26 +1793,26 @@ const autohelperowl_attackpat46 = (trans, move, color, action)=>{
   return  (this.owl_escape_value(b) <= 0 && this.owl_escape_value(c) <= 0) || !this.play_attack_defend_n(color, 1, 2, [move, a, d]);
 }
 
-const autohelperowl_attackpat47 = (trans, move, color, action)=>{
+const autohelperowl_attackpat47 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(682, trans, move);
 
   return this.owl_escape_value(a) < 1;
 }
 
-const autohelperowl_attackpat49 = (trans, move, color, action)=>{
+const autohelperowl_attackpat49 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(B)<=3 && this.play_attack_defend_n(color, 1, 2, [move, a, B]);
 }
 
-const autohelperowl_attackpat50 = (trans, move, color, action)=>{
+const autohelperowl_attackpat50 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return  this.play_attack_defend_n(color, 1, 2, [move, a, a]);
 }
 
-const autohelperowl_attackpat52 = (trans, move, color, action)=>{
+const autohelperowl_attackpat52 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(646, trans, move);
   let C = AFFINE_TRANSFORM(683, trans, move);
@@ -1821,26 +1821,26 @@ const autohelperowl_attackpat52 = (trans, move, color, action)=>{
     || !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, a, b, a, C]);
 }
 
-const autohelperowl_attackpat53 = (trans, move, color, action)=>{
+const autohelperowl_attackpat53 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return this.owl_escape_value(a)>0;
 }
 
-const autohelperowl_attackpat54 = (trans, move, color, action)=>{
+const autohelperowl_attackpat54 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
 
   return this.owl_escape_value(a)>0 && !this.play_attack_defend_n(color, 1, 3, [move, a, b, move]);
 }
 
-const autohelperowl_attackpat55 = (trans, move, color, action)=>{
+const autohelperowl_attackpat55 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return  this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [move, a]);
 }
 
-const autohelperowl_attackpat56 = (trans, move, color, action)=>{
+const autohelperowl_attackpat56 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(757, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -1848,34 +1848,34 @@ const autohelperowl_attackpat56 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) + this.owl_escape_value(c) > 0;
 }
 
-const autohelperowl_attackpat57 = (trans, move, color, action)=>{
+const autohelperowl_attackpat57 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(649, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
   return this.owl_escape_value(a) + this.owl_escape_value(b) > 0;
 }
 
-const autohelperowl_attackpat58 = (trans, move, color, action)=>{
+const autohelperowl_attackpat58 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_escape_value(a) + this.owl_escape_value(b) > 0;
 }
 
-const autohelperowl_attackpat59 = (trans, move, color, action)=>{
+const autohelperowl_attackpat59 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_escape_value(a) > 0;
 }
 
-const autohelperowl_attackpat60 = (trans, move, color, action)=>{
+const autohelperowl_attackpat60 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(611, trans, move);
 
   return this.owl_escape_value(a)+this.owl_escape_value(b) > 0;
 }
 
-const autohelperowl_attackpat62 = (trans, move, color, action)=>{
+const autohelperowl_attackpat62 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -1883,7 +1883,7 @@ const autohelperowl_attackpat62 = (trans, move, color, action)=>{
   return  this.play_attack_defend_n(color, 1, 4, [move, a, b, c, c]);
 }
 
-const autohelperowl_attackpat63 = (trans, move, color, action)=>{
+const autohelperowl_attackpat63 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -1894,11 +1894,11 @@ const autohelperowl_attackpat63 = (trans, move, color, action)=>{
     && this.board.countlib(e)>3 && this.play_attack_defend_n(color, 1, 4, [move, a, b, c, c]);
 }
 
-const autohelperowl_attackpat67 = (trans, move, color, action)=>{
+const autohelperowl_attackpat67 = function (trans, move, color, action){
   return  !this.play_attack_defend_n(color, 1, 1, [move, move]);
 }
 
-const autohelperowl_attackpat68 = (trans, move, color, action)=>{
+const autohelperowl_attackpat68 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -1908,14 +1908,14 @@ const autohelperowl_attackpat68 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 0, 3, [move, b, c, A]);
 }
 
-const autohelperowl_attackpat72 = (trans, move, color, action)=>{
+const autohelperowl_attackpat72 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(609, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
 
   return !this.play_connect_n(color, 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat73 = (trans, move, color, action)=>{
+const autohelperowl_attackpat73 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(610, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -1924,13 +1924,13 @@ const autohelperowl_attackpat73 = (trans, move, color, action)=>{
     && this.play_connect_n(this.board.OTHER_COLOR(color), 0, 2, [move, b, b, c]);
 }
 
-const autohelperowl_attackpat74 = (trans, move, color, action)=>{
+const autohelperowl_attackpat74 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(757, trans, move);
 
   return !this.owl_goal_dragon(A);
 }
 
-const autohelperowl_attackpat77 = (trans, move, color, action)=>{
+const autohelperowl_attackpat77 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
@@ -1938,20 +1938,20 @@ const autohelperowl_attackpat77 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 2, [move, a, b]);
 }
 
-const autohelperowl_attackpat78 = (trans, move, color, action)=>{
+const autohelperowl_attackpat78 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
   return  this.play_attack_defend2_n(color, 0, 2, [move, a, move, b]);
 }
 
-const autohelperowl_attackpat79 = (trans, move, color, action)=>{
+const autohelperowl_attackpat79 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return this.board.countlib(a)<=2 || this.board.accuratelib(move, this.board.OTHER_COLOR(color), this.board.MAX_LIBERTIES, null)>2;
 }
 
-const autohelperowl_attackpat80 = (trans, move, color, action)=>{
+const autohelperowl_attackpat80 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(682, trans, move);
@@ -1962,7 +1962,7 @@ const autohelperowl_attackpat80 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 4, [move, b, a, d, move, A]);
 }
 
-const autohelperowl_attackpat81 = (trans, move, color, action)=>{
+const autohelperowl_attackpat81 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(682, trans, move);
@@ -1974,14 +1974,14 @@ const autohelperowl_attackpat81 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 4, [move, b, a, d, move, A]);
 }
 
-const autohelperowl_attackpat83 = (trans, move, color, action)=>{
+const autohelperowl_attackpat83 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
   return  (this.owl_escape_value(a)>0)||(this.owl_escape_value(b)>0);
 }
 
-const autohelperowl_attackpat84 = (trans, move, color, action)=>{
+const autohelperowl_attackpat84 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
   let c = AFFINE_TRANSFORM(719, trans, move);
@@ -1992,7 +1992,7 @@ const autohelperowl_attackpat84 = (trans, move, color, action)=>{
     || (this.somewhere(color, 0, 1, c) && !this.safe_move(d, this.board.OTHER_COLOR(color))));
 }
 
-const autohelperowl_attackpat85 = (trans, move, color, action)=>{
+const autohelperowl_attackpat85 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(646, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
@@ -2004,13 +2004,13 @@ const autohelperowl_attackpat85 = (trans, move, color, action)=>{
     || !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 0, 4, [move, b, d, e, e]));
 }
 
-const autohelperowl_attackpat86 = (trans, move, color, action)=>{
+const autohelperowl_attackpat86 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(682, trans, move);
 
   return this.owl_escape_value(a)>0;
 }
 
-const autohelperowl_attackpat87 = (trans, move, color, action)=>{
+const autohelperowl_attackpat87 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(722, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -2019,7 +2019,7 @@ const autohelperowl_attackpat87 = (trans, move, color, action)=>{
     || this.somewhere(this.board.OTHER_COLOR(color), 0, 1, c);
 }
 
-const autohelperowl_attackpat89 = (trans, move, color, action)=>{
+const autohelperowl_attackpat89 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(609, trans, move);
   let c = AFFINE_TRANSFORM(573, trans, move);
@@ -2029,7 +2029,7 @@ const autohelperowl_attackpat89 = (trans, move, color, action)=>{
   return this.somewhere(color, 0, 4, [a, b, c, d]) && this.owl_escape_value(e) > 0;
 }
 
-const autohelperowl_attackpat90 = (trans, move, color, action)=>{
+const autohelperowl_attackpat90 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
   let c = AFFINE_TRANSFORM(649, trans, move);
@@ -2037,13 +2037,13 @@ const autohelperowl_attackpat90 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) + this.owl_escape_value(c) > 0;
 }
 
-const autohelperowl_attackpat91 = (trans, move, color, action)=>{
+const autohelperowl_attackpat91 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return this.owl_escape_value(a)>0;
 }
 
-const autohelperowl_attackpat92 = (trans, move, color, action)=>{
+const autohelperowl_attackpat92 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   let b = AFFINE_TRANSFORM(611, trans, move);
   let c = AFFINE_TRANSFORM(610, trans, move);
@@ -2060,7 +2060,7 @@ const autohelperowl_attackpat92 = (trans, move, color, action)=>{
     || (this.somewhere(color, 0, 1, j) && this.owl_escape_value(d)===0 && this.owl_escape_value(e)===0));
 }
 
-const autohelperowl_attackpat93 = (trans, move, color, action)=>{
+const autohelperowl_attackpat93 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
   let c = AFFINE_TRANSFORM(681, trans, move);
@@ -2076,7 +2076,7 @@ const autohelperowl_attackpat93 = (trans, move, color, action)=>{
     && this.somewhere(color, 0, 4, [b, c, d, e]);
 }
 
-const autohelperowl_attackpat94 = (trans, move, color, action)=>{
+const autohelperowl_attackpat94 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
   let c = AFFINE_TRANSFORM(649, trans, move);
@@ -2093,7 +2093,7 @@ const autohelperowl_attackpat94 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 5, [move, a, b, e, f, move]);
 }
 
-const autohelperowl_attackpat95 = (trans, move, color, action)=>{
+const autohelperowl_attackpat95 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(795, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
   let c = AFFINE_TRANSFORM(794, trans, move);
@@ -2110,7 +2110,7 @@ const autohelperowl_attackpat95 = (trans, move, color, action)=>{
     && this.owl_escape_value(e)>0 && this.somewhere(color, 0, 6, [f, g, h, i, j, k]);
 }
 
-const autohelperowl_attackpat96 = (trans, move, color, action)=>{
+const autohelperowl_attackpat96 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(760, trans, move);
   let b = AFFINE_TRANSFORM(538, trans, move);
   let c = AFFINE_TRANSFORM(537, trans, move);
@@ -2122,7 +2122,7 @@ const autohelperowl_attackpat96 = (trans, move, color, action)=>{
     && this.somewhere(color, 0, 2, [e, f]);
 }
 
-const autohelperowl_attackpat97 = (trans, move, color, action)=>{
+const autohelperowl_attackpat97 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
   let A = AFFINE_TRANSFORM(722, trans, move);
@@ -2130,7 +2130,7 @@ const autohelperowl_attackpat97 = (trans, move, color, action)=>{
   return this.owl_escape_value(A)>0 && this.play_attack_defend2_n(color, 0, 2, [move, b, move, c]);
 }
 
-const autohelperowl_attackpat99 = (trans, move, color, action)=>{
+const autohelperowl_attackpat99 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(649, trans, move);
   let b = AFFINE_TRANSFORM(686, trans, move);
   let c = AFFINE_TRANSFORM(723, trans, move);
@@ -2138,13 +2138,13 @@ const autohelperowl_attackpat99 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) + this.owl_escape_value(c) > 0;
 }
 
-const autohelperowl_attackpat100 = (trans, move, color, action)=>{
+const autohelperowl_attackpat100 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(758, trans, move);
 
   return  this.board.countlib(A)>1;
 }
 
-const autohelperowl_attackpat101 = (trans, move, color, action)=>{
+const autohelperowl_attackpat101 = function (trans, move, color, action){
   let c = AFFINE_TRANSFORM(647, trans, move);
   let d = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(685, trans, move);
@@ -2152,7 +2152,7 @@ const autohelperowl_attackpat101 = (trans, move, color, action)=>{
   return (this.owl_escape_value(A)>0) && this.play_attack_defend2_n(color, 0, 2, [move, c, move, d]);
 }
 
-const autohelperowl_attackpat102 = (trans, move, color, action)=>{
+const autohelperowl_attackpat102 = function (trans, move, color, action){
   let c = AFFINE_TRANSFORM(647, trans, move);
   let d = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(646, trans, move);
@@ -2160,7 +2160,7 @@ const autohelperowl_attackpat102 = (trans, move, color, action)=>{
   return (this.owl_escape_value(A)>0) && this.play_attack_defend2_n(color, 0, 2, [move, c, move, d]);
 }
 
-const autohelperowl_attackpat103 = (trans, move, color, action)=>{
+const autohelperowl_attackpat103 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(610, trans, move);
   let c = AFFINE_TRANSFORM(609, trans, move);
@@ -2170,56 +2170,56 @@ const autohelperowl_attackpat103 = (trans, move, color, action)=>{
   return this.owl_escape_value(e)>0 && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, a, b, c, d]);
 }
 
-const autohelperowl_attackpat104 = (trans, move, color, action)=>{
+const autohelperowl_attackpat104 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(611, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
   return this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0;
 }
 
-const autohelperowl_attackpat105 = (trans, move, color, action)=>{
+const autohelperowl_attackpat105 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
 
   return (!this.owl_goal_dragon(b))&& !this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat106 = (trans, move, color, action)=>{
+const autohelperowl_attackpat106 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
 
   return (!this.owl_goal_dragon(a))&& !this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat107 = (trans, move, color, action)=>{
+const autohelperowl_attackpat107 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
 
   return (this.owl_escape_value(a) > 0);
 }
 
-const autohelperowl_attackpat108 = (trans, move, color, action)=>{
+const autohelperowl_attackpat108 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(719, trans, move);
 
   return (this.owl_escape_value(a) > 0);
 }
 
-const autohelperowl_attackpat109 = (trans, move, color, action)=>{
+const autohelperowl_attackpat109 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_escape_value(a) > 0;
 }
 
-const autohelperowl_attackpat112 = (trans, move, color, action)=>{
+const autohelperowl_attackpat112 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return  ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat114 = (trans, move, color, action)=>{
+const autohelperowl_attackpat114 = function (trans, move, color, action){
   return this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1;
 }
 
-const autohelperowl_attackpat120 = (trans, move, color, action)=>{
+const autohelperowl_attackpat120 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(721, trans, move);
   let A = AFFINE_TRANSFORM(720, trans, move);
 
@@ -2227,13 +2227,13 @@ const autohelperowl_attackpat120 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(color, 1, 2, [move, b, b]);
 }
 
-const autohelperowl_attackpat122 = (trans, move, color, action)=>{
+const autohelperowl_attackpat122 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
 
   return this.owl_eyespace(a);
 }
 
-const autohelperowl_attackpat124 = (trans, move, color, action)=>{
+const autohelperowl_attackpat124 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
 
@@ -2241,7 +2241,7 @@ const autohelperowl_attackpat124 = (trans, move, color, action)=>{
     || this.play_attack_defend_n(color, 1, 2, [a, b, a]);
 }
 
-const autohelperowl_attackpat125 = (trans, move, color, action)=>{
+const autohelperowl_attackpat125 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(611, trans, move);
   let A = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(646, trans, move);
@@ -2251,27 +2251,27 @@ const autohelperowl_attackpat125 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 4, [move, A, b, C, b]);
 }
 
-const autohelperowl_attackpat126 = (trans, move, color, action)=>{
+const autohelperowl_attackpat126 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.play_attack_defend_n(color, 1, 3, [move, a, b, move]);
 }
 
-const autohelperowl_attackpat127 = (trans, move, color, action)=>{
+const autohelperowl_attackpat127 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.obvious_false_eye(a, this.board.OTHER_COLOR(color)) || !this.obvious_false_eye(b, color);
 }
 
-const autohelperowl_attackpat131 = (trans, move, color, action)=>{
+const autohelperowl_attackpat131 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
 
   return !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat132 = (trans, move, color, action)=>{
+const autohelperowl_attackpat132 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(757, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(610, trans, move);
@@ -2280,14 +2280,14 @@ const autohelperowl_attackpat132 = (trans, move, color, action)=>{
     && (this.somewhere(this.board.OTHER_COLOR(color), 0, 1, c) || this.owl_proper_eye(c));
 }
 
-const autohelperowl_attackpat133 = (trans, move, color, action)=>{
+const autohelperowl_attackpat133 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(758, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_eyespace(b) && !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat136 = (trans, move, color, action)=>{
+const autohelperowl_attackpat136 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
@@ -2295,7 +2295,7 @@ const autohelperowl_attackpat136 = (trans, move, color, action)=>{
   return this.board.countlib(c) > 1 && !this.play_attack_defend_n(color, 1, 3, [move, a, b, move]);
 }
 
-const autohelperowl_attackpat137 = (trans, move, color, action)=>{
+const autohelperowl_attackpat137 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
@@ -2303,7 +2303,7 @@ const autohelperowl_attackpat137 = (trans, move, color, action)=>{
     && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat138 = (trans, move, color, action)=>{
+const autohelperowl_attackpat138 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
 
@@ -2311,14 +2311,14 @@ const autohelperowl_attackpat138 = (trans, move, color, action)=>{
     && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat139 = (trans, move, color, action)=>{
+const autohelperowl_attackpat139 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_eyespace(b) && !this.play_attack_defend_n(color, 1, 2, [move, b, a]);
 }
 
-const autohelperowl_attackpat140 = (trans, move, color, action)=>{
+const autohelperowl_attackpat140 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(610, trans, move);
@@ -2329,7 +2329,7 @@ const autohelperowl_attackpat140 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 1, [move, a]) && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat141 = (trans, move, color, action)=>{
+const autohelperowl_attackpat141 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let C = AFFINE_TRANSFORM(683, trans, move);
@@ -2339,25 +2339,25 @@ const autohelperowl_attackpat141 = (trans, move, color, action)=>{
     && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat143 = (trans, move, color, action)=>{
+const autohelperowl_attackpat143 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(609, trans, move);
 
   return !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat144 = (trans, move, color, action)=>{
+const autohelperowl_attackpat144 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(609, trans, move);
 
   return this.board.countlib(A)===2;
 }
 
-const autohelperowl_attackpat145 = (trans, move, color, action)=>{
+const autohelperowl_attackpat145 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(795, trans, move);
 
   return this.board.countlib(a) > 1;
 }
 
-const autohelperowl_attackpat146 = (trans, move, color, action)=>{
+const autohelperowl_attackpat146 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
@@ -2366,19 +2366,19 @@ const autohelperowl_attackpat146 = (trans, move, color, action)=>{
   return this.play_attack_defend_n(color, 1, 4, [move, a, b, c, D]);
 }
 
-const autohelperowl_attackpat147 = (trans, move, color, action)=>{
+const autohelperowl_attackpat147 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
 
   return !this.play_attack_defend_n(color, 1, 2, [a, move, move]);
 }
 
-const autohelperowl_attackpat148 = (trans, move, color, action)=>{
+const autohelperowl_attackpat148 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(682, trans, move);
 
   return this.board.countlib(A) === 3;
 }
 
-const autohelperowl_attackpat149 = (trans, move, color, action)=>{
+const autohelperowl_attackpat149 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
   let C = AFFINE_TRANSFORM(609, trans, move);
@@ -2387,32 +2387,32 @@ const autohelperowl_attackpat149 = (trans, move, color, action)=>{
     || (this.somewhere(this.board.OTHER_COLOR(color), 0, 1, b) && this.somewhere(color, 0, 1, a)));
 }
 
-const autohelperowl_attackpat150 = (trans, move, color, action)=>{
+const autohelperowl_attackpat150 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(645, trans, move);
 
   return  this.board.countlib(A) === 3;
 }
 
-const autohelperowl_attackpat151 = (trans, move, color, action)=>{
+const autohelperowl_attackpat151 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(610, trans, move);
   let A = AFFINE_TRANSFORM(685, trans, move);
 
   return  this.play_attack_defend2_n(color, 0, 2, [move, A, b, move]);
 }
 
-const autohelperowl_attackpat153 = (trans, move, color, action)=>{
+const autohelperowl_attackpat153 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return !this.obvious_false_eye(a, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat154 = (trans, move, color, action)=>{
+const autohelperowl_attackpat154 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(757, trans, move);
 
   return this.board.countlib(A)<3 && this.owl_eyespace(move);
 }
 
-const autohelperowl_attackpat155 = (trans, move, color, action)=>{
+const autohelperowl_attackpat155 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(609, trans, move);
 
@@ -2420,25 +2420,25 @@ const autohelperowl_attackpat155 = (trans, move, color, action)=>{
     && (this.somewhere(this.board.OTHER_COLOR(color), 0, 1, b) || !this.safe_move(b, color));
 }
 
-const autohelperowl_attackpat157 = (trans, move, color, action)=>{
+const autohelperowl_attackpat157 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_proper_eye(a);
 }
 
-const autohelperowl_attackpat158 = (trans, move, color, action)=>{
+const autohelperowl_attackpat158 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(759, trans, move);
 
   return this.board.countlib(A)>1;
 }
 
-const autohelperowl_attackpat159 = (trans, move, color, action)=>{
+const autohelperowl_attackpat159 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(759, trans, move);
 
   return this.board.countlib(A)>1;
 }
 
-const autohelperowl_attackpat162 = (trans, move, color, action)=>{
+const autohelperowl_attackpat162 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
 
@@ -2446,7 +2446,7 @@ const autohelperowl_attackpat162 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(color, 1, 2, [move, b, b]);
 }
 
-const autohelperowl_attackpat163 = (trans, move, color, action)=>{
+const autohelperowl_attackpat163 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(759, trans, move);
   let A = AFFINE_TRANSFORM(722, trans, move);
@@ -2454,7 +2454,7 @@ const autohelperowl_attackpat163 = (trans, move, color, action)=>{
   return  (this.owl_topological_eye(a, this.board.board[A])<=2) && (this.owl_topological_eye(b, this.board.board[A])===2);
 }
 
-const autohelperowl_attackpat164 = (trans, move, color, action)=>{
+const autohelperowl_attackpat164 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let A = AFFINE_TRANSFORM(685, trans, move);
@@ -2463,14 +2463,14 @@ const autohelperowl_attackpat164 = (trans, move, color, action)=>{
     && ((this.owl_topological_eye(b, this.board.board[A])===2) || (this.owl_topological_eye(b, this.board.board[A])===3));
 }
 
-const autohelperowl_attackpat165 = (trans, move, color, action)=>{
+const autohelperowl_attackpat165 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let B = AFFINE_TRANSFORM(685, trans, move);
 
   return this.owl_topological_eye(a, this.board.board[B])===3 && this.does_attack(move, B);
 }
 
-const autohelperowl_attackpat166 = (trans, move, color, action)=>{
+const autohelperowl_attackpat166 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let A = AFFINE_TRANSFORM(682, trans, move);
@@ -2479,7 +2479,7 @@ const autohelperowl_attackpat166 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 2, [move, b, b]);
 }
 
-const autohelperowl_attackpat167 = (trans, move, color, action)=>{
+const autohelperowl_attackpat167 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(647, trans, move);
@@ -2487,45 +2487,45 @@ const autohelperowl_attackpat167 = (trans, move, color, action)=>{
   return  this.board.countlib(a)===2 && this.owl_topological_eye(b, this.board.board[A])===3;
 }
 
-const autohelperowl_attackpat170 = (trans, move, color, action)=>{
+const autohelperowl_attackpat170 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(572, trans, move);
 
   return !ATTACK_MACRO.call(this, b) && this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [a, b]);
 }
 
-const autohelperowl_attackpat171 = (trans, move, color, action)=>{
+const autohelperowl_attackpat171 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)===1;
 }
 
-const autohelperowl_attackpat172 = (trans, move, color, action)=>{
+const autohelperowl_attackpat172 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(760, trans, move);
 
   return !this.owl_proper_eye(move) && !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat173 = (trans, move, color, action)=>{
+const autohelperowl_attackpat173 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [move, a]);
 }
 
-const autohelperowl_attackpat174 = (trans, move, color, action)=>{
+const autohelperowl_attackpat174 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(685, trans, move);
 
   return  this.owl_big_eyespace(A) && this.play_attack_defend_n(color, 1, 1, [move, b]);
 }
 
-const autohelperowl_attackpat175 = (trans, move, color, action)=>{
+const autohelperowl_attackpat175 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return  1 || this.play_attack_defend_n(color, 1, 1, [move, A]);
 }
 
-const autohelperowl_attackpat176 = (trans, move, color, action)=>{
+const autohelperowl_attackpat176 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -2535,7 +2535,7 @@ const autohelperowl_attackpat176 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 3, [move, a, b, b]);
 }
 
-const autohelperowl_attackpat177 = (trans, move, color, action)=>{
+const autohelperowl_attackpat177 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -2545,7 +2545,7 @@ const autohelperowl_attackpat177 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 3, [move, a, b, b]);
 }
 
-const autohelperowl_attackpat178 = (trans, move, color, action)=>{
+const autohelperowl_attackpat178 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(682, trans, move);
 
@@ -2554,7 +2554,7 @@ const autohelperowl_attackpat178 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 1, [move, a]);
 }
 
-const autohelperowl_attackpat179 = (trans, move, color, action)=>{
+const autohelperowl_attackpat179 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
   let d = AFFINE_TRANSFORM(647, trans, move);
@@ -2567,29 +2567,29 @@ const autohelperowl_attackpat179 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 5, [move, c, b, d, e, b, e]);
 }
 
-const autohelperowl_attackpat182 = (trans, move, color, action)=>{
+const autohelperowl_attackpat182 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
 
   return  ATTACK_MACRO.call(this, A) && !this.play_attack_defend_n(color, 1, 1, move, A);
 }
 
-const autohelperowl_attackpat183 = (trans, move, color, action)=>{
+const autohelperowl_attackpat183 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return  this.does_attack(move, A);
 }
 
-const autohelperowl_attackpat188 = (trans, move, color, action)=>{
+const autohelperowl_attackpat188 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(645, trans, move);
 
   return  this.board.countlib(A)>2;
 }
 
-const autohelperowl_attackpat189 = (trans, move, color, action)=>{
+const autohelperowl_attackpat189 = function (trans, move, color, action){
   return this.owl_eyespace(move);
 }
 
-const autohelperowl_attackpat190 = (trans, move, color, action)=>{
+const autohelperowl_attackpat190 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(757, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let C = AFFINE_TRANSFORM(722, trans, move);
@@ -2597,11 +2597,11 @@ const autohelperowl_attackpat190 = (trans, move, color, action)=>{
   return  this.board.countlib(C) <= 3 && this.owl_proper_eye(a) && this.owl_proper_eye(b);
 }
 
-const autohelperowl_attackpat191 = (trans, move, color, action)=>{
+const autohelperowl_attackpat191 = function (trans, move, color, action){
   return this.owl_eyespace(move);
 }
 
-const autohelperowl_attackpat192 = (trans, move, color, action)=>{
+const autohelperowl_attackpat192 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(649, trans, move);
@@ -2611,7 +2611,7 @@ const autohelperowl_attackpat192 = (trans, move, color, action)=>{
     || (!ATTACK_MACRO.call(this, b) && this.board.accuratelib(c, color, this.board.MAX_LIBERTIES, null)>=3);
 }
 
-const autohelperowl_attackpat193 = (trans, move, color, action)=>{
+const autohelperowl_attackpat193 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(685, trans, move);
   let B = AFFINE_TRANSFORM(647, trans, move);
 
@@ -2619,7 +2619,7 @@ const autohelperowl_attackpat193 = (trans, move, color, action)=>{
     && this.board.accuratelib(a, color, this.board.MAX_LIBERTIES, null)>1;
 }
 
-const autohelperowl_attackpat195 = (trans, move, color, action)=>{
+const autohelperowl_attackpat195 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -2627,7 +2627,7 @@ const autohelperowl_attackpat195 = (trans, move, color, action)=>{
   return this.board.countlib(a)===1 && this.board.countlib(b)===1 && this.board.countlib(c)<=2;
 }
 
-const autohelperowl_attackpat196 = (trans, move, color, action)=>{
+const autohelperowl_attackpat196 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -2635,76 +2635,76 @@ const autohelperowl_attackpat196 = (trans, move, color, action)=>{
   return this.board.countlib(a)<=2 && this.board.countlib(b)===1 && this.board.countlib(c)<=2;
 }
 
-const autohelperowl_attackpat198 = (trans, move, color, action)=>{
+const autohelperowl_attackpat198 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let B = AFFINE_TRANSFORM(609, trans, move);
 
   return this.board.countlib(a) === 1 && this.board.countlib(B) > 1;
 }
 
-const autohelperowl_attackpat200 = (trans, move, color, action)=>{
+const autohelperowl_attackpat200 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(718, trans, move);
 
   return !this.somewhere(color, 0, 1, a) || !DEFEND_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat201 = (trans, move, color, action)=>{
+const autohelperowl_attackpat201 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(718, trans, move);
 
   return !this.somewhere(color, 0, 1, a) || !DEFEND_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat202 = (trans, move, color, action)=>{
+const autohelperowl_attackpat202 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return !DEFEND_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat203 = (trans, move, color, action)=>{
+const autohelperowl_attackpat203 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
 
   return this.board.accuratelib(a, this.board.OTHER_COLOR(color), this.board.MAX_LIBERTIES, null) === 2;
 }
 
-const autohelperowl_attackpat205 = (trans, move, color, action)=>{
+const autohelperowl_attackpat205 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return !this.obvious_false_eye(a, this.board.OTHER_COLOR(color)) && this.owl_maxeye(move)>1;
 }
 
-const autohelperowl_attackpat206 = (trans, move, color, action)=>{
+const autohelperowl_attackpat206 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(609, trans, move);
 
   return this.board.countlib(A)===2;
 }
 
-const autohelperowl_attackpat208 = (trans, move, color, action)=>{
+const autohelperowl_attackpat208 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(647, trans, move);
   let A = AFFINE_TRANSFORM(645, trans, move);
 
   return this.board.countlib(A)===2 && !this.safe_move(b, color);
 }
 
-const autohelperowl_attackpat209 = (trans, move, color, action)=>{
+const autohelperowl_attackpat209 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
 
   return !this.safe_move(a, color);
 }
 
-const autohelperowl_attackpat210 = (trans, move, color, action)=>{
+const autohelperowl_attackpat210 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(757, trans, move);
   let b = AFFINE_TRANSFORM(795, trans, move);
 
   return this.somewhere(color, 0, 2, [a, b]);
 }
 
-const autohelperowl_attackpat216 = (trans, move, color, action)=>{
+const autohelperowl_attackpat216 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(721, trans, move);
 
   return this.play_attack_defend_n(color, 0, 1, [move, A])!==codes.WIN;
 }
 
-const autohelperowl_attackpat217 = (trans, move, color, action)=>{
+const autohelperowl_attackpat217 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(721, trans, move);
@@ -2712,13 +2712,13 @@ const autohelperowl_attackpat217 = (trans, move, color, action)=>{
   return (this.owl_escape_value(B)>0 || this.owl_escape_value(C)>0)&& !this.play_attack_defend2_n(color, 1, 1, [move, move, a]);
 }
 
-const autohelperowl_attackpat218 = (trans, move, color, action)=>{
+const autohelperowl_attackpat218 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
 
   return  !this.play_attack_defend2_n(color, 1, 1, [move, move, a]);
 }
 
-const autohelperowl_attackpat219 = (trans, move, color, action)=>{
+const autohelperowl_attackpat219 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(719, trans, move);
 
@@ -2726,14 +2726,14 @@ const autohelperowl_attackpat219 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 2, [move, a, move]);
 }
 
-const autohelperowl_attackpat220 = (trans, move, color, action)=>{
+const autohelperowl_attackpat220 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(719, trans, move);
 
   return  !this.safe_move(a, color) && !this.play_attack_defend2_n(color, 1, 3, [move, NO_MOVE, a, a, c]);
 }
 
-const autohelperowl_attackpat221 = (trans, move, color, action)=>{
+const autohelperowl_attackpat221 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(720, trans, move);
@@ -2741,7 +2741,7 @@ const autohelperowl_attackpat221 = (trans, move, color, action)=>{
   return this.owl_escape_value(C)>0 && this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, a, b]);
 }
 
-const autohelperowl_attackpat222 = (trans, move, color, action)=>{
+const autohelperowl_attackpat222 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(647, trans, move);
@@ -2749,20 +2749,20 @@ const autohelperowl_attackpat222 = (trans, move, color, action)=>{
   return this.owl_escape_value(C)>0 && this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, a, b]);
 }
 
-const autohelperowl_attackpat224 = (trans, move, color, action)=>{
+const autohelperowl_attackpat224 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(a) <= 2;
 }
 
-const autohelperowl_attackpat225 = (trans, move, color, action)=>{
+const autohelperowl_attackpat225 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0;
 }
 
-const autohelperowl_attackpat226 = (trans, move, color, action)=>{
+const autohelperowl_attackpat226 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -2770,34 +2770,34 @@ const autohelperowl_attackpat226 = (trans, move, color, action)=>{
   return (this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0) && this.play_attack_defend_n(color, 1, 2, [move, c, c]);
 }
 
-const autohelperowl_attackpat227 = (trans, move, color, action)=>{
+const autohelperowl_attackpat227 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
 
   return this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, a]);
 }
 
-const autohelperowl_attackpat228 = (trans, move, color, action)=>{
+const autohelperowl_attackpat228 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return this.play_attack_defend_n(color, 1, 2, [move, a, B]);
 }
 
-const autohelperowl_attackpat229 = (trans, move, color, action)=>{
+const autohelperowl_attackpat229 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(646, trans, move);
 
   return this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0;
 }
 
-const autohelperowl_attackpat230 = (trans, move, color, action)=>{
+const autohelperowl_attackpat230 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(648, trans, move);
 
   return  !this.safe_move(a, color) && this.board.countlib(b)>1;
 }
 
-const autohelperowl_attackpat231 = (trans, move, color, action)=>{
+const autohelperowl_attackpat231 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(648, trans, move);
   let c = AFFINE_TRANSFORM(610, trans, move);
   let A = AFFINE_TRANSFORM(647, trans, move);
@@ -2806,14 +2806,14 @@ const autohelperowl_attackpat231 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 3, [move, A, b, b, move]);
 }
 
-const autohelperowl_attackpat232 = (trans, move, color, action)=>{
+const autohelperowl_attackpat232 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(794, trans, move);
   let B = AFFINE_TRANSFORM(757, trans, move);
 
   return this.somewhere(this.board.OTHER_COLOR(color), 0, 2, [A, B]) && this.owl_escape_value(A) + this.owl_escape_value(B) > 0;
 }
 
-const autohelperowl_attackpat233 = (trans, move, color, action)=>{
+const autohelperowl_attackpat233 = function (trans, move, color, action){
   let e = AFFINE_TRANSFORM(683, trans, move);
   let f = AFFINE_TRANSFORM(720, trans, move);
   let g = AFFINE_TRANSFORM(721, trans, move);
@@ -2824,7 +2824,7 @@ const autohelperowl_attackpat233 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 4, [move, g, f, e, f, move]);
 }
 
-const autohelperowl_attackpat234 = (trans, move, color, action)=>{
+const autohelperowl_attackpat234 = function (trans, move, color, action){
   let e = AFFINE_TRANSFORM(683, trans, move);
   let f = AFFINE_TRANSFORM(720, trans, move);
   let g = AFFINE_TRANSFORM(721, trans, move);
@@ -2835,7 +2835,7 @@ const autohelperowl_attackpat234 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 4, [move, g, f, e, f, move]);
 }
 
-const autohelperowl_attackpat235 = (trans, move, color, action)=>{
+const autohelperowl_attackpat235 = function (trans, move, color, action){
   let c = AFFINE_TRANSFORM(721, trans, move);
   let d = AFFINE_TRANSFORM(720, trans, move);
   let e = AFFINE_TRANSFORM(683, trans, move);
@@ -2849,7 +2849,7 @@ const autohelperowl_attackpat235 = (trans, move, color, action)=>{
         && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, c, d, c, e])));
 }
 
-const autohelperowl_attackpat236 = (trans, move, color, action)=>{
+const autohelperowl_attackpat236 = function (trans, move, color, action){
   let c = AFFINE_TRANSFORM(721, trans, move);
   let d = AFFINE_TRANSFORM(720, trans, move);
   let e = AFFINE_TRANSFORM(683, trans, move);
@@ -2863,7 +2863,7 @@ const autohelperowl_attackpat236 = (trans, move, color, action)=>{
         && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, c, d, c, e])));
 }
 
-const autohelperowl_attackpat237 = (trans, move, color, action)=>{
+const autohelperowl_attackpat237 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
   let C = AFFINE_TRANSFORM(648, trans, move);
@@ -2873,7 +2873,7 @@ const autohelperowl_attackpat237 = (trans, move, color, action)=>{
       || !this.play_attack_defend_n(color, 1, 2, [move, b, move])) && !ATTACK_MACRO.call(this, C);
 }
 
-const autohelperowl_attackpat239 = (trans, move, color, action)=>{
+const autohelperowl_attackpat239 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(685, trans, move);
   let d = AFFINE_TRANSFORM(722, trans, move);
@@ -2886,7 +2886,7 @@ const autohelperowl_attackpat239 = (trans, move, color, action)=>{
     && (this.somewhere(color, 0, 1, f) || !this.play_attack_defend2_n(color, 1, 5, [move, d, b, f, g, b, g]));
 }
 
-const autohelperowl_attackpat240 = (trans, move, color, action)=>{
+const autohelperowl_attackpat240 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(688, trans, move);
   let b = AFFINE_TRANSFORM(651, trans, move);
   let c = AFFINE_TRANSFORM(614, trans, move);
@@ -2902,21 +2902,21 @@ const autohelperowl_attackpat240 = (trans, move, color, action)=>{
     (this.owl_escape_value(g)>0) + (this.owl_escape_value(h)>0) + (this.owl_escape_value(i)>0) < 2;
 }
 
-const autohelperowl_attackpat241 = (trans, move, color, action)=>{
+const autohelperowl_attackpat241 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(685, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return !this.owl_goal_dragon(A) && !this.play_connect_n(color, 1, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat242 = (trans, move, color, action)=>{
+const autohelperowl_attackpat242 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(722, trans, move);
   let B = AFFINE_TRANSFORM(646, trans, move);
 
   return !this.play_connect_n(color, 1, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat243 = (trans, move, color, action)=>{
+const autohelperowl_attackpat243 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(686, trans, move);
@@ -2924,21 +2924,21 @@ const autohelperowl_attackpat243 = (trans, move, color, action)=>{
   return this.play_connect_n(color, 0, 2, [move, a, B, C]);
 }
 
-const autohelperowl_attackpat244 = (trans, move, color, action)=>{
+const autohelperowl_attackpat244 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
   let B = AFFINE_TRANSFORM(758, trans, move);
 
   return this.owl_strong_dragon(B) && !this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat245 = (trans, move, color, action)=>{
+const autohelperowl_attackpat245 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(758, trans, move);
   let B = AFFINE_TRANSFORM(646, trans, move);
 
   return this.owl_strong_dragon(B) && !this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat246 = (trans, move, color, action)=>{
+const autohelperowl_attackpat246 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(646, trans, move);
@@ -2946,7 +2946,7 @@ const autohelperowl_attackpat246 = (trans, move, color, action)=>{
   return this.owl_escape_value(c)>0 && this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, a, b]);
 }
 
-const autohelperowl_attackpat247 = (trans, move, color, action)=>{
+const autohelperowl_attackpat247 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(685, trans, move);
@@ -2954,7 +2954,7 @@ const autohelperowl_attackpat247 = (trans, move, color, action)=>{
   return  this.play_break_through_n(this.board.OTHER_COLOR(color), 2, [move, a, b, a, c]) === codes.WIN;
 }
 
-const autohelperowl_attackpat248 = (trans, move, color, action)=>{
+const autohelperowl_attackpat248 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(685, trans, move);
@@ -2963,14 +2963,14 @@ const autohelperowl_attackpat248 = (trans, move, color, action)=>{
     && this.play_break_through_n(this.board.OTHER_COLOR(color), 2, [move, a, b, a, c]) === codes.WIN;
 }
 
-const autohelperowl_attackpat249 = (trans, move, color, action)=>{
+const autohelperowl_attackpat249 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(647, trans, move);
 
   return  this.vital_chain(A) && this.vital_chain(B) && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat250 = (trans, move, color, action)=>{
+const autohelperowl_attackpat250 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
@@ -2978,7 +2978,7 @@ const autohelperowl_attackpat250 = (trans, move, color, action)=>{
   return !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 3, [move, a, b, a, c]);
 }
 
-const autohelperowl_attackpat251 = (trans, move, color, action)=>{
+const autohelperowl_attackpat251 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(686, trans, move);
   let B = AFFINE_TRANSFORM(721, trans, move);
@@ -2987,7 +2987,7 @@ const autohelperowl_attackpat251 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 0, 1, [move, A]);
 }
 
-const autohelperowl_attackpat252 = (trans, move, color, action)=>{
+const autohelperowl_attackpat252 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
   let A = AFFINE_TRANSFORM(648, trans, move);
@@ -2995,7 +2995,7 @@ const autohelperowl_attackpat252 = (trans, move, color, action)=>{
   return !ATTACK_MACRO.call(this, A) && this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, b]);
 }
 
-const autohelperowl_attackpat253 = (trans, move, color, action)=>{
+const autohelperowl_attackpat253 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let A = AFFINE_TRANSFORM(611, trans, move);
   let B = AFFINE_TRANSFORM(647, trans, move);
@@ -3003,14 +3003,14 @@ const autohelperowl_attackpat253 = (trans, move, color, action)=>{
   return !ATTACK_MACRO.call(this, A) && ATTACK_MACRO.call(this, a) && !this.play_attack_defend_n(color, 0, 1,[ move, B]);
 }
 
-const autohelperowl_attackpat254 = (trans, move, color, action)=>{
+const autohelperowl_attackpat254 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return  this.vital_chain(a) && this.vital_chain(b) && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat255 = (trans, move, color, action)=>{
+const autohelperowl_attackpat255 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(648, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(611, trans, move);
@@ -3020,7 +3020,7 @@ const autohelperowl_attackpat255 = (trans, move, color, action)=>{
     && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [a, b, c]);
 }
 
-const autohelperowl_attackpat256 = (trans, move, color, action)=>{
+const autohelperowl_attackpat256 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(646, trans, move);
   let c = AFFINE_TRANSFORM(610, trans, move);
@@ -3030,14 +3030,14 @@ const autohelperowl_attackpat256 = (trans, move, color, action)=>{
     && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [a, b, c]);
 }
 
-const autohelperowl_attackpat257 = (trans, move, color, action)=>{
+const autohelperowl_attackpat257 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(720, trans, move);
 
   return this.owl_escape_value(B) > 0 && this.does_defend(move, a);
 }
 
-const autohelperowl_attackpat258 = (trans, move, color, action)=>{
+const autohelperowl_attackpat258 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(646, trans, move);
   let b = AFFINE_TRANSFORM(609, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -3045,27 +3045,27 @@ const autohelperowl_attackpat258 = (trans, move, color, action)=>{
   return  this.somewhere(color, 0, 2, [a, b]) && ATTACK_MACRO.call(this, c);
 }
 
-const autohelperowl_attackpat261 = (trans, move, color, action)=>{
+const autohelperowl_attackpat261 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
 
   return  ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat262 = (trans, move, color, action)=>{
+const autohelperowl_attackpat262 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(681, trans, move);
   let b = AFFINE_TRANSFORM(573, trans, move);
 
   return this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0;
 }
 
-const autohelperowl_attackpat263 = (trans, move, color, action)=>{
+const autohelperowl_attackpat263 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(796, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
 
   return this.owl_escape_value(a)>0 || this.owl_escape_value(b)>0;
 }
 
-const autohelperowl_attackpat265 = (trans, move, color, action)=>{
+const autohelperowl_attackpat265 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let C = AFFINE_TRANSFORM(722, trans, move);
@@ -3075,27 +3075,27 @@ const autohelperowl_attackpat265 = (trans, move, color, action)=>{
     && !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat266 = (trans, move, color, action)=>{
+const autohelperowl_attackpat266 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat267 = (trans, move, color, action)=>{
+const autohelperowl_attackpat267 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
   return !this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 0, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat268 = (trans, move, color, action)=>{
+const autohelperowl_attackpat268 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(610, trans, move);
 
   return  ATTACK_MACRO.call(this, A) && !this.play_attack_defend_n(color, 1, 1, [move, A]);
 }
 
-const autohelperowl_attackpat269 = (trans, move, color, action)=>{
+const autohelperowl_attackpat269 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -3107,7 +3107,7 @@ const autohelperowl_attackpat269 = (trans, move, color, action)=>{
       || this.owl_escape_value(a) < 0) && !this.play_attack_defend2_n(color, 1, 3, [move, c, D, move, D]);
 }
 
-const autohelperowl_attackpat270 = (trans, move, color, action)=>{
+const autohelperowl_attackpat270 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
@@ -3115,28 +3115,28 @@ const autohelperowl_attackpat270 = (trans, move, color, action)=>{
   return !this.board.same_string(a, b) && (this.board.countlib(a) <= 4 || this.board.countlib(b) <= 4 || this.board.countlib(c) <= 4);
 }
 
-const autohelperowl_attackpat271 = (trans, move, color, action)=>{
+const autohelperowl_attackpat271 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.owl_goal_dragon(b) && !this.play_connect_n(color, 1, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat272 = (trans, move, color, action)=>{
+const autohelperowl_attackpat272 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.owl_goal_dragon(a) && !this.play_connect_n(color, 1, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat273 = (trans, move, color, action)=>{
+const autohelperowl_attackpat273 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return this.board.countlib(a) === 2 && !this.play_connect_n(color, 1, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat274 = (trans, move, color, action)=>{
+const autohelperowl_attackpat274 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(757, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -3147,7 +3147,7 @@ const autohelperowl_attackpat274 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 3, [move, c, d, c, E]);
 }
 
-const autohelperowl_attackpat275 = (trans, move, color, action)=>{
+const autohelperowl_attackpat275 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(757, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -3158,7 +3158,7 @@ const autohelperowl_attackpat275 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(this.board.OTHER_COLOR(color), 1, 3, [move, c, d, c, E]);
 }
 
-const autohelperowl_attackpat276 = (trans, move, color, action)=>{
+const autohelperowl_attackpat276 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(758, trans, move);
   let c = AFFINE_TRANSFORM(722, trans, move);
   let d = AFFINE_TRANSFORM(721, trans, move);
@@ -3168,7 +3168,7 @@ const autohelperowl_attackpat276 = (trans, move, color, action)=>{
     && this.play_attack_defend2_n(color, 0, 2, [move, d, A, move]);
 }
 
-const autohelperowl_attackpat277 = (trans, move, color, action)=>{
+const autohelperowl_attackpat277 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(722, trans, move);
   let d = AFFINE_TRANSFORM(685, trans, move);
@@ -3179,7 +3179,7 @@ const autohelperowl_attackpat277 = (trans, move, color, action)=>{
     && !this.play_attack_defend2_n(color, 0, 2, [e, move, A, e]);
 }
 
-const autohelperowl_attackpat278 = (trans, move, color, action)=>{
+const autohelperowl_attackpat278 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(610, trans, move);
   let c = AFFINE_TRANSFORM(611, trans, move);
   let d = AFFINE_TRANSFORM(648, trans, move);
@@ -3191,7 +3191,7 @@ const autohelperowl_attackpat278 = (trans, move, color, action)=>{
     && this.play_connect_n(color, 0, 2, [move, e, e, A]);
 }
 
-const autohelperowl_attackpat280 = (trans, move, color, action)=>{
+const autohelperowl_attackpat280 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
 
@@ -3200,7 +3200,7 @@ const autohelperowl_attackpat280 = (trans, move, color, action)=>{
     && !this.play_connect_n(this.board.OTHER_COLOR(color), 1, 1, [move, a, b]);
 }
 
-const autohelperowl_attackpat281 = (trans, move, color, action)=>{
+const autohelperowl_attackpat281 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
   let A = AFFINE_TRANSFORM(646, trans, move);
@@ -3209,7 +3209,7 @@ const autohelperowl_attackpat281 = (trans, move, color, action)=>{
     && (!this.owl_goal_dragon(b) || !this.owl_goal_dragon(c));
 }
 
-const autohelperowl_attackpat282 = (trans, move, color, action)=>{
+const autohelperowl_attackpat282 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(683, trans, move);
   let A = AFFINE_TRANSFORM(646, trans, move);
@@ -3218,7 +3218,7 @@ const autohelperowl_attackpat282 = (trans, move, color, action)=>{
     && (!this.owl_goal_dragon(b) || !this.owl_goal_dragon(c));
 }
 
-const autohelperowl_attackpat283 = (trans, move, color, action)=>{
+const autohelperowl_attackpat283 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(721, trans, move);
   let c = AFFINE_TRANSFORM(722, trans, move);
@@ -3229,21 +3229,21 @@ const autohelperowl_attackpat283 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 3, [move, c, d, d]);
 }
 
-const autohelperowl_attackpat284 = (trans, move, color, action)=>{
+const autohelperowl_attackpat284 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(722, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
   return this.play_attack_defend_n(this.board.OTHER_COLOR(color), 1, 2, [move, a, B]);
 }
 
-const autohelperowl_attackpat286 = (trans, move, color, action)=>{
+const autohelperowl_attackpat286 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
   let B = AFFINE_TRANSFORM(649, trans, move);
 
   return this.owl_strong_dragon(A) && !this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat288 = (trans, move, color, action)=>{
+const autohelperowl_attackpat288 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(610, trans, move);
   let b = AFFINE_TRANSFORM(611, trans, move);
   let c = AFFINE_TRANSFORM(612, trans, move);
@@ -3252,7 +3252,7 @@ const autohelperowl_attackpat288 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) +this.owl_escape_value(c) + this.owl_escape_value(d) > 0;
 }
 
-const autohelperowl_attackpat289 = (trans, move, color, action)=>{
+const autohelperowl_attackpat289 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(611, trans, move);
   let b = AFFINE_TRANSFORM(612, trans, move);
   let c = AFFINE_TRANSFORM(613, trans, move);
@@ -3261,33 +3261,33 @@ const autohelperowl_attackpat289 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) +this.owl_escape_value(c) + this.owl_escape_value(d) > 0;
 }
 
-const autohelperowl_attackpat290 = (trans, move, color, action)=>{
+const autohelperowl_attackpat290 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(646, trans, move);
 
   return  this.board.countlib(a) === 1 && this.owl_escape_value(B) > 0;
 }
 
-const autohelperowl_attackpat291 = (trans, move, color, action)=>{
+const autohelperowl_attackpat291 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(720, trans, move);
 
   return  this.board.countlib(a) === 1 && this.owl_escape_value(B) > 0;
 }
 
-const autohelperowl_attackpat292 = (trans, move, color, action)=>{
+const autohelperowl_attackpat292 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
 
   return  this.board.countlib(a) === 1;
 }
 
-const autohelperowl_attackpat293 = (trans, move, color, action)=>{
+const autohelperowl_attackpat293 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
 
   return  this.board.countlib(a) === 1;
 }
 
-const autohelperowl_attackpat294 = (trans, move, color, action)=>{
+const autohelperowl_attackpat294 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(610, trans, move);
   let B = AFFINE_TRANSFORM(720, trans, move);
 
@@ -3296,7 +3296,7 @@ const autohelperowl_attackpat294 = (trans, move, color, action)=>{
     && !this.play_connect_n(color, 1, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat295 = (trans, move, color, action)=>{
+const autohelperowl_attackpat295 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(686, trans, move);
   let B = AFFINE_TRANSFORM(683, trans, move);
 
@@ -3305,7 +3305,7 @@ const autohelperowl_attackpat295 = (trans, move, color, action)=>{
     && !this.play_connect_n(color, 1, 1, [move, A, B]);
 }
 
-const autohelperowl_attackpat296 = (trans, move, color, action)=>{
+const autohelperowl_attackpat296 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(645, trans, move);
   let b = AFFINE_TRANSFORM(682, trans, move);
   let c = AFFINE_TRANSFORM(719, trans, move);
@@ -3313,7 +3313,7 @@ const autohelperowl_attackpat296 = (trans, move, color, action)=>{
   return this.owl_escape_value(a) + this.owl_escape_value(b) + this.owl_escape_value(c) > 0;
 }
 
-const autohelperowl_attackpat298 = (trans, move, color, action)=>{
+const autohelperowl_attackpat298 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(722, trans, move);
   let b = AFFINE_TRANSFORM(759, trans, move);
   let c = AFFINE_TRANSFORM(796, trans, move);
@@ -3325,77 +3325,77 @@ const autohelperowl_attackpat298 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 2, [move, b, c]);
 }
 
-const autohelperowl_attackpat299 = (trans, move, color, action)=>{
+const autohelperowl_attackpat299 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
   let B = AFFINE_TRANSFORM(720, trans, move);
 
   return this.owl_escape_value(A) > 0 && this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, move, A, B) !== codes.WIN;
 }
 
-const autohelperowl_attackpat300 = (trans, move, color, action)=>{
+const autohelperowl_attackpat300 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
   let B = AFFINE_TRANSFORM(720, trans, move);
 
   return this.owl_escape_value(B) > 0 && this.play_connect_n(this.board.OTHER_COLOR(color), 0, 1, move, A, B) !== codes.WIN;
 }
 
-const autohelperowl_attackpat301 = (trans, move, color, action)=>{
+const autohelperowl_attackpat301 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.play_connect_n(color, 1, 1, move, a, b);
 }
 
-const autohelperowl_attackpat302 = (trans, move, color, action)=>{
+const autohelperowl_attackpat302 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(722, trans, move);
 
   return !this.play_connect_n(color, 1, 1, move, a, b);
 }
 
-const autohelperowl_attackpat303 = (trans, move, color, action)=>{
+const autohelperowl_attackpat303 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(720, trans, move);
   let B = AFFINE_TRANSFORM(721, trans, move);
 
   return  (this.board.countlib(a)===1) && (this.board.countlib(B)===1);
 }
 
-const autohelperowl_attackpat304 = (trans, move, color, action)=>{
+const autohelperowl_attackpat304 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countstones(A)>3 && this.board.countlib(A)===1;
 }
 
-const autohelperowl_attackpat305 = (trans, move, color, action)=>{
+const autohelperowl_attackpat305 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countstones(A)<=3 && this.board.countlib(A)===1 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null) > 1;
 }
 
-const autohelperowl_attackpat306 = (trans, move, color, action)=>{
+const autohelperowl_attackpat306 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return this.board.countstones(A)>3 && this.does_attack(move, A);
 }
 
-const autohelperowl_attackpat307 = (trans, move, color, action)=>{
+const autohelperowl_attackpat307 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return this.board.countstones(A)<=3 && this.does_attack(move, A)
     && (this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null) > 1 || this.board.is_ko_point(move));
 }
 
-const autohelperowl_attackpat308 = (trans, move, color, action)=>{
+const autohelperowl_attackpat308 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(721, trans, move);
 
   return  this.does_attack(move, A);
 }
 
-const autohelperowl_attackpat310 = (trans, move, color, action)=>{
+const autohelperowl_attackpat310 = function (trans, move, color, action){
   return this.owl_proper_eye(move);
 }
 
-const autohelperowl_attackpat311 = (trans, move, color, action)=>{
+const autohelperowl_attackpat311 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let B = AFFINE_TRANSFORM(647, trans, move);
   let C = AFFINE_TRANSFORM(721, trans, move);
@@ -3405,90 +3405,90 @@ const autohelperowl_attackpat311 = (trans, move, color, action)=>{
     && !this.play_attack_defend2_n(color, 0, 1, [move, B, C]);
 }
 
-const autohelperowl_attackpat312 = (trans, move, color, action)=>{
+const autohelperowl_attackpat312 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(643, trans, move);
   let b = AFFINE_TRANSFORM(644, trans, move);
 
   return  this.somewhere(color, 0, 2, [a, b]);
 }
 
-const autohelperowl_attackpat316 = (trans, move, color, action)=>{
+const autohelperowl_attackpat316 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return DEFEND_MACRO.call(this, a) !== codes.WIN;
 }
 
-const autohelperowl_attackpat317 = (trans, move, color, action)=>{
+const autohelperowl_attackpat317 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(720, trans, move);
   let A = AFFINE_TRANSFORM(647, trans, move);
 
   return this.board.countlib(A)===2 && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat323 = (trans, move, color, action)=>{
+const autohelperowl_attackpat323 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(720, trans, move);
 
   return this.board.countlib(a)>1 && !this.obvious_false_eye(b, this.board.OTHER_COLOR(color));
 }
 
-const autohelperowl_attackpat330 = (trans, move, color, action)=>{
+const autohelperowl_attackpat330 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(609, trans, move);
 
   return !ATTACK_MACRO.call(this, a);
 }
 
-const autohelperowl_attackpat333 = (trans, move, color, action)=>{
+const autohelperowl_attackpat333 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(645, trans, move);
 
   return this.board.countlib(A) === 4 && ATTACK_MACRO.call(this, A) !== codes.WIN;
 }
 
-const autohelperowl_attackpat334 = (trans, move, color, action)=>{
+const autohelperowl_attackpat334 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(757, trans, move);
 
   return this.board.countlib(A) === 2 && ATTACK_MACRO.call(this, A) !== codes.WIN;
 }
 
-const autohelperowl_attackpat335 = (trans, move, color, action)=>{
+const autohelperowl_attackpat335 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(646, trans, move);
 
   return !ATTACK_MACRO.call(this, A);
 }
 
-const autohelperowl_attackpat337 = (trans, move, color, action)=>{
+const autohelperowl_attackpat337 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(682, trans, move);
 
   return !ATTACK_MACRO.call(this, A);
 }
 
-const autohelperowl_attackpat348 = (trans, move, color, action)=>{
+const autohelperowl_attackpat348 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(722, trans, move);
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)<=3 && DEFEND_MACRO.call(this, a) !== codes.WIN;
 }
 
-const autohelperowl_attackpat349 = (trans, move, color, action)=>{
+const autohelperowl_attackpat349 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(757, trans, move);
 
   return this.play_attack_defend_n(color, 1, 1, [a, a]);
 }
 
-const autohelperowl_attackpat350 = (trans, move, color, action)=>{
+const autohelperowl_attackpat350 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
 
   return this.play_attack_defend_n(color, 0, 2, [move, a, move]);
 }
 
-const autohelperowl_attackpat351 = (trans, move, color, action)=>{
+const autohelperowl_attackpat351 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(609, trans, move);
   let B = AFFINE_TRANSFORM(610, trans, move);
 
   return !this.somewhere(this.board.OTHER_COLOR(color), 0, 1, a) || (this.board.countlib(B) <= 6);
 }
 
-const autohelperowl_attackpat353 = (trans, move, color, action)=>{
+const autohelperowl_attackpat353 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(573, trans, move);
 
@@ -3496,7 +3496,7 @@ const autohelperowl_attackpat353 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 1, [a, b]);
 }
 
-const autohelperowl_attackpat354 = (trans, move, color, action)=>{
+const autohelperowl_attackpat354 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(759, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
 
@@ -3504,7 +3504,7 @@ const autohelperowl_attackpat354 = (trans, move, color, action)=>{
     || this.play_attack_defend_n(color, 1, 1, [a, a]);
 }
 
-const autohelperowl_attackpat355 = (trans, move, color, action)=>{
+const autohelperowl_attackpat355 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(757, trans, move);
   let c = AFFINE_TRANSFORM(720, trans, move);
@@ -3514,26 +3514,26 @@ const autohelperowl_attackpat355 = (trans, move, color, action)=>{
     && this.play_attack_defend_n(color, 0, 2, [move, c, d]);
 }
 
-const autohelperowl_attackpat367 = (trans, move, color, action)=>{
+const autohelperowl_attackpat367 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(645, trans, move);
   let B = AFFINE_TRANSFORM(719, trans, move);
 
   return this.board.countlib(a)===1 && this.board.countlib(B)<=3 && DEFEND_MACRO.call(this, a)!==codes.WIN;
 }
 
-const autohelperowl_attackpat368 = (trans, move, color, action)=>{
+const autohelperowl_attackpat368 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(722, trans, move);
 
   return !ATTACK_MACRO.call(this, A);
 }
 
-const autohelperowl_attackpat369 = (trans, move, color, action)=>{
+const autohelperowl_attackpat369 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(722, trans, move);
 
   return !ATTACK_MACRO.call(this, A);
 }
 
-const autohelperowl_attackpat370 = (trans, move, color, action)=>{
+const autohelperowl_attackpat370 = function (trans, move, color, action){
   let A;
 
   A = AFFINE_TRANSFORM(718, trans, move);
@@ -3541,13 +3541,13 @@ const autohelperowl_attackpat370 = (trans, move, color, action)=>{
   return this.board.countlib(A)===3;
 }
 
-const autohelperowl_attackpat372 = (trans, move, color, action)=>{
+const autohelperowl_attackpat372 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
 
   return this.is_proper_eye_space(a);
 }
 
-const autohelperowl_attackpat373 = (trans, move, color, action)=>{
+const autohelperowl_attackpat373 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(685, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
@@ -3555,33 +3555,33 @@ const autohelperowl_attackpat373 = (trans, move, color, action)=>{
   return this.is_proper_eye_space(a) && this.play_attack_defend_n(color, 0, 3, [move, b, c, move]);
 }
 
-const autohelperowl_attackpat376 = (trans, move, color, action)=>{
+const autohelperowl_attackpat376 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)===2 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1 && this.finish_ko_helper(A);
 }
 
-const autohelperowl_attackpat377 = (trans, move, color, action)=>{
+const autohelperowl_attackpat377 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(683, trans, move);
 
   return this.board.countlib(A)===2 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null)>1 && this.finish_ko_helper(A);
 }
 
-const autohelperowl_attackpat378 = (trans, move, color, action)=>{
+const autohelperowl_attackpat378 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(721, trans, move);
 
   return this.owl_escape_value(A) > 0 || this.owl_escape_value(B) > 0;
 }
 
-const autohelperowl_attackpat379 = (trans, move, color, action)=>{
+const autohelperowl_attackpat379 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(721, trans, move);
 
   return this.owl_escape_value(A) > 0 || this.owl_escape_value(B) > 0;
 }
 
-const autohelperowl_attackpat380 = (trans, move, color, action)=>{
+const autohelperowl_attackpat380 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(614, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let c = AFFINE_TRANSFORM(648, trans, move);
@@ -3589,7 +3589,7 @@ const autohelperowl_attackpat380 = (trans, move, color, action)=>{
   return !ATTACK_MACRO.call(this, a) && !this.play_attack_defend_n(this.board.OTHER_COLOR(color), 0, 1, [b, c]);
 }
 
-const autohelperowl_attackpat381 = (trans, move, color, action)=>{
+const autohelperowl_attackpat381 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let c = AFFINE_TRANSFORM(648, trans, move);
@@ -3599,7 +3599,7 @@ const autohelperowl_attackpat381 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 3, [move, b, c, c]);
 }
 
-const autohelperowl_attackpat382 = (trans, move, color, action)=>{
+const autohelperowl_attackpat382 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(683, trans, move);
   let C = AFFINE_TRANSFORM(682, trans, move);
@@ -3607,7 +3607,7 @@ const autohelperowl_attackpat382 = (trans, move, color, action)=>{
   return !this.play_attack_defend_n(color, 0, 3, [move, a, b, C]);
 }
 
-const autohelperowl_attackpat383 = (trans, move, color, action)=>{
+const autohelperowl_attackpat383 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let b = AFFINE_TRANSFORM(647, trans, move);
   let C = AFFINE_TRANSFORM(610, trans, move);
@@ -3615,35 +3615,35 @@ const autohelperowl_attackpat383 = (trans, move, color, action)=>{
   return !this.play_attack_defend_n(color, 0, 3, [move, a, b, C]);
 }
 
-const autohelperowl_attackpat384 = (trans, move, color, action)=>{
+const autohelperowl_attackpat384 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(758, trans, move);
 
   return !this.play_attack_defend_n(color, 0, 3, [move, NO_MOVE, a, B]);
 }
 
-const autohelperowl_attackpat385 = (trans, move, color, action)=>{
+const autohelperowl_attackpat385 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(721, trans, move);
   let B = AFFINE_TRANSFORM(758, trans, move);
 
   return !this.play_attack_defend_n(color, 0, 3, [move, NO_MOVE, a, B]);
 }
 
-const autohelperowl_attackpat386 = (trans, move, color, action)=>{
+const autohelperowl_attackpat386 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(683, trans, move);
   let B = AFFINE_TRANSFORM(682, trans, move);
 
   return !this.play_attack_defend_n(color, 0, 3, [move, NO_MOVE, a, B]);
 }
 
-const autohelperowl_attackpat387 = (trans, move, color, action)=>{
+const autohelperowl_attackpat387 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let B = AFFINE_TRANSFORM(610, trans, move);
 
   return !this.play_attack_defend_n(color, 0, 3, [move, NO_MOVE, a, B]);
 }
 
-const autohelperowl_attackpat391 = (trans, move, color, action)=>{
+const autohelperowl_attackpat391 = function (trans, move, color, action){
   let b = AFFINE_TRANSFORM(571, trans, move);
   let c = AFFINE_TRANSFORM(647, trans, move);
   let d = AFFINE_TRANSFORM(646, trans, move);
@@ -3655,7 +3655,7 @@ const autohelperowl_attackpat391 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 5, [move, c, d, e, f, f]);
 }
 
-const autohelperowl_attackpat392 = (trans, move, color, action)=>{
+const autohelperowl_attackpat392 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(647, trans, move);
   let b = AFFINE_TRANSFORM(758, trans, move);
   let c = AFFINE_TRANSFORM(721, trans, move);
@@ -3667,7 +3667,7 @@ const autohelperowl_attackpat392 = (trans, move, color, action)=>{
     && !this.play_attack_defend_n(color, 1, 1, [move, f]);
 }
 
-const autohelperowl_attackpat393 = (trans, move, color, action)=>{
+const autohelperowl_attackpat393 = function (trans, move, color, action){
   let e = AFFINE_TRANSFORM(685, trans, move);
   let A = AFFINE_TRANSFORM(797, trans, move);
   let B = AFFINE_TRANSFORM(686, trans, move);
@@ -3677,14 +3677,14 @@ const autohelperowl_attackpat393 = (trans, move, color, action)=>{
   return this.board.countlib(A) > 2 && !this.play_attack_defend_n(color, 0, 7, [move, NO_MOVE, B, NO_MOVE, C, NO_MOVE, D, e]);
 }
 
-const autohelperowl_attackpat395 = (trans, move, color, action)=>{
+const autohelperowl_attackpat395 = function (trans, move, color, action){
   let A = AFFINE_TRANSFORM(757, trans, move);
   let B = AFFINE_TRANSFORM(756, trans, move);
 
   return  this.board.countlib(A) === 2 && this.board.countlib(B) > 1 && this.board.accuratelib(move, color, this.board.MAX_LIBERTIES, null) > 1;
 }
 
-const autohelperowl_attackpat396 = (trans, move, color, action)=>{
+const autohelperowl_attackpat396 = function (trans, move, color, action){
   let a = AFFINE_TRANSFORM(682, trans, move);
   let B = AFFINE_TRANSFORM(644, trans, move);
 
@@ -3948,10 +3948,10 @@ const data = [
   [ 0x0038ffff, 0xc0f0e0c0, 0xfcb00000, 0x2f3f0f00, 0xe0f0c000, 0xff380000, 0x0f3f2f0f, 0x00b0fcfc],
   [ 0x00100200, 0x00100080, 0x00100000, 0x00100000, 0x00100000, 0x02100000, 0x00100008, 0x00100000]
   , 0x0,80.000000,attributes[0],1,null,autohelperowl_attackpat60,0,0.016000],
-[owl_attackpat61,1,8, "A231",-1,0,1,3,2,3,0x0,686,
-  [ 0x003cfcfc, 0xc0f0f000, 0xfcf00000, 0x3f3f0f00, 0xf0f0c000, 0xfc3c0000, 0x0f3f3f00, 0x00f0fcfc],
-  [ 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000]
-  , 0x0,50.000000,attributes[0],0,null,null,0,0.000000],
+// [owl_attackpat61,1,8, "A231",-1,0,1,3,2,3,0x0,686,
+//   [ 0x003cfcfc, 0xc0f0f000, 0xfcf00000, 0x3f3f0f00, 0xf0f0c000, 0xfc3c0000, 0x0f3f3f00, 0x00f0fcfc],
+//   [ 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000, 0x00100000]
+//   , 0x0,50.000000,attributes[0],0,null,null,0,0.000000],
 [owl_attackpat62,1,8, "A232",0,-1,3,2,3,3,0x2,686,
   [ 0x003cfcff, 0xc0f0f000, 0xfcf00000, 0x3f3f0f00, 0xf0f0c000, 0xfc3c0000, 0x0f3f3f03, 0x00f0fcfc],
   [ 0x00148000, 0x80101000, 0x08500000, 0x10100800, 0x10108000, 0x80140000, 0x08101000, 0x00500800]

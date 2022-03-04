@@ -1526,7 +1526,17 @@ export const Owl = {
     return 0;
   },
 
-  second_liberty_of_goal () {},
+  /* Is the vertex at pos a second liberty of the owl goal? */
+  second_liberty_of_goal (pos, owl) {
+    const b = this.board
+    for (let k = 0; k < 4; k++){
+      if (b.board[pos + b.delta[k]] === colors.EMPTY && this.liberty_of_goal(pos + b.delta[k], owl)){
+        return 1;
+      }
+    }
+
+    return 0;
+  },
 
   /* 'liberty' is a liberty of 'worm' which we would like to fill.
    * However it is not safe to play there, so we look for a
@@ -1732,7 +1742,7 @@ export const Owl = {
 
       // TRACE_CACHED_RESULT(value1, xpos);
       if (move){
-        move[0] = xpos;
+        move[0] = xpos[0];
       }
 
       if (value1[0] === codes.GAIN) {
@@ -1876,7 +1886,7 @@ export const Owl = {
           b.count_variations = 0;
           result = this.attack(str, apos);
           if (result === codes.WIN || (result !== 0 && (this.min_eyes(probable_eyes) >= 2 || pass === 5))) {
-            this.set_single_owl_move(shape_moves, apos, "tactical attack");
+            this.set_single_owl_move(shape_moves, apos[0], "tactical attack");
             moves = shape_moves;
           }
           // sgf_dumptree = save_sgf_dumptree;
@@ -1927,7 +1937,7 @@ export const Owl = {
               b.count_variations = save_count_variations;
 
               if (dpos !== NO_MOVE) {
-                this.set_single_owl_move(shape_moves, dpos, name);
+                this.set_single_owl_move(shape_moves, dpos[0], name);
                 moves = shape_moves;
               }
             }
@@ -1988,6 +1998,7 @@ export const Owl = {
         captured = (color === colors.WHITE ? b.white_captured : b.black_captured);
 
         /* Try to make the move. */
+        console.log(mpos)
         if (!b.komaster_trymove(mpos, other, moves[k].name, str, ko_move, savecode === 0)){
           continue;
         }
@@ -2415,7 +2426,7 @@ export const Owl = {
               && (b.approxlib(dpos[0], color, 2, null) > 1
               || this.does_capture_something(dpos[0], color))) {
               // TRACE("Found tactical defense for %1m at %1m.\n", str, dpos);
-              this.set_single_owl_move(shape_moves, dpos, "tactical_defense");
+              this.set_single_owl_move(shape_moves, dpos[0], "tactical_defense");
               moves = shape_moves;
             }
             // sgf_dumptree = save_sgf_dumptree;
@@ -2460,12 +2471,12 @@ export const Owl = {
           }
         }
 
-        mpos = [moves[k].pos];
+        mpos = moves[k].pos;
         this.modify_eyefilling_move(mpos, color);
-        b.ASSERT_ON_BOARD1(mpos[0]);
+        b.ASSERT_ON_BOARD1(mpos);
 
         /* Have we already tested this move? */
-        if (mw[mpos[0]]){
+        if (mw[mpos]){
           continue;
         }
 
@@ -2485,7 +2496,7 @@ export const Owl = {
 
         /* We have now made a move. Analyze the new position. */
         this.push_owl(owl);
-        mw[mpos[0]] = 1;
+        mw[mpos] = 1;
         number_tried_moves++;
 
         /* Add the stone just played to the goal dragon, unless the
@@ -2506,16 +2517,16 @@ export const Owl = {
             //   SGFTRACE(mpos, codes.WIN, codes.WINstr);
             // }
             this.close_pattern_list(color, shape_patterns);
-            this.READ_RETURN(routine_id.OWL_DEFEND, str, this.depth - b.stackp, move, mpos, codes.WIN);
+            this.READ_RETURN(routine_id.OWL_DEFEND, str, this.depth - b.stackp, move, [mpos], codes.WIN);
           }
           if (acode === codes.GAIN){
             saveworm = wid[0];
           }
-          this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, mpos);
+          this.UPDATE_SAVED_KO_RESULT(savecode, savemove, acode, [mpos]);
         }
         else {
           if (this.do_owl_attack(str, null, null, owl, new_escape) !== codes.WIN) {
-            savemove = mpos[0];
+            savemove = mpos;
             savecode = codes.KO_B;
           }
         }
@@ -2723,8 +2734,10 @@ export const Owl = {
     /* Reset halfeye data. Set topological eye value to something big. */
     for (pos = b.BOARDMIN; pos < b.BOARDMAX; pos++) {
       if (b.ON_BOARD(pos)) {
-        owl.half_eye[pos].type = 0;
-        owl.half_eye[pos].value = 10.0;
+        owl.half_eye[pos] = new HalfEyeData({
+          type : 0,
+          value : 10.0,
+        })
       }
     }
 
@@ -3230,7 +3243,7 @@ export const Owl = {
 
     /* If the constraint is cheap to check, we do this first. */
     if ((pattern.autohelper_flag & HAVE_CONSTRAINT) && pattern.constraint_cost < 0.45) {
-      if (!pattern.autohelper(ll, move, color, 0)){
+      if (!pattern.autohelper.call(this, ll, move, color, 0)){
         return 0;
       }
       constraint_checked = 1;
@@ -3487,8 +3500,17 @@ export const Owl = {
     let jdist = 2*b.J(move) - b.board_size + 1;
     return idist*idist + jdist*jdist;
   },
-  
-  BETTER_PATTERN () {},
+
+  /* NOTICE : In order to stabilize the regression test results,
+   * arbitrary parameters like pattern memory address and move position
+   * have been included in the sorting algorithm.
+   */
+  BETTER_PATTERN (a, b) {
+    return a.value > b.value || (a.value === b.value
+      && (a.pattern < b.pattern	 || (a.pattern === b.pattern
+        && (a.bdist < b.bdist	|| (a.bdist === b.bdist
+          && a.move < b.move)))))
+  },
   
   pattern_list_prepare (list) {
     const b = this.board
