@@ -10,6 +10,9 @@ const maskMap = {
 const map = ['.', 'X', 'O', 'x', 'o', ',', 'a','!']
  
 export const Test = {
+
+  mark_goal_in_sgf() {},
+  
   // 模式特征码打印
   printMask(val) {
     let arr = []

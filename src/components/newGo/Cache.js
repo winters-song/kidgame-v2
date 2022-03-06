@@ -77,12 +77,18 @@ export const Cache = {
  * return a result from a reading function and where we want to
  * store the result in the hash table at the same time.
  */
+  /**
+   * 调用后，在调用位置return 0
+   */
   READ_RETURN0(routine, str, remaining_depth) {
     //table, routine, target1, target2, remaining_depth, extra_hash, value1, value2, move
     this.tt_update(ttable, routine, str, NO_MOVE, remaining_depth, null, 0, 0, NO_MOVE)
   //  return 0;
   },
 
+  /**
+   * 调用后，在调用位置return value
+   */
   READ_RETURN(routine, str, remaining_depth, point, move, value) {
     this.tt_update(ttable, routine, str, NO_MOVE, remaining_depth, null,  value, 0, move);
     if (value !== 0 && point) {
