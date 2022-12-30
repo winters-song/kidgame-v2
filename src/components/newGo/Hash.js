@@ -22,7 +22,8 @@ export const HashData = {
   }
 }
 
-const random = () =>  Math.floor(Math.random() * 1000000000);  //再多一位就溢出了。。
+// 1000000000
+const random = () =>  Math.floor(Math.random() * 2147483647);  //再多一位就溢出了。。
 
 
 export class Hash{
