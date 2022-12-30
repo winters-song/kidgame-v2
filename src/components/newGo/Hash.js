@@ -18,6 +18,9 @@ export const HashData = {
     return hd1.hashval < hd2.hashval
   },
   xor (hd1, hd2) {
+    if(!hd2){
+      debugger;
+    }
     hd1.hashval ^= hd2.hashval
   }
 }

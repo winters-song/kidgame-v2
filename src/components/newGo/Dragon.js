@@ -71,12 +71,12 @@ class DragonData2 {
   owl_status = dragon_status.UNCHECKED; /* (ALIVE, DEAD, UNKNOWN, CRITICAL, UNCHECKED)    */
   owl_attack_point = NO_MOVE;    /* vital pofor attack                         */
   owl_attack_code = 0;     /* ko result code                                 */
-  owl_attack_certain = 1;  /* 0 if owl reading node limit is reached         */
+  owl_attack_certain = [1];  /* 0 if owl reading node limit is reached        */
   owl_attack_node_count;
   owl_second_attack_point = NO_MOVE;/* if attacker gets both attack points, wins   */
   owl_defense_point = NO_MOVE;   /* vital pofor defense                        */
   owl_defense_code = 0;    /* ko result code                                 */
-  owl_defense_certain = 1; /* 0 if owl reading node limit is reached         */
+  owl_defense_certain = [1]; /* 0 if owl reading node limit is reached         */
   owl_second_defense_point = NO_MOVE;/* if defender gets both attack points, wins  */
   owl_attack_kworm;    /* only valid when owl_attack_code is GAIN        */
   owl_defense_kworm;   /* only valid when owl_defense_code is LOSS       */
@@ -303,7 +303,7 @@ export const Dragon = {
             }
           }
           else {
-            if (!this.DRAGON2(str).owl_attack_certain) {
+            if (!this.DRAGON2(str).owl_attack_certain[0]) {
               kworm = NO_MOVE;
               dcode = this.owl_defend(str, this.defense_point, this.DRAGON2(str).owl_defense_certain, this.kworm);
               if (dcode !== 0) {
@@ -1633,10 +1633,10 @@ export const Dragon = {
       this.dragon2[d].lunch !== NO_MOVE, this.dragon2[d].moyo_territorial_value, this.dragon2[d].escape_route);
 
     /* Now corrections due to (uncertain) owl results resp. owl threats. */
-    if (!this.dragon2[d].owl_attack_certain){
+    if (!this.dragon2[d].owl_attack_certain[0]){
       weakness += Math.min(0.25 * (1.0 - weakness), 0.25 * weakness);
     }
-    if (!this.dragon2[d].owl_defense_certain){
+    if (!this.dragon2[d].owl_defense_certain[0]){
       weakness += Math.min(0.25 * (1.0 - weakness), 0.25 * weakness);
     }
     if (this.dragon2[d].owl_threat_status === dragon_status.CAN_THREATEN_ATTACK){

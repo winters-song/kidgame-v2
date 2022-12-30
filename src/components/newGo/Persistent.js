@@ -266,6 +266,7 @@ export const Persistent = {
   },
 
   /* Store a new read result in the persistent cache. */
+  // int move
   store_persistent_reading_cache(routine, str, result, move, nodes) {
     this.store_persistent_cache(this.reading_cache, routine,
       str, NO_MOVE, NO_MOVE, colors.EMPTY, null,

@@ -1907,7 +1907,7 @@ export const Owl = {
               this.close_pattern_list(other, shape_patterns);
               this.READ_RETURN(routine_id.OWL_ATTACK, str, this.depth - b.stackp, move, 0, codes.WIN);
             }
-            else if (dpos !== NO_MOVE) {
+            else if (dpos[0] !== NO_MOVE) {
               /* The dragon could be defended by one more move. Try to
                * attack with this move.
                *
@@ -1957,7 +1957,7 @@ export const Owl = {
        */
       for (k = 0; k < MAX_MOVES; k++) {
         let mpos;
-        let ko_move = -1;
+        let ko_move = [-1];
         let origin = NO_MOVE;
         let captured;
         let wid = MAX_GOAL_WORMS;
@@ -2044,7 +2044,7 @@ export const Owl = {
           dcode = this.do_owl_defend(origin, null, wid, owl, escape);
         }
 
-        if (!ko_move) {
+        if (!ko_move[0]) {
           if (dcode === 0) {
             this.pop_owl(owl);
             b.popgo();
@@ -2151,7 +2151,7 @@ export const Owl = {
     //   SGFTRACE(0, 0, codes.WINstr);
     // }
 
-    this.READ_RETURN0(dragon_status.OWL_ATTACK, str, this.depth - b.stackp);
+    this.READ_RETURN0(routine_id.OWL_ATTACK, str, this.depth - b.stackp);
   },
 
   owl_threaten_attack () {},
@@ -2272,7 +2272,7 @@ export const Owl = {
 
       // TRACE_CACHED_RESULT(value1, xpos);
       if (move){
-        move[0] = xpos;
+        move[0] = xpos[0];
       }
 
       if (value1[0] === codes.LOSS) {
@@ -3277,7 +3277,7 @@ export const Owl = {
      * if the pattern must be rejected.
      */
     if ((pattern.autohelper_flag & HAVE_CONSTRAINT) && !constraint_checked){
-      if (!pattern.autohelper(ll, move, color, 0)){
+      if (!pattern.autohelper.call(this, ll, move, color, 0)){
         return 0;
       }
     }
@@ -4721,8 +4721,8 @@ export const Owl = {
          * be a good place to play.
          */
         else if (b.board[pos] === color
-          && !this.DRAGON2(pos).owl_attack_certain
-          && this.DRAGON2(pos).owl_defense_certain
+          && !this.DRAGON2(pos).owl_attack_certain[0]
+          && this.DRAGON2(pos).owl_defense_certain[0]
           && b.ON_BOARD(this.DRAGON2(pos).owl_defense_point)) {
           this.add_owl_uncertain_defense_move(this.DRAGON2(pos).owl_defense_point, pos);
           // DEBUG(DEBUG_OWL, "owl: %1m defends the uncertain dragon at %1m at move %d\n", this.DRAGON2(pos).owl_defense_point, pos, movenum+1);
@@ -4735,7 +4735,7 @@ export const Owl = {
        */
       else if (this.DRAGON2(pos).owl_status === dragon_status.DEAD
         && b.board[pos] === b.OTHER_COLOR(color)
-        && !this.DRAGON2(pos).owl_attack_certain
+        && !this.DRAGON2(pos).owl_attack_certain[0]
         && b.ON_BOARD(this.DRAGON2(pos).owl_attack_point)) {
         this.add_owl_uncertain_defense_move(this.DRAGON2(pos).owl_attack_point, pos);
         // DEBUG(DEBUG_OWL, "owl: %1m might defend the uncertain dragon at %1m at move %d\n", DRAGON2(pos).owl_attack_point, pos, movenum+1);
@@ -4950,7 +4950,7 @@ export const Owl = {
             owl.lunch_attack_point[lunches] = apos[0];
             owl.lunch_defend_code[lunches]  = dcode[0];
             b.ASSERT1(b.board[apos] === colors.EMPTY, lunch);
-            if (dcode !== 0) {
+            if (dcode[0] !== 0) {
               owl.lunch_defense_point[lunches] = dpos[0];
               b.ASSERT1(b.board[dpos] === colors.EMPTY, lunch);
             }

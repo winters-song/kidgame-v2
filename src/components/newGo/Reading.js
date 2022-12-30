@@ -280,16 +280,17 @@ export const Reading = {
     }
 
     b.shadow = []
+    // pointer变成了int
     result = this.do_attack(str, the_move);
     const nodes = reading_node_counter - nodes_when_called;
 
-    this.store_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move, nodes);
+    this.store_persistent_reading_cache(routine_id.ATTACK, origin, result, the_move[0], nodes);
 
     if (move){
       move[0] = the_move[0];
     }
 
-    return result[0];
+    return result;
   },
 
 
@@ -330,16 +331,17 @@ export const Reading = {
     }
 
     b.shadow = []
+    // pointer变成int
     result = this.do_find_defense(str, the_move)
     const nodes = reading_node_counter - nodes_when_called;
 
-    this.store_persistent_reading_cache(routine_id.FIND_DEFENSE, origin, result, the_move, nodes);
+    this.store_persistent_reading_cache(routine_id.FIND_DEFENSE, origin, result, the_move[0], nodes);
 
     if (move){
       move[0] = the_move[0];
     }
 
-    return result[0];
+    return result;
   },
 
   /* attack_and_defend(str, &acode, &attack_point,
